@@ -52,7 +52,6 @@ contract NexVault is Initializable, OwnableUpgradeable {
         address _usdcAddress
         ) external initializer {
         __Ownable_init(msg.sender);
-        isOperator[_operator] = true;
         usdcAddress = _usdcAddress;
     }
 
@@ -76,7 +75,6 @@ contract NexVault is Initializable, OwnableUpgradeable {
             orderNonceInfo.sellOrderNonce += 1;
         }
         orderNonceInfo.orderNonce += 1;
-        return orderNonceInfo.orderNonce;
     }
 
     function _transferInputTokenFromCaller(address _inputToken, uint256 _amount) internal {
@@ -87,7 +85,7 @@ contract NexVault is Initializable, OwnableUpgradeable {
     }
 
     function _initializeOrder(
-        _config
+        CreateOrderConfig memory _config
     ) internal {
         // logic to initialize buy order
         if(_config.isBuyOrder) {
