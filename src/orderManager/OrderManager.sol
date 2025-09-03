@@ -5,13 +5,13 @@ import {SafeERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeE
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
-contract NexVault is Initializable, OwnableUpgradeable {
+contract OrderManager is Initializable, OwnableUpgradeable {
     using SafeERC20 for IERC20;
 
     struct OrderNonceInfo {
-        uint buyOrderNonce;
-        uint sellOrderNonce;
-        uint orderNonce;
+        uint256 buyOrderNonce;
+        uint256 sellOrderNonce;
+        uint256 orderNonce;
     }
 
     // create order function info in struct
@@ -35,22 +35,28 @@ contract NexVault is Initializable, OwnableUpgradeable {
     }
 
     OrderNonceInfo public orderNonceInfo;
-    address usdcAddress;
+    address public usdcAddress;
 
     mapping(address => bool) public isOperator;
-    mapping(uint => OrderInfo) public orderInfo; // mapping of orderNonce to OrderInfo
+    mapping(uint256 => OrderInfo) public orderInfo; // mapping of orderNonce to OrderInfo
 
     event FundsWithdrawn(address token, address to, uint256 amount);
-    event OrderCreated(uint indexed orderNonce, address indexed user, bool isBuyOrder, address inputToken, uint256 inputAmount, address outputToken, uint256 outputAmount);
+    event OrderCreated(
+        uint256 indexed orderNonce,
+        address indexed user,
+        bool isBuyOrder,
+        address inputToken,
+        uint256 inputAmount,
+        address outputToken,
+        uint256 outputAmount
+    );
 
     modifier onlyOperator() {
         require(isOperator[msg.sender], "NexVault: caller is not an operator");
         _;
     }
 
-    function initialize(
-        address _usdcAddress
-        ) external initializer {
+    function initialize(address _usdcAddress) external initializer {
         __Ownable_init(msg.sender);
         usdcAddress = _usdcAddress;
     }
@@ -69,7 +75,7 @@ contract NexVault is Initializable, OwnableUpgradeable {
     }
 
     function _increaseOrderNonce(bool isBuyOrder) internal {
-        if(isBuyOrder) {
+        if (isBuyOrder) {
             orderNonceInfo.buyOrderNonce += 1;
         } else {
             orderNonceInfo.sellOrderNonce += 1;
@@ -84,11 +90,9 @@ contract NexVault is Initializable, OwnableUpgradeable {
         IERC20(_inputToken).safeTransferFrom(msg.sender, address(this), _amount);
     }
 
-    function _initializeOrder(
-        CreateOrderConfig memory _config
-    ) internal {
+    function _initializeOrder(CreateOrderConfig memory _config) internal {
         // logic to initialize buy order
-        if(_config.isBuyOrder) {
+        if (_config.isBuyOrder) {
             orderInfo[orderNonceInfo.orderNonce] = OrderInfo({
                 targetTokenAddress: _config.outputTokenAddress,
                 assetType: _config.assetType,
@@ -112,9 +116,7 @@ contract NexVault is Initializable, OwnableUpgradeable {
         }
     }
 
-    function createOrder(
-        CreateOrderConfig memory _config
-    ) external onlyOperator returns(uint orderNonce) {
+    function createOrder(CreateOrderConfig memory _config) external onlyOperator returns (uint256 orderNonce) {
         // increasing order nonce
         _increaseOrderNonce(_config.isBuyOrder);
         // transfer USDC from caller to order manager contract
@@ -122,12 +124,19 @@ contract NexVault is Initializable, OwnableUpgradeable {
         // initialize the order based on buy or sell
         _initializeOrder(_config);
         // emit the event
-        emit OrderCreated(orderNonceInfo.orderNonce, msg.sender, _config.isBuyOrder, _config.inputTokenAddress, _config.inputTokenAmount, _config.outputTokenAddress, _config.outputTokenAmount);
+        emit OrderCreated(
+            orderNonceInfo.orderNonce,
+            msg.sender,
+            _config.isBuyOrder,
+            _config.inputTokenAddress,
+            _config.inputTokenAmount,
+            _config.outputTokenAddress,
+            _config.outputTokenAmount
+        );
         return orderNonceInfo.orderNonce;
     }
 
-
-    function completeOrder(uint _orderNonce) external onlyOperator {
+    function completeOrder(uint256 _orderNonce) external onlyOperator {
         require(_orderNonce > 0 && _orderNonce <= orderNonceInfo.orderNonce, "OrderManager: invalid order nonce");
         OrderInfo storage order = orderInfo[_orderNonce];
         require(!order.isExecuted, "OrderManager: order already executed");
