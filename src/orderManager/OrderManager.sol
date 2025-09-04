@@ -4,10 +4,10 @@ pragma solidity 0.8.25;
 import {SafeERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-
-contract NexVault is Initializable, OwnableUpgradeable {
+ 
+contract OrderManager is Initializable, OwnableUpgradeable {
     using SafeERC20 for IERC20;
-
+ 
     struct OrderNonceInfo {
         uint buyOrderNonce;
         uint sellOrderNonce;
