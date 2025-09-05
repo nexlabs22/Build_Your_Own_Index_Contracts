@@ -8,7 +8,8 @@ import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/Own
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-import "../orderManager/OrderManager.sol";
+import {OrderManager} from "../orderManager/OrderManager.sol";
+import {FunctionsOracle} from "../oracle/FunctionsOracle.sol";
 
 error ZeroAmount();
 error ZeroAddress();
@@ -18,6 +19,7 @@ contract IndexFactory is Initializable, OwnableUpgradeable, PausableUpgradeable,
     using SafeERC20 for IERC20;
 
     OrderManager public orderManager;
+    FunctionsOracle public functionsOracle;
     uint256 public issuanceNonce;
     uint256 public redemptionNonce;
 
@@ -25,9 +27,13 @@ contract IndexFactory is Initializable, OwnableUpgradeable, PausableUpgradeable,
 
     event SupportedIndexTokenUpdated(address indexed token, bool isSupported);
 
-    function initialize(address _orderManager) external initializer {
+    uint256 private constant SHARE_DENOMINATOR = 100e18;
+
+    function initialize(address _orderManager, address _functionsOracle) external initializer {
         require(_orderManager != address(0), "Invalid address for _orderManager");
+        require(_functionsOracle != address(0), "Invalid address for _functionsOracle");
         orderManager = OrderManager(_orderManager);
+        functionsOracle = FunctionsOracle(_functionsOracle);
 
         __Ownable_init(msg.sender);
         __Pausable_init();
@@ -53,17 +59,45 @@ contract IndexFactory is Initializable, OwnableUpgradeable, PausableUpgradeable,
         address usdc = orderManager.usdcAddress();
         IERC20(usdc).safeTransferFrom(msg.sender, address(this), amount);
 
-        IERC20(usdc).approve(address(orderManager), 0);
-        OrderManager.CreateOrderConfig memory cfg = OrderManager.CreateOrderConfig({
-            inputTokenAddress: usdc,
-            outputTokenAddress: indexToken,
-            assetType: uint64(1), // 1 = ERC20
-            inputTokenAmount: amount, // USDC sent in
-            outputTokenAmount: 0, // unknown at creation time
-            isBuyOrder: true
-        });
+        uint256 underlyingAssets = functionsOracle.totalCurrentList(indexToken);
+        require(underlyingAssets > 0, "IndexFactory: no underlyings");
 
-        orderNonce = orderManager.createOrder(cfg);
+        IERC20(usdc).approve(address(orderManager), 0);
+
+        uint256 allocated; // keeps track of sum of per-order amounts to fix rounding dust
+
+        for (uint256 i = 0; i < underlyingAssets; i++) {
+            address underlying = functionsOracle.currentList(indexToken, i);
+            require(underlying != address(0), "IndexFactory: invalid underlying");
+
+            uint256 marketShare = functionsOracle.tokenCurrentMarketShare(indexToken, underlying);
+            // Pro-rata USDC = amount * share / 100e18
+            uint256 share = (amount * marketShare) / SHARE_DENOMINATOR;
+
+            if (i == underlyingAssets - 1) {
+                share = amount - allocated;
+            } else {
+                allocated += share;
+            }
+
+            if (share == 0) {
+                // Skip zero-sized legs to avoid pointless orders
+                continue;
+            }
+
+            OrderManager.CreateOrderConfig memory cfg = OrderManager.CreateOrderConfig({
+                inputTokenAddress: usdc,
+                outputTokenAddress: underlying, // buy the underlying directly
+                assetType: uint64(1), // ERC20
+                inputTokenAmount: share,
+                outputTokenAmount: 0, // unknown at creation time
+                isBuyOrder: true
+            });
+
+            orderNonce = orderManager.createOrder(cfg);
+
+            // lastOrderNonce = orderManager.createOrder(cfg);
+        }
 
         // @notice Should manage this nonce for each index token
         issuanceNonce += 1;
@@ -107,6 +141,11 @@ contract IndexFactory is Initializable, OwnableUpgradeable, PausableUpgradeable,
         if (token == address(0)) revert ZeroAddress();
         supportedIndexTokens[token] = status;
         emit SupportedIndexTokenUpdated(token, status);
+    }
+
+    function setFunctionsOracle(address _oracle) external onlyOwner {
+        if (_oracle == address(0)) revert ZeroAddress();
+        functionsOracle = FunctionsOracle(_oracle);
     }
 
     // /**

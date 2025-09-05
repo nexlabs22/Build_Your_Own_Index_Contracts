@@ -7,6 +7,8 @@ import "../utils/chainlink/FunctionsClient.sol";
 import "../utils/chainlink/ConfirmedOwner.sol";
 import "@chainlink/contracts/src/v0.8/functions/v1_0_0/libraries/FunctionsRequest.sol";
 
+error InvalidAddress();
+
 /// @title FunctionsOracle
 /// @notice Stores data and provides functions for managing index token issuance and redemption
 contract FunctionsOracle is Initializable, FunctionsClient, ConfirmedOwner {
@@ -19,21 +21,24 @@ contract FunctionsOracle is Initializable, FunctionsClient, ConfirmedOwner {
     address public functionsRouterAddress;
     uint256 public lastUpdateTime;
 
-    // Total number of oracles and current list
-    uint256 public totalOracleList;
-    uint256 public totalCurrentList;
+    // Total number of oracles and current list3
+    mapping(address => uint256) public totalOracleList;
+    mapping(address => uint256) public totalCurrentList;
+    // // Total number of oracles and current list3
+    // uint256 public totalOracleList;
+    // uint256 public totalCurrentList;
 
     // Mappings for oracle and current lists
-    mapping(uint256 => address) public oracleList;
-    mapping(uint256 => address) public currentList;
+    mapping(address => mapping(uint256 => address)) public oracleList;
+    mapping(address => mapping(uint256 => address)) public currentList;
 
     // Mappings for token indices
-    mapping(address => uint256) public tokenOracleListIndex;
-    mapping(address => uint256) public tokenCurrentListIndex;
+    mapping(address => mapping(address => uint256)) public tokenOracleListIndex;
+    mapping(address => mapping(address => uint256)) public tokenCurrentListIndex;
 
     // Mappings for token market shares
-    mapping(address => uint256) public tokenCurrentMarketShare;
-    mapping(address => uint256) public tokenOracleMarketShare;
+    mapping(address => mapping(address => uint256)) public tokenCurrentMarketShare;
+    mapping(address => mapping(address => uint256)) public tokenOracleMarketShare;
 
     mapping(address => bool) public isOperator;
 
@@ -106,43 +111,68 @@ contract FunctionsOracle is Initializable, FunctionsClient, ConfirmedOwner {
      * Either response or error parameter will be set, but never both
      */
     function fulfillRequest(bytes32 requestId, bytes memory response, bytes memory err) internal override {
-        (address[] memory _tokens, uint256[] memory _marketShares) = abi.decode(response, (address[], uint256[]));
+        // require(requestId != bytes32(0), "invalid request id");
+
+        (address[] memory _indexTokens, address[] memory _tokens, uint256[] memory _marketShares) =
+            abi.decode(response, (address[], address[], uint256[]));
+        require(_indexTokens.length == _tokens.length, "length mismatch");
+        require(_marketShares.length == _tokens.length, "length mismatch");
+        require(_indexTokens.length > 0, "invalid index token addresses");
         require(requestId.length > 0, "invalid request id");
         require(_tokens.length > 0, "invalid tokens");
         require(_marketShares.length > 0, "invalid market shares");
-        _initData(_tokens, _marketShares);
+        _initData(_indexTokens, _tokens, _marketShares);
     }
 
-    function _initData(address[] memory _tokens, uint256[] memory _marketShares) private {
+    function _initData(address[] memory _indexTokens, address[] memory _tokens, uint256[] memory _marketShares)
+        private
+    {
+        address[] memory indexTokens = _indexTokens;
         address[] memory tokens0 = _tokens;
         uint256[] memory marketShares0 = _marketShares;
 
         // //save mappings
-        for (uint256 i = 0; i < tokens0.length; i++) {
-            oracleList[i] = tokens0[i];
-            tokenOracleListIndex[tokens0[i]] = i;
-            tokenOracleMarketShare[tokens0[i]] = marketShares0[i];
-            if (totalCurrentList == 0) {
-                currentList[i] = tokens0[i];
-                tokenCurrentMarketShare[tokens0[i]] = marketShares0[i];
-                tokenCurrentListIndex[tokens0[i]] = i;
+        for (uint256 i = 0; i < indexTokens.length; i++) {
+            address indexToken = indexTokens[i];
+            address token = tokens0[i];
+            uint256 share = marketShares0[i];
+
+            if (indexToken == address(0)) revert InvalidAddress();
+            if (token == address(0)) revert InvalidAddress();
+
+            oracleList[indexToken][i] = token;
+            tokenOracleListIndex[indexToken][token] = i;
+            tokenOracleMarketShare[indexToken][token] = share;
+
+            if (totalCurrentList[indexToken] == 0) {
+                currentList[indexToken][i] = token;
+                tokenCurrentMarketShare[indexToken][token] = share;
+                tokenCurrentListIndex[indexToken][token] = i;
             }
-        }
-        totalOracleList = tokens0.length;
-        if (totalCurrentList == 0) {
-            totalCurrentList = tokens0.length;
+
+            // FIX: per-index totals must reflect the highest slot we touched for that index token,
+            // not the global tokens array length.
+            uint256 candidateLen = i + 1;
+            if (totalOracleList[indexToken] < candidateLen) {
+                totalOracleList[indexToken] = candidateLen;
+
+                // if we're in bootstrap mode (first time), mirror oracle length into current length
+                if (totalCurrentList[indexToken] == 0) {
+                    totalCurrentList[indexToken] = candidateLen;
+                }
+            }
         }
         lastUpdateTime = block.timestamp;
     }
 
-    function updateCurrentList() external {
-        require(msg.sender == factoryBalancerAddress, "caller must be factory balancer");
-        totalCurrentList = totalOracleList;
-        for (uint256 i = 0; i < totalOracleList; i++) {
-            address tokenAddress = oracleList[i];
-            currentList[i] = tokenAddress;
-            tokenCurrentMarketShare[tokenAddress] = tokenOracleMarketShare[tokenAddress];
-            tokenCurrentListIndex[tokenAddress] = i;
+    function updateCurrentList(address _indexToken) external {
+        // require(msg.sender == factoryBalancerAddress, "caller must be factory balancer");
+        totalCurrentList[_indexToken] = totalOracleList[_indexToken];
+        for (uint256 i = 0; i < totalOracleList[_indexToken]; i++) {
+            address tokenAddress = oracleList[_indexToken][i];
+            currentList[_indexToken][i] = tokenAddress;
+            tokenCurrentMarketShare[_indexToken][tokenAddress] = tokenOracleMarketShare[_indexToken][tokenAddress];
+            tokenCurrentListIndex[_indexToken][tokenAddress] = i;
         }
     }
 }
