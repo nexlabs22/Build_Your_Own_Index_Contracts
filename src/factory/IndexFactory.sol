@@ -24,6 +24,7 @@ contract IndexFactory is Initializable, OwnableUpgradeable, PausableUpgradeable,
     uint256 public redemptionNonce;
 
     mapping(address => bool) public supportedIndexTokens;
+    mapping(address => uint64) public assetsTypes;
 
     event SupportedIndexTokenUpdated(address indexed token, bool isSupported);
 
@@ -88,7 +89,7 @@ contract IndexFactory is Initializable, OwnableUpgradeable, PausableUpgradeable,
             OrderManager.CreateOrderConfig memory cfg = OrderManager.CreateOrderConfig({
                 inputTokenAddress: usdc,
                 outputTokenAddress: underlying, // buy the underlying directly
-                assetType: uint64(1), // ERC20
+                assetType: assetsTypes[underlying], // ERC20
                 inputTokenAmount: share,
                 outputTokenAmount: 0, // unknown at creation time
                 isBuyOrder: true
@@ -110,7 +111,7 @@ contract IndexFactory is Initializable, OwnableUpgradeable, PausableUpgradeable,
         payable
         whenNotPaused
         nonReentrant
-        returns (uint256 nonce)
+        returns (uint256 orderNonce)
     {
         if (amount == 0) revert ZeroAmount();
         if (indexToken == address(0)) revert ZeroAddress();
@@ -118,19 +119,45 @@ contract IndexFactory is Initializable, OwnableUpgradeable, PausableUpgradeable,
 
         IERC20(indexToken).safeTransferFrom(msg.sender, address(this), amount);
 
-        IERC20(indexToken).approve(address(orderManager), 0);
+        uint256 underlyingAssets = functionsOracle.totalCurrentList(indexToken);
+        require(underlyingAssets > 0, "IndexFactory: no underlyings");
 
-        OrderManager.CreateOrderConfig memory cfg = OrderManager.CreateOrderConfig({
-            inputTokenAddress: indexToken, // we're selling the index token
-            outputTokenAddress: address(0), // unknown for now
-            assetType: uint64(1), // 1 = ERC20
-            inputTokenAmount: amount, // amount of index token to sell
-            outputTokenAmount: 0, // unknown at creation
-            isBuyOrder: false // SELL order
-        });
+        IERC20(indexToken).approve(address(orderManager), amount);
 
-        // Create order in OrderManager (this contract must be an operator)
-        uint256 orderNonce = orderManager.createOrder(cfg);
+        uint256 allocated;
+
+        for (uint256 i = 0; i < underlyingAssets; i++) {
+            address underlying = functionsOracle.currentList(indexToken, i);
+            require(underlying != address(0), "IndexFactory: invalid underlying");
+
+            uint256 marketShare = functionsOracle.tokenCurrentMarketShare(indexToken, underlying);
+
+            // Pro-rata index tokens to sell for this leg
+            uint256 part = (amount * marketShare) / SHARE_DENOMINATOR;
+
+            // Push rounding dust to the last leg
+            if (i == underlyingAssets - 1) {
+                part = amount - allocated;
+            } else {
+                allocated += part;
+            }
+
+            if (part == 0) {
+                continue; // skip zero-sized legs
+            }
+
+            // SELL order: input = indexToken, output (hint) = underlying
+            OrderManager.CreateOrderConfig memory cfg = OrderManager.CreateOrderConfig({
+                inputTokenAddress: indexToken,
+                outputTokenAddress: underlying, // informational; OrderManager stores input token for sells
+                assetType: assetsTypes[indexToken], // selling the index token
+                inputTokenAmount: part,
+                outputTokenAmount: 0,
+                isBuyOrder: false
+            });
+
+            orderNonce = orderManager.createOrder(cfg);
+        }
 
         redemptionNonce += 1;
 
@@ -146,6 +173,19 @@ contract IndexFactory is Initializable, OwnableUpgradeable, PausableUpgradeable,
     function setFunctionsOracle(address _oracle) external onlyOwner {
         if (_oracle == address(0)) revert ZeroAddress();
         functionsOracle = FunctionsOracle(_oracle);
+    }
+
+    function setAssetType(address token, uint64 assetType) external onlyOwner {
+        if (token == address(0)) revert ZeroAddress();
+        assetsTypes[token] = assetType;
+    }
+
+    function setAssetTypes(address[] calldata tokens, uint64[] calldata assetTypes) external onlyOwner {
+        require(tokens.length == assetTypes.length, "length mismatch");
+        for (uint256 i = 0; i < tokens.length; i++) {
+            if (tokens[i] == address(0)) revert ZeroAddress();
+            assetsTypes[tokens[i]] = assetTypes[i];
+        }
     }
 
     // /**
