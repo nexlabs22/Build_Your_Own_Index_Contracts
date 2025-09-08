@@ -8,4 +8,4 @@ openzeppelin-contracts-upgradeable/=lib/openzeppelin-contracts-upgradeable/
 openzeppelin-contracts/=lib/openzeppelin-contracts/
 openzeppelin-foundry-upgrades/=lib/openzeppelin-foundry-upgrades/src/
 openzeppelin-upgrades/=lib/openzeppelin-upgrades/
-@chainlink/contracts-ccip/=lib/ccip/contracts
+@chainlink/contracts-ccip/=lib/contracts-ccip/evm
