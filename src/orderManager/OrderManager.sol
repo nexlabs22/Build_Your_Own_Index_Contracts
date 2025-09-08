@@ -16,12 +16,14 @@ contract OrderManager is Initializable, OwnableUpgradeable {
 
     // create order function info in struct
     struct CreateOrderConfig {
+        uint256 requestNonce;
         address inputTokenAddress;
         address outputTokenAddress;
         uint64 assetType; // 1 for ERC20, 2 for ERC721,
         uint256 inputTokenAmount;
         uint256 outputTokenAmount; // for buy order, this will be 0 initially
         bool isBuyOrder;
+        uint256 burnPercent;
     }
 
     struct OrderInfo {

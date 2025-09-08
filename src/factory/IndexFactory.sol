@@ -10,6 +10,8 @@ import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol
 
 import {OrderManager} from "../orderManager/OrderManager.sol";
 import {FunctionsOracle} from "../oracle/FunctionsOracle.sol";
+import {IndexFactoryStorage} from "./IndexFactoryStorage.sol";
+import {IndexToken} from "../token/IndexToken.sol";
 
 error ZeroAmount();
 error ZeroAddress();
@@ -20,6 +22,7 @@ contract IndexFactory is Initializable, OwnableUpgradeable, PausableUpgradeable,
 
     OrderManager public orderManager;
     FunctionsOracle public functionsOracle;
+    IndexFactoryStorage public factoryStorage;
     uint256 public issuanceNonce;
     uint256 public redemptionNonce;
 
@@ -30,11 +33,12 @@ contract IndexFactory is Initializable, OwnableUpgradeable, PausableUpgradeable,
 
     uint256 private constant SHARE_DENOMINATOR = 100e18;
 
-    function initialize(address _orderManager, address _functionsOracle) external initializer {
+    function initialize(address _orderManager, address _functionsOracle, address _factoryStorage) external initializer {
         require(_orderManager != address(0), "Invalid address for _orderManager");
         require(_functionsOracle != address(0), "Invalid address for _functionsOracle");
         orderManager = OrderManager(_orderManager);
         functionsOracle = FunctionsOracle(_functionsOracle);
+        factoryStorage = IndexFactoryStorage(_factoryStorage);        
 
         __Ownable_init(msg.sender);
         __Pausable_init();
@@ -87,12 +91,14 @@ contract IndexFactory is Initializable, OwnableUpgradeable, PausableUpgradeable,
             }
 
             OrderManager.CreateOrderConfig memory cfg = OrderManager.CreateOrderConfig({
+                requestNonce: issuanceNonce,
                 inputTokenAddress: usdc,
                 outputTokenAddress: underlying, // buy the underlying directly
                 assetType: assetsTypes[underlying], // ERC20
                 inputTokenAmount: share,
                 outputTokenAmount: 0, // unknown at creation time
-                isBuyOrder: true
+                isBuyOrder: true,
+                burnPercent: 0
             });
 
             orderNonce = orderManager.createOrder(cfg);
@@ -104,6 +110,54 @@ contract IndexFactory is Initializable, OwnableUpgradeable, PausableUpgradeable,
         issuanceNonce += 1;
 
         return orderNonce;
+    }
+
+
+    // order manager calls this
+    function handleCompleteIssuance(
+        uint256 _issuanceNonce,
+        address _indexToken,
+        address _underlyingTokenAddress, 
+        uint256 _oldTokenValue,
+        uint256 _newTokenValue
+    ) public {
+        // storing data in the mapping
+        factoryStorage.setOldTokenValue(msg.sender, _underlyingTokenAddress, _issuanceNonce, _oldTokenValue);
+        factoryStorage.setNewTokenValue(msg.sender, _underlyingTokenAddress, _issuanceNonce, _newTokenValue);
+
+        // incrementing issuance completed count
+        factoryStorage.incrementIssuanceCompletedAssetsCount(_indexToken, _issuanceNonce);
+
+        // calling complete issuance
+        if(factoryStorage.issuanceCompletedAssetsCount(_indexToken, _issuanceNonce) == functionsOracle.totalCurrentList(_indexToken))
+        completeIssuance(_issuanceNonce, _indexToken);
+    }
+
+
+    function completeIssuance(
+        uint256 _issuanceNonce,
+        address _indexToken
+    ) public {
+        uint256 totalOldValues;
+        uint256 totalNewValues;
+
+        for (uint256 i = 0; i <= _issuanceNonce; i++) {
+            address _underlyingTokenAddress = functionsOracle.currentList(_indexToken, i);
+            totalOldValues += factoryStorage.oldTokenValue(_indexToken, _underlyingTokenAddress, i);
+            totalNewValues += factoryStorage.newTokenValue(_indexToken, _underlyingTokenAddress, i);
+        }
+
+        require(totalNewValues > totalOldValues, "IndexFactory: no new tokens to mint");
+
+        // calculate the mint amount
+        uint256 totalSupply = IERC20(_indexToken).totalSupply();
+        uint256 newTotalSupply = (totalSupply * totalNewValues) / totalOldValues;
+        uint256 mintAmount = newTotalSupply - totalSupply;
+
+        // mint index token for requester
+        address requester = factoryStorage.issuanceRequester(_indexToken, _issuanceNonce);
+        require(requester != address(0), "IndexFactory: invalid requester");
+        IndexToken(_indexToken).mint(requester, mintAmount);
     }
 
     function redemption(address indexToken, uint256 amount)
@@ -148,12 +202,14 @@ contract IndexFactory is Initializable, OwnableUpgradeable, PausableUpgradeable,
 
             // SELL order: input = indexToken, output (hint) = underlying
             OrderManager.CreateOrderConfig memory cfg = OrderManager.CreateOrderConfig({
+                requestNonce: redemptionNonce,
                 inputTokenAddress: indexToken,
                 outputTokenAddress: underlying, // informational; OrderManager stores input token for sells
                 assetType: assetsTypes[indexToken], // selling the index token
                 inputTokenAmount: part,
                 outputTokenAmount: 0,
-                isBuyOrder: false
+                isBuyOrder: false,
+                burnPercent: 0
             });
 
             orderNonce = orderManager.createOrder(cfg);
@@ -162,6 +218,35 @@ contract IndexFactory is Initializable, OwnableUpgradeable, PausableUpgradeable,
         redemptionNonce += 1;
 
         return orderNonce;
+    }
+
+    function handleCompleteRedemption(
+        uint256 _redemptionNonce,
+        address _indexToken,
+        address _underlyingTokenAddress, 
+        uint256 _outputValue
+    ) public {
+        // storing data in the mapping
+        factoryStorage.setRedemptionOutputValuePerToken(_redemptionNonce, _indexToken, _underlyingTokenAddress, _outputValue);
+
+        // incrementing redemption completed count
+        factoryStorage.incrementRedemptionCompletedAssetsCount(_indexToken, _redemptionNonce);
+
+        // calling complete redemption
+        if(factoryStorage.redemptionCompletedAssetsCount(_indexToken, _redemptionNonce) == functionsOracle.totalCurrentList(_indexToken))
+        completeRedemption(_redemptionNonce, _indexToken);
+    }
+
+    function completeRedemption(
+        uint256 _redemptionNonce,
+        address _indexToken
+    ) public {
+        uint256 totalOutputValue = factoryStorage.redemptionTotalOutputValue(_indexToken, _redemptionNonce);
+        require(totalOutputValue > 0, "IndexFactory: no output value");
+        address requester = factoryStorage.redemptionRequester(_indexToken, _redemptionNonce);
+        require(requester != address(0), "IndexFactory: invalid requester");
+        address usdc = orderManager.usdcAddress();
+        IERC20(usdc).safeTransfer(requester, totalOutputValue);
     }
 
     function setSupportedIndexToken(address token, bool status) external onlyOwner {
