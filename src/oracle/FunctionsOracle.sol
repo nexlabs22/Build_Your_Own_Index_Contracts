@@ -24,6 +24,8 @@ contract FunctionsOracle is Initializable, FunctionsClient, ConfirmedOwner {
     address public functionsRouterAddress;
     uint256 public lastUpdateTime;
 
+    uint64 public maxAssetTypes; // Maximum number of asset types supported
+
     // Total number of oracles and current list3
     mapping(address => uint256) public totalOracleList;
     mapping(address => uint256) public totalCurrentList;
@@ -47,7 +49,7 @@ contract FunctionsOracle is Initializable, FunctionsClient, ConfirmedOwner {
         public tokenOracleMarketShare;
 
     // mappings for tokens of each asset type
-    mapping(address => uint256) public tokenAssetType;
+    mapping(address => uint64) public tokenAssetType;
 
     // chain selector for each token
     mapping(address => uint64) public tokenChainSelector;
@@ -65,32 +67,32 @@ contract FunctionsOracle is Initializable, FunctionsClient, ConfirmedOwner {
         address[] tokens;
         uint[] marketShares;
         uint64[] chainSelectors;
-        uint256[] assetTypes;
+        uint64[] assetTypes;
         mapping(uint64 => bool) isOracleChainSelectorStored;
         mapping(uint64 => address[]) oracleChainSelectorTokens;
         mapping(uint64 => uint[]) oracleChainSelectorVersions;
         mapping(uint64 => uint[]) oracleChainSelectorTokenShares;
         mapping(uint64 => uint) oracleChainSelectorTotalShares;
-        mapping(uint256 => bool) isOracleAssetTypeStored;
-        mapping(uint256 => address[]) oracleAssetTypeTokens;
-        mapping(uint256 => uint[]) oracleAssetTypeTokenShares;
-        mapping(uint256 => uint) oracleAssetTypeTotalShares;
+        mapping(uint64 => bool) isOracleAssetTypeStored;
+        mapping(uint64 => address[]) oracleAssetTypeTokens;
+        mapping(uint64 => uint[]) oracleAssetTypeTokenShares;
+        mapping(uint64 => uint) oracleAssetTypeTotalShares;
     }
 
     struct CurrentData {
         address[] tokens;
         uint[] marketShares;
         uint64[] chainSelectors;
-        uint256[] assetTypes;
+        uint64[] assetTypes;
         mapping(uint64 => bool) isCurrentChainSelectorStored;
         mapping(uint64 => address[]) currentChainSelectorTokens;
         mapping(uint64 => uint[]) currentChainSelectorVersions;
         mapping(uint64 => uint[]) currentChainSelectorTokenShares;
         mapping(uint64 => uint) currentChainSelectorTotalShares;
-        mapping(uint256 => bool) isCurrentAssetTypeStored;
-        mapping(uint256 => address[]) currentAssetTypeTokens;
-        mapping(uint256 => uint[]) currentAssetTypeTokenShares;
-        mapping(uint256 => uint) currentAssetTypeTotalShares;
+        mapping(uint64 => bool) isCurrentAssetTypeStored;
+        mapping(uint64 => address[]) currentAssetTypeTokens;
+        mapping(uint64 => uint[]) currentAssetTypeTokenShares;
+        mapping(uint64 => uint) currentAssetTypeTotalShares;
     }
 
     mapping(address => mapping(uint256 => OracleData)) internal oracleData;
@@ -124,6 +126,7 @@ contract FunctionsOracle is Initializable, FunctionsClient, ConfirmedOwner {
         __ConfirmedOwner_init(msg.sender);
         donId = _newDonId;
         functionsRouterAddress = _functionsRouterAddress;
+        maxAssetTypes = 3;
     }
 
     /// @custom:oz-upgrades-unsafe-allow constructor
@@ -166,6 +169,11 @@ contract FunctionsOracle is Initializable, FunctionsClient, ConfirmedOwner {
             "invalid factory balancer address"
         );
         factoryBalancerAddress = _factoryBalancerAddress;
+    }
+
+    function setMaxAssetTypes(uint64 _maxAssetTypes) public onlyOwner {
+        require(_maxAssetTypes > 0, "max asset types must be greater than zero");
+        maxAssetTypes = _maxAssetTypes;
     }
 
     function requestAssetsData(
@@ -270,7 +278,7 @@ contract FunctionsOracle is Initializable, FunctionsClient, ConfirmedOwner {
     function _initAssetTypesOracleData(
         address indexToken,
         address token,
-        uint256 assetType,
+        uint64 assetType,
         uint256 marketShare
     ) internal {
         uint256 oracleFilledCount0 = oracleFilledCount[indexToken];
@@ -297,7 +305,7 @@ contract FunctionsOracle is Initializable, FunctionsClient, ConfirmedOwner {
     function _initAssetTypesCurrentData(
         address indexToken,
         address token,
-        uint256 assetType,
+        uint64 assetType,
         uint256 marketShare
     ) internal {
         uint256 currentFilledCount0 = currentFilledCount[indexToken];
@@ -345,7 +353,7 @@ contract FunctionsOracle is Initializable, FunctionsClient, ConfirmedOwner {
             tokenOracleMarketShare[indexToken][token] = share;
 
             uint64 chainSelector = tokenChainSelector[token];
-            uint256 assetType = tokenAssetType[token];
+            uint64 assetType = tokenAssetType[token];
             if (chainSelector == 0) revert ChainSelectorIsZero();
             if (assetType == 0) revert AssetTypeIsZero();
             // oracle asset type actions
@@ -411,7 +419,7 @@ contract FunctionsOracle is Initializable, FunctionsClient, ConfirmedOwner {
 
             // current chain selector actions
             uint64 chainSelector = tokenChainSelector[tokenAddress];
-            uint256 tokenAssetType0 = tokenAssetType[tokenAddress];
+            uint64 tokenAssetType0 = tokenAssetType[tokenAddress];
             _initAssetTypesCurrentData(_indexToken, tokenAddress, tokenAssetType0, tokenOracleMarketShare[_indexToken][tokenAddress]);
             if (tokenAssetType0 == 2) {
                 _initChainSelectorsCurrentData(_indexToken, chainSelector, tokenAddress, tokenOracleMarketShare[_indexToken][tokenAddress]);
@@ -421,7 +429,7 @@ contract FunctionsOracle is Initializable, FunctionsClient, ConfirmedOwner {
     }
 
     function updatePathData(
-        uint256[] memory assetTypes,
+        uint64[] memory assetTypes,
         uint64[] memory chainSelectors,
         bytes[] memory pathBytes
     ) public onlyOwnerOrOperator {
@@ -437,7 +445,7 @@ contract FunctionsOracle is Initializable, FunctionsClient, ConfirmedOwner {
     }
 
     function _initPathData(
-        uint256 _assetType,
+        uint64 _assetType,
         uint64 _chainSelector,
         bytes memory _pathBytes
     ) internal {
@@ -523,6 +531,20 @@ contract FunctionsOracle is Initializable, FunctionsClient, ConfirmedOwner {
         return (data.tokens, data.marketShares, data.chainSelectors);
     }
 
+    function getCurrentAssetTypes(
+        address indexToken,
+        uint currentFilledCount
+    ) public view returns (uint64[] memory) {
+        return currentData[indexToken][currentFilledCount].assetTypes;
+    }
+
+    function getOracleAssetTypes(
+        address indexToken,
+        uint oracleFilledCount
+    ) public view returns (uint64[] memory) {
+        return oracleData[indexToken][oracleFilledCount].assetTypes;
+    }
+
     function getCurrentChainSelectorTotalShares(
         address indexToken,
         uint currentFilledCount,
@@ -543,7 +565,7 @@ contract FunctionsOracle is Initializable, FunctionsClient, ConfirmedOwner {
     function getCurrentAssetTypeTotalShares(
         address indexToken,
         uint currentFilledCount,
-        uint256 assetType
+        uint64 assetType
     ) public view returns (uint) {
         return
             currentData[indexToken][currentFilledCount].currentAssetTypeTotalShares[assetType];
@@ -552,8 +574,8 @@ contract FunctionsOracle is Initializable, FunctionsClient, ConfirmedOwner {
     function getCurrentAssetTypeData(
         address indexToken,
         uint currentFilledCount,
-        uint256 assetType
-    ) public view returns (uint totalShares, address[] memory, uint[] memory) {
+        uint64 assetType
+    ) public view returns (uint, address[] memory, uint[] memory) {
         return (
             currentData[indexToken][currentFilledCount].currentAssetTypeTotalShares[assetType],
             currentData[indexToken][currentFilledCount].currentAssetTypeTokens[assetType],
