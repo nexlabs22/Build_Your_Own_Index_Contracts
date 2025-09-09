@@ -47,7 +47,7 @@ contract FunctionsOracle is Initializable, FunctionsClient, ConfirmedOwner {
         public tokenOracleMarketShare;
 
     // mappings for tokens of each asset type
-    mapping(address => mapping(address => uint256)) public tokenAssetType;
+    mapping(address => uint256) public tokenAssetType;
 
     // chain selector for each token
     mapping(address => uint64) public tokenChainSelector;
@@ -58,8 +58,8 @@ contract FunctionsOracle is Initializable, FunctionsClient, ConfirmedOwner {
     mapping(address => uint24[]) public fromETHFees;
     mapping(address => uint24[]) public toETHFees;
 
-    uint public oracleFilledCount;
-    uint public currentFilledCount;
+    mapping(address => uint256) public oracleFilledCount;
+    mapping(address => uint256) public currentFilledCount;
 
     struct OracleData {
         address[] tokens;
@@ -218,24 +218,24 @@ contract FunctionsOracle is Initializable, FunctionsClient, ConfirmedOwner {
         address token,
         uint256 marketShares
     ) internal {
+        uint256 oracleFilledCount0 = oracleFilledCount[indexToken];
         if (
-            !oracleData[indexToken][oracleFilledCount].isOracleChainSelectorStored[
-                chainSelector
-            ]
+            !oracleData[indexToken][oracleFilledCount0]
+                .isOracleChainSelectorStored[chainSelector]
         ) {
-            oracleData[indexToken][oracleFilledCount].chainSelectors.push(chainSelector);
-            oracleData[indexToken][oracleFilledCount].isOracleChainSelectorStored[
+            oracleData[indexToken][oracleFilledCount0].chainSelectors.push(
                 chainSelector
-            ] = true;
+            );
+            oracleData[indexToken][oracleFilledCount0]
+                .isOracleChainSelectorStored[chainSelector] = true;
         }
-        oracleData[indexToken][oracleFilledCount]
+        oracleData[indexToken][oracleFilledCount0]
             .oracleChainSelectorTokens[chainSelector]
             .push(token);
-        oracleData[indexToken][oracleFilledCount].oracleChainSelectorTotalShares[
-            chainSelector
-        ] += marketShares;
+        oracleData[indexToken][oracleFilledCount0]
+            .oracleChainSelectorTotalShares[chainSelector] += marketShares;
 
-        oracleData[indexToken][oracleFilledCount]
+        oracleData[indexToken][oracleFilledCount0]
             .oracleChainSelectorTokenShares[chainSelector]
             .push(marketShares);
     }
@@ -246,25 +246,23 @@ contract FunctionsOracle is Initializable, FunctionsClient, ConfirmedOwner {
         address token,
         uint256 marketShares
     ) internal {
+        uint256 currentFilledCount0 = currentFilledCount[indexToken];
         if (
-            !currentData[indexToken][currentFilledCount].isCurrentChainSelectorStored[
-                chainSelector
-            ]
+            !currentData[indexToken][currentFilledCount0]
+                .isCurrentChainSelectorStored[chainSelector]
         ) {
-            currentData[indexToken][currentFilledCount].isCurrentChainSelectorStored[
-                chainSelector
-            ] = true;
-            currentData[indexToken][currentFilledCount].chainSelectors.push(
+            currentData[indexToken][currentFilledCount0]
+                .isCurrentChainSelectorStored[chainSelector] = true;
+            currentData[indexToken][currentFilledCount0].chainSelectors.push(
                 chainSelector
             );
         }
-        currentData[indexToken][currentFilledCount]
+        currentData[indexToken][currentFilledCount0]
             .currentChainSelectorTokens[chainSelector]
             .push(token);
-        currentData[indexToken][currentFilledCount].currentChainSelectorTotalShares[
-            chainSelector
-        ] += marketShares;
-        currentData[indexToken][currentFilledCount]
+        currentData[indexToken][currentFilledCount0]
+            .currentChainSelectorTotalShares[chainSelector] += marketShares;
+        currentData[indexToken][currentFilledCount0]
             .currentChainSelectorTokenShares[chainSelector]
             .push(marketShares);
     }
@@ -275,14 +273,25 @@ contract FunctionsOracle is Initializable, FunctionsClient, ConfirmedOwner {
         uint256 assetType,
         uint256 marketShare
     ) internal {
-        if(
-            !oracleData[indexToken][oracleFilledCount].isOracleAssetTypeStored[assetType]
+        uint256 oracleFilledCount0 = oracleFilledCount[indexToken];
+        if (
+            !oracleData[indexToken][oracleFilledCount0].isOracleAssetTypeStored[
+                assetType
+            ]
         ) {
-            oracleData[indexToken][oracleFilledCount].isOracleAssetTypeStored[assetType] = true;
-            oracleData[indexToken][oracleFilledCount].oracleAssetTypeTokens[assetType].push(token);
+            oracleData[indexToken][oracleFilledCount0].isOracleAssetTypeStored[
+                assetType
+            ] = true;
+            oracleData[indexToken][oracleFilledCount0]
+                .oracleAssetTypeTokens[assetType]
+                .push(token);
         }
-        oracleData[indexToken][oracleFilledCount].oracleAssetTypeTotalShares[assetType] += marketShare;
-        oracleData[indexToken][oracleFilledCount].oracleAssetTypeTokenShares[assetType].push(marketShare);
+        oracleData[indexToken][oracleFilledCount0].oracleAssetTypeTotalShares[
+            assetType
+        ] += marketShare;
+        oracleData[indexToken][oracleFilledCount0]
+            .oracleAssetTypeTokenShares[assetType]
+            .push(marketShare);
     }
 
     function _initAssetTypesCurrentData(
@@ -291,14 +300,22 @@ contract FunctionsOracle is Initializable, FunctionsClient, ConfirmedOwner {
         uint256 assetType,
         uint256 marketShare
     ) internal {
-        if(
-            !currentData[indexToken][currentFilledCount].isCurrentAssetTypeStored[assetType]
+        uint256 currentFilledCount0 = currentFilledCount[indexToken];
+        if (
+            !currentData[indexToken][currentFilledCount0]
+                .isCurrentAssetTypeStored[assetType]
         ) {
-            currentData[indexToken][currentFilledCount].isCurrentAssetTypeStored[assetType] = true;
-            currentData[indexToken][currentFilledCount].currentAssetTypeTokens[assetType].push(token);
+            currentData[indexToken][currentFilledCount0]
+                .isCurrentAssetTypeStored[assetType] = true;
+            currentData[indexToken][currentFilledCount0]
+                .currentAssetTypeTokens[assetType]
+                .push(token);
         }
-        currentData[indexToken][currentFilledCount].currentAssetTypeTotalShares[assetType] += marketShare;
-        currentData[indexToken][currentFilledCount].currentAssetTypeTokenShares[assetType].push(marketShare);
+        currentData[indexToken][currentFilledCount0]
+            .currentAssetTypeTotalShares[assetType] += marketShare;
+        currentData[indexToken][currentFilledCount0]
+            .currentAssetTypeTokenShares[assetType]
+            .push(marketShare);
     }
 
     function _initData(
@@ -310,9 +327,9 @@ contract FunctionsOracle is Initializable, FunctionsClient, ConfirmedOwner {
         address[] memory tokens0 = _tokens;
         uint256[] memory marketShares0 = _marketShares;
 
-        oracleFilledCount += 1;
+        oracleFilledCount[indexTokens[0]] += 1;
         if (totalCurrentList[indexTokens[0]] == 0) {
-            currentFilledCount += 1;
+            currentFilledCount[indexTokens[0]] += 1;
         }
         // //save mappings
         for (uint256 i = 0; i < tokens0.length; i++) {
@@ -328,22 +345,19 @@ contract FunctionsOracle is Initializable, FunctionsClient, ConfirmedOwner {
             tokenOracleMarketShare[indexToken][token] = share;
 
             uint64 chainSelector = tokenChainSelector[token];
-            uint256 assetType = tokenAssetType[indexToken][token];
+            uint256 assetType = tokenAssetType[token];
             if (chainSelector == 0) revert ChainSelectorIsZero();
             if (assetType == 0) revert AssetTypeIsZero();
             // oracle asset type actions
-            _initAssetTypesOracleData(
-                indexToken,
-                token, 
-                assetType, 
-                share);
+            _initAssetTypesOracleData(indexToken, token, assetType, share);
             // oracle chain selector actions
             if (assetType == 2) {
                 _initChainSelectorsOracleData(
                     indexToken,
-                    chainSelector, 
-                    token, 
-                    share);
+                    chainSelector,
+                    token,
+                    share
+                );
             }
 
             if (totalCurrentList[indexToken] == 0) {
@@ -351,11 +365,7 @@ contract FunctionsOracle is Initializable, FunctionsClient, ConfirmedOwner {
                 tokenCurrentMarketShare[indexToken][token] = share;
                 tokenCurrentListIndex[indexToken][token] = i;
                 // current asset type actions
-                _initAssetTypesCurrentData(
-                    indexToken,
-                    token, 
-                    assetType, 
-                    share);
+                _initAssetTypesCurrentData(indexToken, token, assetType, share);
                 // current chain selector actions
                 if (assetType == 2) {
                     _initChainSelectorsCurrentData(
@@ -389,6 +399,27 @@ contract FunctionsOracle is Initializable, FunctionsClient, ConfirmedOwner {
         }
     }
 
+
+    function _updateCurrentList(address _indexToken) internal {
+        currentFilledCount[_indexToken] += 1;
+        for (uint i = 0; i < totalOracleList[_indexToken]; i++) {
+            address tokenAddress = oracleList[_indexToken][i];
+            currentList[_indexToken][i] = tokenAddress;
+            tokenCurrentMarketShare[_indexToken][tokenAddress] = tokenOracleMarketShare[_indexToken][tokenAddress];
+            tokenCurrentListIndex[_indexToken][tokenAddress] = i;
+    
+
+            // current chain selector actions
+            uint64 chainSelector = tokenChainSelector[tokenAddress];
+            uint256 tokenAssetType0 = tokenAssetType[tokenAddress];
+            _initAssetTypesCurrentData(_indexToken, tokenAddress, tokenAssetType0, tokenOracleMarketShare[_indexToken][tokenAddress]);
+            if (tokenAssetType0 == 2) {
+                _initChainSelectorsCurrentData(_indexToken, chainSelector, tokenAddress, tokenOracleMarketShare[_indexToken][tokenAddress]);
+            }
+        }
+        totalCurrentList[_indexToken] = totalOracleList[_indexToken];
+    }
+
     function updatePathData(
         uint256[] memory assetTypes,
         uint64[] memory chainSelectors,
@@ -399,10 +430,7 @@ contract FunctionsOracle is Initializable, FunctionsClient, ConfirmedOwner {
             "The length of the chainSelectors and pathBytes arrays should be the same"
         );
         for (uint256 i = 0; i < chainSelectors.length; i++) {
-            _initPathData(
-                assetTypes[i],
-                chainSelectors[i], 
-                pathBytes[i]);
+            _initPathData(assetTypes[i], chainSelectors[i], pathBytes[i]);
         }
 
         // emit PathDataUpdated(block.timestamp);
@@ -435,4 +463,103 @@ contract FunctionsOracle is Initializable, FunctionsClient, ConfirmedOwner {
         toETHPath[tokenAddress] = _toETHPath;
         toETHFees[tokenAddress] = _toETHFees;
     }
+
+
+    function getFromETHPathData(
+        address _tokenAddress
+    ) public view returns (address[] memory, uint24[] memory) {
+        return (fromETHPath[_tokenAddress], fromETHFees[_tokenAddress]);
+    }
+
+    function getToETHPathData(
+        address _tokenAddress
+    ) public view returns (address[] memory, uint24[] memory) {
+        return (toETHPath[_tokenAddress], toETHFees[_tokenAddress]);
+    }
+
+    function getFromETHPathBytesForTokens(
+        address[] memory _tokens
+    ) public view returns (bytes[] memory) {
+        bytes[] memory pathBytes = new bytes[](_tokens.length);
+        for (uint i = 0; i < _tokens.length; i++) {
+            pathBytes[i] = PathHelpers.getFromETHPathBytes(
+                fromETHPath[_tokens[i]],
+                fromETHFees[_tokens[i]]
+            );
+        }
+
+        return pathBytes;
+    }
+
+    function getOracleData(
+        address _indexToken,
+        uint _oracleFilledCount
+    )
+        public
+        view
+        returns (
+            address[] memory tokens,
+            uint[] memory marketShares,
+            uint64[] memory chainSelectors
+        )
+    {
+        OracleData storage data = oracleData[_indexToken][_oracleFilledCount];
+        return (data.tokens, data.marketShares, data.chainSelectors);
+    }
+
+    function getCurrentData(
+        address indexToken,
+        uint currentFilledCount
+    )
+        public
+        view
+        returns (
+            address[] memory tokens,
+            uint[] memory marketShares,
+            uint64[] memory chainSelectors
+        )
+    {
+        CurrentData storage data = currentData[indexToken][currentFilledCount];
+        return (data.tokens, data.marketShares, data.chainSelectors);
+    }
+
+    function getCurrentChainSelectorTotalShares(
+        address indexToken,
+        uint currentFilledCount,
+        uint64 chainSelector
+    ) public view returns (uint) {
+        return
+            currentData[indexToken][currentFilledCount].currentChainSelectorTotalShares[chainSelector];
+    }
+
+    function getOracleChainSelectorTotalShares(
+        address indexToken,
+        uint oracleFilledCount,
+        uint64 chainSelector
+    ) public view returns (uint) {
+        return oracleData[indexToken][oracleFilledCount].oracleChainSelectorTotalShares[chainSelector];
+    }
+
+    function getCurrentAssetTypeTotalShares(
+        address indexToken,
+        uint currentFilledCount,
+        uint256 assetType
+    ) public view returns (uint) {
+        return
+            currentData[indexToken][currentFilledCount].currentAssetTypeTotalShares[assetType];
+    }
+
+    function getCurrentAssetTypeData(
+        address indexToken,
+        uint currentFilledCount,
+        uint256 assetType
+    ) public view returns (uint totalShares, address[] memory, uint[] memory) {
+        return (
+            currentData[indexToken][currentFilledCount].currentAssetTypeTotalShares[assetType],
+            currentData[indexToken][currentFilledCount].currentAssetTypeTokens[assetType],
+            currentData[indexToken][currentFilledCount].currentAssetTypeTokenShares[assetType]
+        );
+    }
+
+
 }
