@@ -499,6 +499,92 @@ contract FunctionsOracle is Initializable, FunctionsClient, ConfirmedOwner {
         return pathBytes;
     }
 
+    /**
+     * @dev Returns all tokens in the oracle chain selector.
+     * @param _chainSelector The chain selector.
+     * @return tokens The addresses of the tokens.
+     */
+    function allOracleChainSelectorTokens(
+        address _indexToken,
+        uint64 _chainSelector
+    ) public view returns (address[] memory tokens) {
+        tokens = oracleData[_indexToken][oracleFilledCount[_indexToken]].oracleChainSelectorTokens[
+            _chainSelector
+        ];
+    }
+
+    /**
+     * @dev Returns all tokens in the current chain selector.
+     * @param _chainSelector The chain selector.
+     * @return tokens The addresses of the tokens.
+     */
+    function allCurrentChainSelectorTokens(
+        address _indexToken,
+        uint64 _chainSelector
+    ) public view returns (address[] memory tokens) {
+        tokens = currentData[_indexToken][currentFilledCount[_indexToken]].currentChainSelectorTokens[
+            _chainSelector
+        ];
+    }
+
+    /**
+     * @dev Returns all versions in the oracle chain selector.
+     * @param _chainSelector The chain selector.
+     * @return versions The versions of the tokens.
+     */
+    function allOracleChainSelectorVersions(
+        address _indexToken,
+        uint64 _chainSelector
+    ) public view returns (uint[] memory versions) {
+        versions = oracleData[_indexToken][oracleFilledCount[_indexToken]].oracleChainSelectorVersions[
+            _chainSelector
+        ];
+    }
+
+    /**
+     * @dev Returns all versions in the current chain selector.
+     * @param _chainSelector The chain selector.
+     * @return versions The versions of the tokens.
+     */
+    function allCurrentChainSelectorVersions(
+        address _indexToken,
+        uint64 _chainSelector
+    ) public view returns (uint[] memory versions) {
+        versions = currentData[_indexToken][currentFilledCount[_indexToken]].currentChainSelectorVersions[
+            _chainSelector
+        ];
+    }
+
+    /**
+     * @dev Returns all token shares in the oracle chain selector.
+     * @param _chainSelector The chain selector.
+     * @return The token shares.
+     */
+    function allOracleChainSelectorTokenShares(
+        address _indexToken,
+        uint64 _chainSelector
+    ) public view returns (uint[] memory) {
+        return
+            oracleData[_indexToken][oracleFilledCount[_indexToken]].oracleChainSelectorTokenShares[
+                _chainSelector
+            ];
+    }
+
+    /**
+     * @dev Returns all token shares in the current chain selector.
+     * @param _chainSelector The chain selector.
+     * @return The token shares.
+     */
+    function allCurrentChainSelectorTokenShares(
+        address _indexToken,
+        uint64 _chainSelector
+    ) public view returns (uint[] memory) {
+        return
+            currentData[_indexToken][currentFilledCount[_indexToken]].currentChainSelectorTokenShares[
+                _chainSelector
+            ];
+    }
+
     function getOracleData(
         address _indexToken,
         uint _oracleFilledCount

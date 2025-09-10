@@ -87,7 +87,7 @@ contract CCIPStorage is Initializable, ProposableOwnableUpgradeable {
 
     
 
-    
+    address public linkToken;
     uint64 public currentChainSelector;
     address public priceOracle;
 
@@ -165,6 +165,7 @@ contract CCIPStorage is Initializable, ProposableOwnableUpgradeable {
         uint64 _currentChainSelector,
         address _functionsOracle,
         address _toUsdPriceFeed,
+        address _linkToken,
         address _weth,
         address _swapRouterV3,
         address _factoryV3,
@@ -187,6 +188,7 @@ contract CCIPStorage is Initializable, ProposableOwnableUpgradeable {
         toUsdPriceFeed = AggregatorV3Interface(_toUsdPriceFeed);
         //set addressesd
         weth = IWETH(_weth);
+        linkToken = _linkToken;
         swapRouterV3 = ISwapRouter(_swapRouterV3);
         factoryV3 = IUniswapV3Factory(_factoryV3);
         swapRouterV2 = IUniswapV2Router02(_swapRouterV2);
@@ -275,6 +277,8 @@ contract CCIPStorage is Initializable, ProposableOwnableUpgradeable {
         require(_priceOracle != address(0), "Price oracle address cannot be zero address");
         priceOracle = _priceOracle;
     }
+
+    
 
     /**
      * @dev Sets the IndexFactory contract address.
