@@ -93,6 +93,19 @@ contract IndexFactory is Initializable, OwnableUpgradeable, PausableUpgradeable,
         uint256 totalCurrentList = _requireUnderlyings(indexToken);
         _approveForOrderManager(usdc, amount);
 
+        uint currentFilledCount = functionsOracle.currentFilledCount(indexToken);
+        uint64[] memory currentAssetTypes = functionsOracle.getCurrentAssetTypes(indexToken, currentFilledCount);
+        for (uint256 i = 0; i <= currentAssetTypes.length; i++) {
+            (uint totalShares, address[] memory tokens, uint256[] memory marketShares) =
+            functionsOracle.getCurrentAssetTypeData(indexToken, currentFilledCount, currentAssetTypes[i]);
+            uint256 share = (amount * totalShares) / SHARE_DENOMINATOR;
+            orderNonce = _createBuyOrder(issuanceNonce, indexToken, usdc, address(0), currentAssetTypes[i], share);
+            // emit Issuanced(issuanceNonce, msg.sender, indexToken, usdc, underlyings[i], parts[i]);
+        }
+        
+        issuanceNonce += 1;
+        return orderNonce;
+        /**
         (address[] memory underlyings, uint256[] memory parts) = _calcProRataUSDC(indexToken, amount, totalCurrentList);
 
         for (uint256 i = 0; i < totalCurrentList; i++) {
@@ -101,8 +114,8 @@ contract IndexFactory is Initializable, OwnableUpgradeable, PausableUpgradeable,
             emit Issuanced(issuanceNonce, msg.sender, indexToken, usdc, underlyings[i], parts[i]);
         }
 
-        issuanceNonce += 1;
-        return orderNonce;
+        */
+        
     }
 
     function redemption(address indexToken, uint256 amount)
@@ -139,6 +152,7 @@ contract IndexFactory is Initializable, OwnableUpgradeable, PausableUpgradeable,
 
             orderNonce = _createSellOrder(
                 redemptionNonce,
+                indexToken,
                 underlying, // input for sells (or 0 amount for type 2)
                 usdc, // output hint
                 assetType,
@@ -350,12 +364,13 @@ contract IndexFactory is Initializable, OwnableUpgradeable, PausableUpgradeable,
         Vault(vaultAddr).withdrawFunds(underlying, address(this), withdrawn);
     }
 
-    function _createBuyOrder(uint256 requestNonce_, address usdc, address underlying, uint64 assetType_, uint256 share)
+    function _createBuyOrder(uint256 requestNonce_, address indexToken, address usdc, address underlying, uint64 assetType_, uint256 share)
         private
         returns (uint256 orderNonce)
     {
         OrderManager.CreateOrderConfig memory cfg = OrderManager.CreateOrderConfig({
             requestNonce: requestNonce_,
+            indexTokenAddress: indexToken,
             inputTokenAddress: usdc,
             outputTokenAddress: underlying,
             assetType: assetType_,
@@ -369,6 +384,7 @@ contract IndexFactory is Initializable, OwnableUpgradeable, PausableUpgradeable,
 
     function _createSellOrder(
         uint256 requestNonce_,
+        address indexToken,
         address inputToken, // underlying leg
         address outputTokenHint, // e.g., USDC
         uint64 assetType_,
@@ -377,6 +393,7 @@ contract IndexFactory is Initializable, OwnableUpgradeable, PausableUpgradeable,
     ) private returns (uint256 orderNonce) {
         OrderManager.CreateOrderConfig memory cfg = OrderManager.CreateOrderConfig({
             requestNonce: requestNonce_,
+            indexTokenAddress: indexToken,
             inputTokenAddress: inputToken,
             outputTokenAddress: outputTokenHint,
             assetType: assetType_,
