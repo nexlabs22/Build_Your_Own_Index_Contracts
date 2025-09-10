@@ -11,7 +11,8 @@ import {IRiskAssetFactory} from "./interfaces/IRiskAssetFactory.sol";
 import {IndexFactory} from "../factory/IndexFactory.sol";
 import {IndexToken} from "../token/IndexToken.sol";
 import {IndexFactoryStorage} from "./IndexFactoryStorage.sol";
-import {FunctionsOracle} from "./FunctionsOracle.sol";
+// import {FunctionsOracle} from "./FunctionsOracle.sol";
+import {FunctionsOracle} from "../oracle/FunctionsOracle.sol";
 import {FeeCalculation} from "../libraries/FeeCalculation.sol";
 import {Vault} from "../vault/Vault.sol";
 
@@ -34,8 +35,6 @@ contract StagingCustodyAccount is Initializable, ReentrancyGuardUpgradeable, Own
     event Rescue(address indexed token, address indexed to, uint256 amount, uint256 indexed timestamp);
     event WithdrawnForPurchase(uint256 indexed roundId, uint256 indexed amount, uint256 indexed timestamp);
     event Refunded(uint256 indexed roundId, address indexed to, uint256 indexed amount, uint256 timestamp);
-    event IssuanceRiskAsset(uint256 indexed amount, uint256 timestamp);
-    event RedemptionRiskAsset(uint256 indexed amount, uint256 timestamp);
     event RedemptionSettled(uint256 indexed roundId, uint256 indexed amount, uint256 timestamp);
     event IssuanceSettled(
         uint256 indexed roundId,
@@ -44,10 +43,8 @@ contract StagingCustodyAccount is Initializable, ReentrancyGuardUpgradeable, Own
         uint256 indexed usdcAmount,
         uint256 timestamp
     );
-    event RedemptionRequested(
-        uint256 indexed totalIdx, uint256 indexed totalBond, uint256 indexed totalRiskAsset, uint256 timestamp
-    );
-    event IssuanceRequested(uint256 indexed usdcForBond, uint256 indexed usdcForRiskAsset, uint256 timestamp);
+    event RedemptionRequested(uint256 indexed totalIdx, uint256 indexed totalBond, uint256 timestamp);
+    event IssuanceRequested(uint256 indexed usdcForBond, uint256 timestamp);
     event IssuanceCompleted(address indexed user, uint256 indexed amount, uint256 timestamp);
     event RedemptionCompleted(address indexed user, uint256 indexed amount, uint256 timestamp);
 
@@ -104,11 +101,11 @@ contract StagingCustodyAccount is Initializable, ReentrancyGuardUpgradeable, Own
 
     /// @notice Withdraw USDC for bond purchase; only active, unsettled rounds
     function withdrawForPurchase(uint256 roundId, uint256 amount) public onlyOwnerOrOperator nonReentrant {
-        require(
-            factoryStorage.issuanceRoundActive(roundId) && !factoryStorage.issuanceIsCompleted(roundId),
-            "Round not open"
-        );
-        require(factoryStorage.totalIssuanceByRound(roundId) > 0, "Nothing to withdraw");
+        // require(
+        //     factoryStorage.issuanceRoundActive(roundId) && !factoryStorage.issuanceIsCompleted(roundId),
+        //     "Round not open"
+        // );
+        // require(factoryStorage.totalIssuanceByRound(roundId) > 0, "Nothing to withdraw");
         if (amount == 0) revert ZeroAmount();
         uint256 balance = IERC20(factoryStorage.usdc()).balanceOf(address(this));
         require(balance >= amount, "Insufficient USDC balance");
@@ -123,105 +120,27 @@ contract StagingCustodyAccount is Initializable, ReentrancyGuardUpgradeable, Own
         emit Rescue(token, to, amount, block.timestamp);
     }
 
-    function refund(uint256 roundId, address to, uint256 amount) external onlyOwnerOrOperator {
-        if (to == address(0)) revert ZeroAddress();
-        if (amount == 0) revert ZeroAmount();
-        IERC20(factoryStorage.usdc()).safeTransfer(to, amount);
-        emit Refunded(roundId, to, amount, block.timestamp);
-    }
-
-    function issuanceRiskAsset(uint256 usdcAmount, address[] calldata _tokenInPath, uint24[] calldata _tokenInFees)
-        public
-        payable
-        onlyOwnerOrOperator
-    {
-        uint256 expected =
-            factoryStorage.getIssuanceFee(address(factoryStorage.usdc()), _tokenInPath, _tokenInFees, usdcAmount);
-        if (msg.value < expected) revert WrongETHAmount();
-        uint256 usdcFee = FeeCalculation.calculateFee(usdcAmount, factoryStorage.feeRate());
-
-        factoryStorage.usdc().approve(riskAssetFactoryAddress, usdcAmount + usdcFee);
-        IRiskAssetFactory(riskAssetFactoryAddress).issuanceIndexTokens{value: msg.value}(
-            address(factoryStorage.usdc()), _tokenInPath, _tokenInFees, usdcAmount
-        );
-        // IRiskAssetFactory(riskAssetFactoryAddress).issuanceIndexTokens{value: msg.value}(
-        //     address(factoryStorage.usdc()), _tokenInPath, _tokenInFees, usdcAmount
-        // );
-        emit IssuanceRiskAsset(usdcAmount, block.timestamp);
-    }
-
-    function redemptionRiskAsset(
-        uint256 amountIn,
-        address _tokenOut,
-        address[] memory _tokenOutPath,
-        uint24[] memory _tokenOutFees
-    ) public payable onlyOwnerOrOperator {
-        uint256 expected = factoryStorage.getRedemptionFee(amountIn);
-        if (msg.value < expected) revert WrongETHAmount();
-        factoryStorage.usdc().approve(riskAssetFactoryAddress, amountIn);
-        IRiskAssetFactory(riskAssetFactoryAddress).redemption{value: msg.value}(
-            amountIn, _tokenOut, _tokenOutPath, _tokenOutFees
-        );
-        emit RedemptionRiskAsset(amountIn, block.timestamp);
-    }
-
-    function requestIssuance(uint256 roundId, address[] calldata _tokenInPath, uint24[] calldata _tokenInFees)
-        public
-        payable
-        onlyOwnerOrOperator
-    {
+    function requestIssuance(uint256 roundId) public payable onlyOwnerOrOperator {
         if (roundId < 1 || roundId > factoryStorage.issuanceRoundId()) revert InvalidRoundId();
         uint256 prev = roundId - 1;
-        if (roundId > 1) {
-            require(!factoryStorage.issuanceRoundActive(prev), "Prev round still active");
-            require(factoryStorage.issuanceIsCompleted(prev), "Prev round not completed");
-        }
-        require(factoryStorage.issuanceRoundActive(roundId), "Round is not active");
-        require(!factoryStorage.issuanceIsCompleted(roundId), "Round already completed");
-
-        // uint256 balance = factoryStorage.usdc().balanceOf(address(this));
-        // require(balance > 0, "USDC Balance is Zero!");
+        // if (roundId > 1) {
+        //     require(!factoryStorage.issuanceRoundActive(prev), "Prev round still active");
+        //     require(factoryStorage.issuanceIsCompleted(prev), "Prev round not completed");
+        // }
+        // require(factoryStorage.issuanceRoundActive(roundId), "Round is not active");
+        // require(!factoryStorage.issuanceIsCompleted(roundId), "Round already completed");
 
         uint256 balance = factoryStorage.totalIssuanceByRound(roundId);
         require(balance > 0, "Total issuance in this round is Zero!");
 
-        uint256 usdcAmountForBond;
-        uint256 usdcAmountForRiskAsset;
-
-        for (uint256 i; i < factoryStorage.functionsOracle().totalCurrentList(); ++i) {
-            address token = factoryStorage.functionsOracle().currentList(i);
-            uint256 share = factoryStorage.functionsOracle().tokenCurrentMarketShare(token);
-            uint256 slice = (balance * share) / 100e18;
-
-            if (factoryStorage.functionsOracle().tokenAssetType(token) == 1) {
-                usdcAmountForRiskAsset += slice;
-            } else {
-                usdcAmountForBond += slice;
-            }
-        }
-
-        // uint256 dust = balance - usdcAmountForRiskAsset - usdcAmountForBond;
-        // if (dust > 0) usdcAmountForBond += dust;
-
-        if (usdcAmountForRiskAsset > 0) {
-            uint256 fee = factoryStorage.getIssuanceFee(
-                address(factoryStorage.usdc()), _tokenInPath, _tokenInFees, usdcAmountForRiskAsset
-            );
-            if (msg.value < fee) revert WrongETHAmount();
-            uint256 usdcFee = FeeCalculation.calculateFee(usdcAmountForRiskAsset, factoryStorage.feeRate());
-            issuanceRiskAsset(usdcAmountForRiskAsset - usdcFee, _tokenInPath, _tokenInFees);
-        } else {
-            require(msg.value == 0, "SCA: unexpected ETH");
-        }
-
-        if (usdcAmountForBond > 0) {
-            withdrawForPurchase(roundId, usdcAmountForBond);
+        if (balance > 0) {
+            withdrawForPurchase(roundId, balance);
         }
 
         factoryStorage.setIssuanceRoundActive(roundId, false);
         factoryStorage.increaseIssuanceRoundId();
 
-        emit IssuanceRequested(usdcAmountForBond, usdcAmountForRiskAsset, block.timestamp);
+        emit IssuanceRequested(balance, block.timestamp);
     }
 
     function completeIssuance(uint256 roundId, uint256 bondPrice, uint256 riskAssetPrice) external onlyNexBot {
@@ -230,13 +149,13 @@ contract StagingCustodyAccount is Initializable, ReentrancyGuardUpgradeable, Own
 
         if (roundId > factoryStorage.issuanceRoundId()) revert InvalidRoundId();
         if (roundId < 1 || roundId > factoryStorage.issuanceRoundId()) revert InvalidRoundId();
-        uint256 prev = roundId - 1;
-        if (roundId > 1) {
-            require(!factoryStorage.issuanceRoundActive(prev), "Prev round still active");
-            require(factoryStorage.issuanceIsCompleted(prev), "Prev round not completed");
-        }
-        require(!factoryStorage.issuanceRoundActive(roundId), "Round is active");
-        require(!factoryStorage.issuanceIsCompleted(roundId), "Round already completed");
+        // uint256 prev = roundId - 1;
+        // if (roundId > 1) {
+        //     require(!factoryStorage.issuanceRoundActive(prev), "Prev round still active");
+        //     require(factoryStorage.issuanceIsCompleted(prev), "Prev round not completed");
+        // }
+        // require(!factoryStorage.issuanceRoundActive(roundId), "Round is active");
+        // require(!factoryStorage.issuanceIsCompleted(roundId), "Round already completed");
 
         uint256 oldValue = factoryStorage.getPortfolioValue(bondPrice, riskAssetPrice);
         for (uint256 i; i < factoryStorage.functionsOracle().totalCurrentList(); i++) {
@@ -263,7 +182,7 @@ contract StagingCustodyAccount is Initializable, ReentrancyGuardUpgradeable, Own
         emit IssuanceSettled(roundId, mintAmount, distributed, total, block.timestamp);
     }
 
-    function requestRedemption(uint256 roundId, address[] calldata tokenOutPath, uint24[] calldata tokenOutFees)
+    function requestRedemption(address indexToken, address vault, uint256 roundId)
         external
         payable
         nonReentrant
@@ -271,13 +190,14 @@ contract StagingCustodyAccount is Initializable, ReentrancyGuardUpgradeable, Own
     {
         if (roundId < 1 || roundId > factoryStorage.redemptionRoundId()) revert InvalidRoundId();
         uint256 prev = roundId - 1;
-        if (roundId > 1) {
-            require(!factoryStorage.redemptionRoundActive(prev), "Prev redemption round active");
-            require(factoryStorage.redemptionIsCompleted(prev), "Prev redemption not completed");
-        }
-        require(factoryStorage.redemptionRoundActive(roundId), "Round not active");
-        require(!factoryStorage.redemptionIsCompleted(roundId), "Round already completed");
+        // if (roundId > 1) {
+        //     require(!factoryStorage.redemptionRoundActive(prev), "Prev redemption round active");
+        //     require(factoryStorage.redemptionIsCompleted(prev), "Prev redemption not completed");
+        // }
+        // require(factoryStorage.redemptionRoundActive(roundId), "Round not active");
+        // require(!factoryStorage.redemptionIsCompleted(roundId), "Round already completed");
 
+        // uint256 totalIdxThisRound = factoryStorage.totalRedemptionByIndexTokenRound(indexToken, roundId);
         uint256 totalIdxThisRound = factoryStorage.totalRedemptionByRound(roundId);
         if (totalIdxThisRound == 0) revert RedemptionAmountIsZero();
         if (!factoryStorage.redemptionRoundActive(roundId)) {
@@ -285,68 +205,58 @@ contract StagingCustodyAccount is Initializable, ReentrancyGuardUpgradeable, Own
         }
         factoryStorage.setRedemptionRoundActive(roundId, false);
 
-        uint256 supplyBefore = factoryStorage.indexToken().totalSupply();
+        // uint256 supplyBefore = factoryStorage.indexToken().totalSupply();
+        uint256 supplyBefore = IERC20(indexToken).totalSupply();
         require(supplyBefore > totalIdxThisRound, "IDX supply is zero");
         uint256 pct1e18 = (totalIdxThisRound * 1e18) / supplyBefore;
 
+        // uint256 currentList = factoryStorage.functionsOracle().totalCurrentList();
+        uint256 currentList = functionsOracle.totalCurrentList(indexToken);
         uint256 bondSliceTotal;
-        uint256 riskSliceTotal;
-        uint256 currentList = factoryStorage.functionsOracle().totalCurrentList();
         for (uint256 i = 0; i < currentList; ++i) {
             address token = factoryStorage.functionsOracle().currentList(i);
-            uint8 aType = factoryStorage.functionsOracle().tokenAssetType(token);
             uint256 slice = IERC20(token).balanceOf(address(factoryStorage.vault())) * pct1e18 / 1e18;
 
             if (slice == 0) continue;
 
             factoryStorage.vault().withdrawFunds(token, address(this), slice);
-            // factoryStorage.vault().withdrawFunds(token, factoryStorage.nexBot(), slice);
+            IERC20(token).safeTransfer(nexBot, slice);
 
-            if (aType == 1) {
-                riskSliceTotal += slice;
-            } else {
-                bondSliceTotal += slice;
-            }
+            // bondSliceTotal += slice;
         }
 
-        if (riskSliceTotal > 0) {
-            uint256 fee = factoryStorage.getRedemptionFee(riskSliceTotal);
-            if (msg.value < fee) revert WrongETHAmount();
-            redemptionRiskAsset(riskSliceTotal, address(factoryStorage.usdc()), tokenOutPath, tokenOutFees);
-        }
-
-        if (bondSliceTotal > 0) {
-            IERC20(bond).safeTransfer(nexBot, bondSliceTotal);
-        }
+        // if (bondSliceTotal > 0) {
+        //     IERC20(bond).safeTransfer(nexBot, bondSliceTotal);
+        // }
 
         factoryStorage.indexToken().burn(address(this), totalIdxThisRound);
         factoryStorage.increaseRedemptionRoundId();
         factoryStorage.setRedemptionRoundActive(factoryStorage.redemptionRoundId(), false);
 
-        emit RedemptionRequested(totalIdxThisRound, bondSliceTotal, riskSliceTotal, block.timestamp);
+        emit RedemptionRequested(totalIdxThisRound, bondSliceTotal, block.timestamp);
     }
 
-    function completeRedemption(uint256 roundId, uint256 usdcFromBond, uint256 usdcFromRiskAsset) external onlyNexBot {
+    function completeRedemption(uint256 roundId, uint256 usdcFromBond) external onlyNexBot {
         uint256[] memory nonces = factoryStorage.getRedemptionRoundIdToNonces(roundId);
         require(nonces.length > 0, "No redemption requests");
 
         if (roundId < 1 || roundId > factoryStorage.redemptionRoundId()) revert InvalidRoundId();
-        uint256 prev = roundId - 1;
-        if (roundId > 1) {
-            require(!factoryStorage.redemptionRoundActive(prev), "Prev redemption round active");
-            require(factoryStorage.redemptionIsCompleted(prev), "Prev redemption not completed");
-        }
-        require(!factoryStorage.redemptionRoundActive(roundId), "Round still active");
-        require(!factoryStorage.redemptionIsCompleted(roundId), "Round already completed");
+        // uint256 prev = roundId - 1;
+        // if (roundId > 1) {
+        //     require(!factoryStorage.redemptionRoundActive(prev), "Prev redemption round active");
+        //     require(factoryStorage.redemptionIsCompleted(prev), "Prev redemption not completed");
+        // }
+        // require(!factoryStorage.redemptionRoundActive(roundId), "Round still active");
+        // require(!factoryStorage.redemptionIsCompleted(roundId), "Round already completed");
 
         uint256 totalIDX = factoryStorage.totalRedemptionByRound(roundId);
         require(totalIDX > 0, "No tokens to redeem");
 
-        if (usdcFromBond > 0) {
-            factoryStorage.usdc().safeTransferFrom(msg.sender, address(this), usdcFromBond);
-        }
+        // if (usdcFromBond > 0) {
+        //     factoryStorage.usdc().safeTransferFrom(msg.sender, address(this), usdcFromBond);
+        // }
 
-        uint256 totalUSDC = usdcFromBond + usdcFromRiskAsset;
+        uint256 totalUSDC = usdcFromBond;
         require(totalUSDC > 0, "zero USDC received");
 
         uint256 feeAmount = FeeCalculation.calculateFee(totalUSDC, factoryStorage.feeRate());

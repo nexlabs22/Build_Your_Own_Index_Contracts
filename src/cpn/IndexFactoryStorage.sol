@@ -37,31 +37,39 @@ contract IndexFactoryStorage is Initializable, OwnableUpgradeable {
     bool public isMainnet;
     uint256 public latestFeeUpdate;
 
-    mapping(uint256 => bool) public issuanceIsCompleted;
-    mapping(uint256 => bool) public redemptionIsCompleted;
-    mapping(uint256 => address) public issuanceRequesterByNonce;
-    mapping(uint256 => address) public redemptionRequesterByNonce;
-    mapping(uint256 => uint256) public issuanceInputAmount;
-    mapping(uint256 => uint256) public redemptionInputAmount;
-    mapping(uint256 => uint256) public burnedTokenAmountByNonce;
-    mapping(uint256 => address[]) public issuanceRoundIdToAddresses;
-    mapping(uint256 => address[]) public redemptionRoundIdToAddresses;
-    mapping(uint256 => mapping(address => uint256)) public issuanceAmountByRoundUser;
-    mapping(uint256 => mapping(address => uint256)) public redemptionAmountByRoundUser;
+    // BYOI
+    mapping(address => mapping(uint256 => bool)) public issuanceIsCompletedByIndexToken;
+    mapping(address => mapping(uint256 => bool)) public redemptionIsCompletedByIndexToken;
+
+    mapping(uint256 => bool) public issuanceIsCompleted; // no need
+    mapping(uint256 => bool) public redemptionIsCompleted; // no need
+    // mapping(uint256 => address) public issuanceRequesterByNonce; // no need
+    // mapping(uint256 => address) public redemptionRequesterByNonce; // no need
+    mapping(address => mapping(uint256 => uint256)) public issuanceInputAmountByIndexToken;
+    mapping(address => mapping(uint256 => uint256)) public redemptionInputAmountByIndexToken;
+    mapping(uint256 => address[]) public issuanceRoundIdToAddresses; // no need
+    mapping(uint256 => address[]) public redemptionRoundIdToAddresses; // no need
+    mapping(uint256 => mapping(address => uint256)) public issuanceAmountByRoundUser; // no need
+    mapping(uint256 => mapping(address => uint256)) public redemptionAmountByRoundUser; // no need
+    mapping(address => mapping(uint256 => uint256)) public totalIssuanceByRoundByIndexToken;
+    mapping(address => mapping(uint256 => uint256)) public totalRedemptionByRoundByIndexToken;
     mapping(uint256 => uint256) public totalIssuanceByRound;
     mapping(uint256 => uint256) public totalRedemptionByRound;
     mapping(uint256 => bool) public issuanceRoundActive;
     mapping(uint256 => bool) public redemptionRoundActive;
-    // mapping(uint256 => uint256) public roundIdToBondAmount;
-    // mapping(uint256 => uint256) public roundIdToRiskAssetAmount;
-    mapping(uint256 => uint256[]) public issuanceRoundIdToNonces;
-    mapping(uint256 => uint256[]) public redemptionRoundIdToNonces;
-    mapping(uint256 => uint256) public nonceToIssuanceRound;
-    mapping(uint256 => uint256) public nonceToRedemptionRound;
-    mapping(uint256 => uint256) public issuanceFeeByNonce;
-    mapping(uint256 => uint256) public redemptionFeeByNonce;
-    mapping(uint256 => bool) public issuanceRequestCancelled;
-    mapping(uint256 => bool) public redemptionRequestCancelled;
+    mapping(address => mapping(uint256 => uint256[])) public issuanceRoundIdToNoncesByIndexToken;
+    mapping(address => mapping(uint256 => uint256[])) public redemptionRoundIdToNoncesByIndexToken;
+    mapping(address => mapping(uint256 => uint256)) public nonceToIssuanceRoundByIndexToken;
+    mapping(address => mapping(uint256 => uint256)) public nonceToRedemptionRoundByIndexToken;
+    //   mapping(uint256 => uint256) public issuanceFeeByNonce; // no need
+    // mapping(uint256 => uint256) public redemptionFeeByNonce; // no need
+    //     mapping(uint256 => bool) public issuanceRequestCancelled; // no need
+    // mapping(uint256 => bool) public redemptionRequestCancelled; // no need
+    mapping(uint256 => uint256) public nonceToIssuanceRound; // no need
+    mapping(uint256 => uint256) public nonceToRedemptionRound; // no need
+    mapping(uint256 => uint256[]) public issuanceRoundIdToNonces; // no need
+    mapping(uint256 => uint256[]) public redemptionRoundIdToNonces; // no need
+
     mapping(address => uint256) public tokenPendingRebalanceAmount;
     mapping(address => mapping(uint256 => uint256)) public tokenPendingRebalanceAmountByNonce;
 
@@ -161,11 +169,6 @@ contract IndexFactoryStorage is Initializable, OwnableUpgradeable {
         vault = Vault(_vault);
     }
 
-    // function setFeeVault(address _feeVault) external onlyOwner {
-    //     if (_feeVault == address(0)) revert InvalidAddress();
-    //     feeVault = FeeVault(_feeVault);
-    // }
-
     function setFunctionsOracle(address _functionsOracle) external onlyOwner {
         if (_functionsOracle == address(0)) revert InvalidAddress();
         functionsOracle = FunctionsOracle(_functionsOracle);
@@ -176,38 +179,47 @@ contract IndexFactoryStorage is Initializable, OwnableUpgradeable {
         indexFactory = IndexFactory(_indexFactory);
     }
 
-    // function setIndexFactoryBalancer(address _indexFactoryBalancer) external onlyOwner {
-    //     if (_indexFactoryBalancer == address(0)) revert InvalidAddress();
-    //     factoryBalancer = IndexFactoryBalancer(_indexFactoryBalancer);
-    // }
-
     function setFeeReceiver(address _feeReceiver) public onlyOwner {
         if (_feeReceiver == address(0)) revert InvalidAddress();
         feeReceiver = _feeReceiver;
     }
 
-    function setIssuanceInputAmount(uint256 _issuanceNonce, uint256 _amount) external onlyFactory {
+    function setIssuanceInputAmount(address _indexToken, uint256 _issuanceNonce, uint256 _amount)
+        external
+        onlyFactory
+    {
         if (_amount == 0) revert ZeroAmount();
-        issuanceInputAmount[_issuanceNonce] = _amount;
+        issuanceInputAmountByIndexToken[_indexToken][_issuanceNonce] = _amount;
     }
 
-    function setRedemptionInputAmount(uint256 _redemptionNonce, uint256 _amount) external onlyFactory {
+    function setRedemptionInputAmount(address _indexToken, uint256 _redemptionNonce, uint256 _amount)
+        external
+        onlyFactory
+    {
         if (_amount == 0) revert ZeroAmount();
-        redemptionInputAmount[_redemptionNonce] = _amount;
+        redemptionInputAmountByIndexToken[_indexToken][_redemptionNonce] = _amount;
     }
 
-    function setIssuanceFeeByNonce(uint256 nonce, uint256 fee) external onlyFactory {
-        issuanceFeeByNonce[nonce] = fee;
+    function addressesInRedemptionRound(uint256 roundId) external view returns (address[] memory) {
+        return redemptionRoundIdToAddresses[roundId];
     }
 
-    function setRedemptionFeeByNonce(uint256 nonce, uint256 fee) external onlyFactory {
-        redemptionFeeByNonce[nonce] = fee;
+    function addressesInIssuanceRound(uint256 roundId) external view returns (address[] memory) {
+        return issuanceRoundIdToAddresses[roundId];
     }
 
-    function setIssuanceRoundIdToAddresses(uint256 _roundId, address[] memory addresses) external onlyFactory {
-        require(_roundId > 0, "Invalid roundId amount");
-        issuanceRoundIdToAddresses[_roundId] = addresses;
-    }
+    // function setIssuanceFeeByNonce(uint256 nonce, uint256 fee) external onlyFactory {
+    //     issuanceFeeByNonce[nonce] = fee;
+    // }
+
+    // function setRedemptionFeeByNonce(uint256 nonce, uint256 fee) external onlyFactory {
+    //     redemptionFeeByNonce[nonce] = fee;
+    // }
+
+    // function setIssuanceRoundIdToAddresses(uint256 _roundId, address[] memory addresses) external onlyFactory {
+    //     require(_roundId > 0, "Invalid roundId amount");
+    //     issuanceRoundIdToAddresses[_roundId] = addresses;
+    // }
 
     function setIssuanceCompleted(uint256 nonce, bool flag) external onlyFactory {
         issuanceIsCompleted[nonce] = flag;
@@ -241,14 +253,6 @@ contract IndexFactoryStorage is Initializable, OwnableUpgradeable {
         nonceToRedemptionRound[nonce] = roundId;
     }
 
-    function setIssuanceRequestCancelled(uint256 nonce, bool value) external onlyFactory {
-        issuanceRequestCancelled[nonce] = value;
-    }
-
-    function setRedemptionRequestCancelled(uint256 nonce, bool value) external onlyFactory {
-        redemptionRequestCancelled[nonce] = value;
-    }
-
     function addNonceToIssuanceRound(uint256 roundId, uint256 nonce) external onlyFactory {
         issuanceRoundIdToNonces[roundId].push(nonce);
     }
@@ -257,38 +261,38 @@ contract IndexFactoryStorage is Initializable, OwnableUpgradeable {
         redemptionRoundIdToNonces[roundId].push(nonce);
     }
 
-    function addIssuanceForCurrentRound(address account, uint256 amount) external onlyFactory {
+    function addIssuanceForCurrentRound(address indexToken, uint256 amount) external onlyFactory {
         if (!issuanceRoundActive[issuanceRoundId]) {
             issuanceRoundActive[issuanceRoundId] = true;
         }
 
-        if (issuanceAmountByRoundUser[issuanceRoundId][account] == 0) {
-            issuanceRoundIdToAddresses[issuanceRoundId].push(account);
-        }
-        issuanceAmountByRoundUser[issuanceRoundId][account] += amount;
-        totalIssuanceByRound[issuanceRoundId] += amount;
+        // if (issuanceAmountByRoundUser[issuanceRoundId][account] == 0) {
+        //     issuanceRoundIdToAddresses[issuanceRoundId].push(account);
+        // }
+        // issuanceAmountByRoundUser[issuanceRoundId][account] += amount;
+        totalIssuanceByRoundByIndexToken[indexToken][issuanceRoundId] += amount;
     }
 
-    function addRedemptionForCurrentRound(address user, uint256 amount) external onlyFactory {
+    function addRedemptionForCurrentRound(address indexToken, uint256 amount) external onlyFactory {
         uint256 roundId = redemptionRoundId;
 
         if (!redemptionRoundActive[roundId]) redemptionRoundActive[roundId] = true;
 
-        if (redemptionAmountByRoundUser[roundId][user] == 0) {
-            redemptionRoundIdToAddresses[roundId].push(user);
-        }
+        // if (redemptionAmountByRoundUser[roundId][user] == 0) {
+        //     redemptionRoundIdToAddresses[roundId].push(user);
+        // }
 
-        redemptionAmountByRoundUser[roundId][user] += amount;
-        totalRedemptionByRound[roundId] += amount;
+        // redemptionAmountByRoundUser[roundId][user] += amount;
+        totalRedemptionByRoundByIndexToken[indexToken][roundId] += amount;
     }
 
-    function addressesInRedemptionRound(uint256 roundId) external view returns (address[] memory) {
-        return redemptionRoundIdToAddresses[roundId];
-    }
+    // function addressesInRedemptionRound(uint256 roundId) external view returns (address[] memory) {
+    //     return redemptionRoundIdToAddresses[roundId];
+    // }
 
-    function addressesInIssuanceRound(uint256 roundId) external view returns (address[] memory) {
-        return issuanceRoundIdToAddresses[roundId];
-    }
+    // function addressesInIssuanceRound(uint256 roundId) external view returns (address[] memory) {
+    //     return issuanceRoundIdToAddresses[roundId];
+    // }
 
     function getRedemptionRoundActive(uint256 roundId) external view returns (bool) {
         return redemptionRoundActive[roundId];
@@ -302,13 +306,13 @@ contract IndexFactoryStorage is Initializable, OwnableUpgradeable {
         return redemptionRoundIdToNonces[roundId];
     }
 
-    function setIssuanceRequesterByNonce(uint256 nonce, address requester) external onlyFactory {
-        issuanceRequesterByNonce[nonce] = requester;
-    }
+    // function setIssuanceRequesterByNonce(uint256 nonce, address requester) external onlyFactory {
+    //     issuanceRequesterByNonce[nonce] = requester;
+    // }
 
-    function setRedemptionRequesterByNonce(uint256 nonce, address requester) external onlyFactory {
-        redemptionRequesterByNonce[nonce] = requester;
-    }
+    // function setRedemptionRequesterByNonce(uint256 nonce, address requester) external onlyFactory {
+    //     redemptionRequesterByNonce[nonce] = requester;
+    // }
 
     function increaseTokenPendingRebalanceAmount(address _token, uint256 _nonce, uint256 _amount)
         external
@@ -357,13 +361,6 @@ contract IndexFactoryStorage is Initializable, OwnableUpgradeable {
     }
 
     function settleIssuance(uint256 roundId) external onlyOwnerOrOperator {
-        // address[] storage list = issuanceRoundIdToAddresses[roundId];
-        // for (uint256 i = 0; i < list.length; ++i) {
-        //     delete issuanceAmountByRoundUser[roundId][list[i]];
-        // }
-        // delete issuanceRoundIdToAddresses[roundId];
-        // delete totalIssuanceByRound[roundId];
-
         issuanceIsCompleted[roundId] = true;
         issuanceRoundActive[roundId] = false;
 
@@ -371,13 +368,6 @@ contract IndexFactoryStorage is Initializable, OwnableUpgradeable {
     }
 
     function settleRedemption(uint256 roundId) external onlyOwnerOrOperator {
-        // address[] storage list = redemptionRoundIdToAddresses[roundId];
-        // for (uint256 i = 0; i < list.length; ++i) {
-        //     delete redemptionAmountByRoundUser[roundId][list[i]];
-        // }
-        // delete redemptionRoundIdToAddresses[roundId];
-        // delete totalRedemptionByRound[roundId];
-
         redemptionIsCompleted[roundId] = true;
         redemptionRoundActive[roundId] = false;
 
@@ -534,119 +524,13 @@ contract IndexFactoryStorage is Initializable, OwnableUpgradeable {
         mintAmount = supply * (newValue - oldValue) / oldValue;
     }
 
-    function getIssuanceFee(
-        address _tokenIn,
-        address[] memory _tokenInPath,
-        uint24[] memory _tokenInFees,
-        uint256 _inputAmount
-    ) public view returns (uint256) {
-        uint256 ethFee = IRiskAssetFactory(riskAssetFactoryAddress).getIssuanceFee(
-            _tokenIn, _tokenInPath, _tokenInFees, _inputAmount
-        );
-        return ethFee;
-    }
+    // function getIssuanceAmountByRound(uint256 roundId) public view returns (uint256) {
+    //     return totalIssuanceByRound[roundId];
+    // }
 
-    function getRedemptionFee(uint256 _amount) public view returns (uint256) {
-        uint256 ethFee = IRiskAssetFactory(riskAssetFactoryAddress).getRedemptionFee(_amount);
-        return ethFee;
-    }
-
-    function getIndexTokenPrice(uint256 bondPrice, uint256 riskAssetPrice) public view returns (uint256) {
-        uint256 totalSupply = indexToken.totalSupply();
-        uint256 portfolioValue = getPortfolioValue(bondPrice, riskAssetPrice);
-        if (totalSupply == 0) {
-            return 0;
-        }
-        return portfolioValue * 1e18 / totalSupply;
-    }
-
-    function undoIssuanceForRound(uint256 roundId, uint256 nonce, address user, uint256 amount) external onlyFactory {
-        uint256 before = issuanceAmountByRoundUser[roundId][user];
-        require(amount > 0 && before >= amount, "bad amount");
-
-        issuanceAmountByRoundUser[roundId][user] = before - amount;
-        totalIssuanceByRound[roundId] -= amount;
-        issuanceInputAmount[nonce] = 0;
-        issuanceFeeByNonce[nonce] = 0;
-        issuanceRequesterByNonce[nonce] = address(0);
-        issuanceRequestCancelled[nonce] = true;
-
-        if (issuanceAmountByRoundUser[roundId][user] == 0) {
-            _pruneAddressFromIssuance(roundId, user);
-        }
-    }
-
-    function _pruneAddressFromIssuance(uint256 roundId, address user) internal {
-        address[] storage arr = issuanceRoundIdToAddresses[roundId];
-        for (uint256 i; i < arr.length; ++i) {
-            if (arr[i] == user) {
-                arr[i] = arr[arr.length - 1];
-                arr.pop();
-                break;
-            }
-        }
-        // if (arr.length == 0) issuanceRoundActive[roundId] = false;
-    }
-
-    function removeIssuanceNonce(uint256 roundId, uint256 nonce) external onlyFactory {
-        uint256[] storage arr = issuanceRoundIdToNonces[roundId];
-        for (uint256 i; i < arr.length; ++i) {
-            if (arr[i] == nonce) {
-                arr[i] = arr[arr.length - 1];
-                arr.pop();
-                break;
-            }
-        }
-    }
-
-    function undoRedemptionForRound(uint256 roundId, uint256 nonce, address user, uint256 amount)
-        external
-        onlyFactory
-    {
-        uint256 before = redemptionAmountByRoundUser[roundId][user];
-        require(amount > 0 && before >= amount, "bad amount");
-
-        redemptionAmountByRoundUser[roundId][user] = before - amount;
-        totalRedemptionByRound[roundId] -= amount;
-        redemptionInputAmount[nonce] = 0;
-        redemptionRequesterByNonce[nonce] = address(0);
-        redemptionRequestCancelled[nonce] = true;
-
-        if (redemptionAmountByRoundUser[roundId][user] == 0) {
-            _pruneAddressFromRedemption(roundId, user);
-        }
-    }
-
-    function _pruneAddressFromRedemption(uint256 roundId, address user) internal {
-        address[] storage arr = redemptionRoundIdToAddresses[roundId];
-        for (uint256 i; i < arr.length; ++i) {
-            if (arr[i] == user) {
-                arr[i] = arr[arr.length - 1];
-                arr.pop();
-                break;
-            }
-        }
-        // if (arr.length == 0) redemptionRoundActive[roundId] = false;
-    }
-
-    function removeRedemptionNonce(uint256 roundId, uint256 nonce) external onlyFactory {
-        uint256[] storage arr = redemptionRoundIdToNonces[roundId];
-        for (uint256 i; i < arr.length; ++i) {
-            if (arr[i] == nonce) {
-                arr[i] = arr[arr.length - 1];
-                arr.pop();
-                break;
-            }
-        }
-    }
-
-    function getIssuanceAmountByRound(uint256 roundId) public view returns (uint256) {
-        return totalIssuanceByRound[roundId];
-    }
-
-    function getRedemptionAmountByRound(uint256 roundId) public view returns (uint256) {
-        return totalRedemptionByRound[roundId];
-    }
+    // function getRedemptionAmountByRound(uint256 roundId) public view returns (uint256) {
+    //     return totalRedemptionByRound[roundId];
+    // }
 
     uint256[50] private __gap;
 }

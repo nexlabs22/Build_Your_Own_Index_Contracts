@@ -18,7 +18,6 @@ import {IRiskAssetFactory} from "./interfaces/IRiskAssetFactory.sol";
 
 error ZeroAmount();
 error WrongETHAmount();
-error OrderAlreadyCancelled();
 
 contract IndexFactory is Initializable, OwnableUpgradeable, PausableUpgradeable, ReentrancyGuardUpgradeable {
     using SafeERC20 for IERC20;
@@ -49,24 +48,6 @@ contract IndexFactory is Initializable, OwnableUpgradeable, PausableUpgradeable,
         uint256 time
     );
 
-    event CancelIssuanceCompleted(
-        uint256 indexed nonce,
-        address indexed user,
-        address inputToken,
-        uint256 inputAmount,
-        uint256 outputAmount,
-        uint256 time
-    );
-
-    event CancelRedemptionCompleted(
-        uint256 indexed nonce,
-        address indexed user,
-        address outputToken,
-        uint256 inputAmount,
-        uint256 outputAmount,
-        uint256 time
-    );
-
     modifier onlyOwnerOrOperator() {
         require(
             msg.sender == owner() || functionsOracle.isOperator(msg.sender),
@@ -94,17 +75,16 @@ contract IndexFactory is Initializable, OwnableUpgradeable, PausableUpgradeable,
     }
 
     function issuanceIndexTokens(
-        address _tokenIn,
-        address[] memory _tokenInPath,
-        uint24[] memory _tokenInFees,
+        // address _tokenIn,
+        // address[] memory _tokenInPath,
+        // uint24[] memory _tokenInFees,
         uint256 _inputAmount
     ) public payable whenNotPaused nonReentrant returns (uint256) {
         if (_inputAmount == 0) revert ZeroAmount();
-        uint256 ethFee = factoryStorage.getIssuanceFee(_tokenIn, _tokenInPath, _tokenInFees, _inputAmount);
-        // if (msg.value != ethFee) revert WrongETHAmount();
-        if (msg.value < ethFee) revert WrongETHAmount();
-        (bool success,) = factoryStorage.nexBot().call{value: ethFee}("");
-        require(success, "ETH transfer failed!");
+        // uint256 ethFee = factoryStorage.getIssuanceFee(_tokenIn, _tokenInPath, _tokenInFees, _inputAmount);
+        // if (msg.value < ethFee) revert WrongETHAmount();
+        // (bool success,) = factoryStorage.nexBot().call{value: ethFee}("");
+        // require(success, "ETH transfer failed!");
 
         uint256 usdcFee = FeeCalculation.calculateFee(_inputAmount, factoryStorage.feeRate());
         IERC20(factoryStorage.usdc()).safeTransferFrom(msg.sender, address(factoryStorage.sca()), _inputAmount);
@@ -132,15 +112,20 @@ contract IndexFactory is Initializable, OwnableUpgradeable, PausableUpgradeable,
         return nonce;
     }
 
-    function redemption(uint256 _amount) external payable whenNotPaused nonReentrant returns (uint256 nonce) {
+    function redemption(address indexToken, uint256 _amount)
+        external
+        payable
+        whenNotPaused
+        nonReentrant
+        returns (uint256 nonce)
+    {
         if (_amount == 0) revert ZeroAmount();
-        uint256 ethFee = factoryStorage.getRedemptionFee(_amount);
-        if (msg.value < ethFee) revert WrongETHAmount();
-        // if (msg.value != ethFee) revert WrongETHAmount();
-        (bool success,) = factoryStorage.nexBot().call{value: ethFee}("");
-        require(success, "ETH transfer failed!");
+        // uint256 ethFee = factoryStorage.getRedemptionFee(_amount);
+        // if (msg.value < ethFee) revert WrongETHAmount();
+        // (bool success,) = factoryStorage.nexBot().call{value: ethFee}("");
+        // require(success, "ETH transfer failed!");
 
-        IERC20(factoryStorage.indexToken()).safeTransferFrom(msg.sender, address(factoryStorage.sca()), _amount);
+        IERC20(indexToken).safeTransferFrom(msg.sender, address(factoryStorage.sca()), _amount);
 
         nonce = ++redemptionNonce;
 
