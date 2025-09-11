@@ -5,6 +5,7 @@ import "../utils/proposable/ProposableOwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
 import "./interfaces/TokenInterface.sol";
 
 /// @title Index Token
@@ -86,9 +87,15 @@ contract IndexToken is
     function mint(address to, uint256 amount) external override whenNotPaused onlyMinter {
         require(to != address(0), "mint to the zero address");
         require(amount > 0, "mint amount must be greater than 0");
-        require(totalSupply() + amount <= supplyCeiling, "will exceed supply ceiling");
         require(!isRestricted[to], "to is restricted");
         require(!isRestricted[msg.sender], "msg.sender is restricted");
+        
+        // Calculate potential fee amount first
+        uint256 potentialFeeAmount = _calculatePotentialFeeAmount();
+        
+        // Check supply ceiling for both fee and main amount
+        require(totalSupply() + potentialFeeAmount + amount <= supplyCeiling, "will exceed supply ceiling");
+        
         _mintToFeeReceiver();
         _mint(to, amount);
     }
@@ -119,12 +126,12 @@ contract IndexToken is
             // Calculate the compounded supply
             supply = (supply * compoundedFeeRate) / SCALAR;
 
-            uint256 amount = supply - initial;
+            uint256 amount = supply - initial;  // This is the FEE amount
             feeTimestamp += 1 days * _days;
 
             require(totalSupply() + amount <= supplyCeiling, "will exceed supply ceiling");
 
-            _mint(feeReceiver, amount);
+            _mint(feeReceiver, amount);  // Mints the FEE
 
             emit MintFeeToReceiver(feeReceiver, block.timestamp, totalSupply(), amount);
         }
@@ -140,7 +147,7 @@ contract IndexToken is
     /// @notice Only owner function for setting the methodologist
     /// @param _methodologist address
     function setMethodologist(address _methodologist) external override onlyOwner {
-        require(_methodologist != address(0));
+        require(_methodologist != address(0), "methodologist cannot be the zero address");
         methodologist = _methodologist;
         emit MethodologistSet(_methodologist);
     }
@@ -165,7 +172,7 @@ contract IndexToken is
     /// @notice Ownable function to set the receiver
     /// @param _feeReceiver address
     function setFeeReceiver(address _feeReceiver) external override onlyOwner {
-        require(_feeReceiver != address(0));
+        require(_feeReceiver != address(0), "fee receiver cannot be the zero address");
         feeReceiver = _feeReceiver;
         emit FeeReceiverSet(_feeReceiver);
     }
@@ -173,9 +180,9 @@ contract IndexToken is
     /// @notice Ownable function to set the contract that controls minting
     /// @param _minter address
     function setMinter(address _minter, bool _enable) external override onlyOwner {
-        require(_minter != address(0));
+        require(_minter != address(0), "minter cannot be the zero address");
         isMinter[_minter] = _enable;
-        emit MinterSet(_minter);
+        emit MinterSet(_minter, _enable); 
     }
 
     /// @notice Ownable function to set the limit at which the total supply cannot exceed
@@ -221,8 +228,8 @@ contract IndexToken is
     /// @param amount uint256
     /// @return bool
     function transferFrom(address from, address to, uint256 amount) public override whenNotPaused returns (bool) {
-        require(from != address(0), "transfer from the zero address");
-        require(to != address(0), "transfer to the zero address");
+        require(from != address(0), "from cannot be the zero address");
+        require(to != address(0), "to cannot be the zero address");
         require(amount <= balanceOf(from), "transfer amount exceeds balance");
         require(!isRestricted[msg.sender], "msg.sender is restricted");
         require(!isRestricted[to], "to is restricted");
