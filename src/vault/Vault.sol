@@ -5,7 +5,7 @@ import {SafeERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeE
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
-contract NexVault is Initializable, OwnableUpgradeable {
+contract Vault is Initializable, OwnableUpgradeable {
     using SafeERC20 for IERC20;
 
     mapping(address => bool) public isOperator;
@@ -13,7 +13,7 @@ contract NexVault is Initializable, OwnableUpgradeable {
     event FundsWithdrawn(address token, address to, uint256 amount);
 
     modifier onlyOperator() {
-        require(isOperator[msg.sender], "NexVault: caller is not an operator");
+        require(isOperator[msg.sender], "Vault: caller is not an operator");
         _;
     }
 
