@@ -29,7 +29,7 @@ contract IndexFactory is Initializable, OwnableUpgradeable, PausableUpgradeable,
     uint256 public redemptionNonce;
 
     mapping(address => bool) public supportedIndexTokens;
-    mapping(address => uint64) public assetsTypes;
+    mapping(address => uint64) public providerIndexes;
 
     event SupportedIndexTokenUpdated(address indexed token, bool isSupported);
     event Issuanced(
@@ -94,12 +94,12 @@ contract IndexFactory is Initializable, OwnableUpgradeable, PausableUpgradeable,
         _approveForOrderManager(usdc, amount);
 
         uint currentFilledCount = functionsOracle.currentFilledCount(indexToken);
-        uint64[] memory currentAssetTypes = functionsOracle.getCurrentAssetTypes(indexToken, currentFilledCount);
-        for (uint256 i = 0; i <= currentAssetTypes.length; i++) {
+        uint64[] memory currentProviderIndexes = functionsOracle.getCurrentProviderIndexes(indexToken, currentFilledCount);
+        for (uint256 i = 0; i <= currentProviderIndexes.length; i++) {
             (uint totalShares, address[] memory tokens, uint256[] memory marketShares) =
-            functionsOracle.getCurrentAssetTypeData(indexToken, currentFilledCount, currentAssetTypes[i]);
+            functionsOracle.getCurrentProviderIndexData(indexToken, currentFilledCount, currentProviderIndexes[i]);
             uint256 share = (amount * totalShares) / SHARE_DENOMINATOR;
-            orderNonce = _createBuyOrder(issuanceNonce, indexToken, usdc, address(0), currentAssetTypes[i], share);
+            orderNonce = _createBuyOrder(issuanceNonce, indexToken, usdc, address(0), currentProviderIndexes[i], share);
             // emit Issuanced(issuanceNonce, msg.sender, indexToken, usdc, underlyings[i], parts[i]);
         }
         
@@ -110,7 +110,7 @@ contract IndexFactory is Initializable, OwnableUpgradeable, PausableUpgradeable,
 
         for (uint256 i = 0; i < totalCurrentList; i++) {
             if (parts[i] == 0) continue;
-            orderNonce = _createBuyOrder(issuanceNonce, usdc, underlyings[i], assetsTypes[underlyings[i]], parts[i]);
+            orderNonce = _createBuyOrder(issuanceNonce, usdc, underlyings[i], providerIndexes[underlyings[i]], parts[i]);
             emit Issuanced(issuanceNonce, msg.sender, indexToken, usdc, underlyings[i], parts[i]);
         }
 
@@ -140,10 +140,10 @@ contract IndexFactory is Initializable, OwnableUpgradeable, PausableUpgradeable,
             address underlying = functionsOracle.currentList(indexToken, i);
             require(underlying != address(0), "IndexFactory: invalid underlying");
 
-            uint64 assetType = assetsTypes[underlying];
+            uint64 providerIndex = providerIndexes[underlying];
             uint256 withdrawn = 0;
 
-            if (assetType != 2) {
+            if (providerIndex != 2) {
                 withdrawn = _withdrawProRataFromVault(vaultAddr, underlying, burnPercent);
                 if (withdrawn > 0) {
                     _approveExactForOrderManager(underlying, withdrawn);
@@ -155,8 +155,8 @@ contract IndexFactory is Initializable, OwnableUpgradeable, PausableUpgradeable,
                 indexToken,
                 underlying, // input for sells (or 0 amount for type 2)
                 usdc, // output hint
-                assetType,
-                (assetType == 2) ? 0 : withdrawn,
+                providerIndex,
+                (providerIndex == 2) ? 0 : withdrawn,
                 burnPercent
             );
 
@@ -265,16 +265,16 @@ contract IndexFactory is Initializable, OwnableUpgradeable, PausableUpgradeable,
         functionsOracle = FunctionsOracle(_oracle);
     }
 
-    function setAssetType(address token, uint64 assetType) external onlyOwner {
+    function setProviderIndex(address token, uint64 providerIndex) external onlyOwner {
         if (token == address(0)) revert ZeroAddress();
-        assetsTypes[token] = assetType;
+        providerIndexes[token] = providerIndex;
     }
 
-    function setAssetTypes(address[] calldata tokens, uint64[] calldata assetTypes) external onlyOwner {
-        require(tokens.length == assetTypes.length, "length mismatch");
+    function setProviderIndexes(address[] calldata tokens, uint64[] calldata providerIndexes_) external onlyOwner {
+        require(tokens.length == providerIndexes_.length, "length mismatch");
         for (uint256 i = 0; i < tokens.length; i++) {
             if (tokens[i] == address(0)) revert ZeroAddress();
-            assetsTypes[tokens[i]] = assetTypes[i];
+            providerIndexes[tokens[i]] = providerIndexes_[i];
         }
     }
 
@@ -364,7 +364,7 @@ contract IndexFactory is Initializable, OwnableUpgradeable, PausableUpgradeable,
         Vault(vaultAddr).withdrawFunds(underlying, address(this), withdrawn);
     }
 
-    function _createBuyOrder(uint256 requestNonce_, address indexToken, address usdc, address underlying, uint64 assetType_, uint256 share)
+    function _createBuyOrder(uint256 requestNonce_, address indexToken, address usdc, address underlying, uint64 providerIndex_, uint256 share)
         private
         returns (uint256 orderNonce)
     {
@@ -373,7 +373,7 @@ contract IndexFactory is Initializable, OwnableUpgradeable, PausableUpgradeable,
             indexTokenAddress: indexToken,
             inputTokenAddress: usdc,
             outputTokenAddress: underlying,
-            assetType: assetType_,
+            providerIndex: providerIndex_,
             inputTokenAmount: share,
             outputTokenAmount: 0,
             isBuyOrder: true,
@@ -387,8 +387,8 @@ contract IndexFactory is Initializable, OwnableUpgradeable, PausableUpgradeable,
         address indexToken,
         address inputToken, // underlying leg
         address outputTokenHint, // e.g., USDC
-        uint64 assetType_,
-        uint256 inputAmount, // 0 when assetType==2
+        uint64 providerIndex_,
+        uint256 inputAmount, // 0 when providerIndex==2
         uint256 burnPercent_
     ) private returns (uint256 orderNonce) {
         OrderManager.CreateOrderConfig memory cfg = OrderManager.CreateOrderConfig({
@@ -396,7 +396,7 @@ contract IndexFactory is Initializable, OwnableUpgradeable, PausableUpgradeable,
             indexTokenAddress: indexToken,
             inputTokenAddress: inputToken,
             outputTokenAddress: outputTokenHint,
-            assetType: assetType_,
+            providerIndex: providerIndex_,
             inputTokenAmount: inputAmount,
             outputTokenAmount: 0,
             isBuyOrder: false,
