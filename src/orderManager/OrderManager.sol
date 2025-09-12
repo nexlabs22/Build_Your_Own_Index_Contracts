@@ -2,10 +2,10 @@
 pragma solidity 0.8.25;
 
 import {SafeERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol"; // Corrected import style
+import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol"; // Corrected import style
 
-contract NexVault is Initializable, OwnableUpgradeable {
+contract OrderManager is Initializable, OwnableUpgradeable {
     using SafeERC20 for IERC20;
 
     struct OrderNonceInfo {
@@ -35,7 +35,7 @@ contract NexVault is Initializable, OwnableUpgradeable {
     }
 
     OrderNonceInfo public orderNonceInfo;
-    address usdcAddress;
+    address public usdcAddress;
 
     mapping(address => bool) public isOperator;
     mapping(uint => OrderInfo) public orderInfo; // mapping of orderNonce to OrderInfo
@@ -44,7 +44,7 @@ contract NexVault is Initializable, OwnableUpgradeable {
     event OrderCreated(uint indexed orderNonce, address indexed user, bool isBuyOrder, address inputToken, uint256 inputAmount, address outputToken, uint256 outputAmount);
 
     modifier onlyOperator() {
-        require(isOperator[msg.sender], "NexVault: caller is not an operator");
+        require(isOperator[msg.sender], "OrderManager: caller is not an operator");
         _;
     }
 
@@ -78,8 +78,8 @@ contract NexVault is Initializable, OwnableUpgradeable {
     }
 
     function _transferInputTokenFromCaller(address _inputToken, uint256 _amount) internal {
-        require(_inputToken != address(0), "OrderManger: invalid token address");
-        require(_amount > 0, "OrderManger: amount must be greater than 0");
+        require(_inputToken != address(0), "OrderManager: invalid token address");
+        require(_amount > 0, "OrderManager: amount must be greater than 0");
 
         IERC20(_inputToken).safeTransferFrom(msg.sender, address(this), _amount);
     }
@@ -125,7 +125,6 @@ contract NexVault is Initializable, OwnableUpgradeable {
         emit OrderCreated(orderNonceInfo.orderNonce, msg.sender, _config.isBuyOrder, _config.inputTokenAddress, _config.inputTokenAmount, _config.outputTokenAddress, _config.outputTokenAmount);
         return orderNonceInfo.orderNonce;
     }
-
 
     function completeOrder(uint _orderNonce) external onlyOperator {
         require(_orderNonce > 0 && _orderNonce <= orderNonceInfo.orderNonce, "OrderManager: invalid order nonce");

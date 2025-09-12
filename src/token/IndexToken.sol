@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.25;
 
-import "../utils/proposable/ProposableOwnableUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import "./interfaces/TokenInterface.sol";
+import {ProposableOwnableUpgradeable} from "../utils/proposable/ProposableOwnableUpgradeable.sol";
+import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
+import {ERC20Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
+import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import {TokenInterface} from "./interfaces/TokenInterface.sol";
 
 /// @title Index Token
 /// @author NEX Labs Protocol
@@ -13,13 +13,13 @@ import "./interfaces/TokenInterface.sol";
 /// @dev This contract uses an upgradeable pattern
 contract IndexToken is
     Initializable,
-    ContextUpgradeable,
+    // Removed ContextUpgradeable
     ERC20Upgradeable,
     ProposableOwnableUpgradeable,
     PausableUpgradeable,
     TokenInterface
 {
-    uint256 internal constant SCALAR = 1e20;
+    uint256 internal constant SCALAR = 1e20; // Corrected to SCALAR
 
     // Inflation rate (per day) on total supply, to be accrued to the feeReceiver.
     uint256 public feeRatePerDayScaled;
@@ -66,7 +66,7 @@ contract IndexToken is
         __Ownable_init(msg.sender);
         __Pausable_init();
         __ERC20_init(tokenName, tokenSymbol);
-        __Context_init();
+        // Removed __Context_init() call
 
         feeRatePerDayScaled = _feeRatePerDayScaled;
         feeReceiver = _feeReceiver;

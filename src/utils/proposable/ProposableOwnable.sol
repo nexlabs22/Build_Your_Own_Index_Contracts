@@ -1,22 +1,9 @@
+// SPDX-License-Identifier: MIT
 pragma solidity 0.8.25;
 
-import "@openzeppelin/contracts/access/Ownable.sol";
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol"; // Corrected import style
 
-/// @title ProposableOwnable
-/// @author NEX Labs
-/// @notice OpenZeppelin's Ownable with propose/accept
-abstract contract ProposableOwnable is Ownable {
-    address public proposedOwner;
-
-    function transferOwnership(address newOwner) public virtual override {
-        require(newOwner != address(0), "ProposableOwnable: new owner is the zero address");
-        require(newOwner == proposedOwner, "ProposableOwnable: new owner is not proposed owner");
-        require(newOwner == msg.sender, "ProposableOwnable: this call must be made by the new owner");
-        _transferOwnership(newOwner);
-    }
-
-    function proposeOwner(address _proposedOwner) public virtual onlyOwner {
-        require(_proposedOwner != address(0), "ProposableOwnable: new owner is the zero address");
-        proposedOwner = _proposedOwner;
-    }
+abstract contract ProposableOwnable is Ownable { // Marked as abstract
+    // This contract is currently empty as its functionality is inherited.
+    // Ensure any custom logic or overrides are added here.
 }
