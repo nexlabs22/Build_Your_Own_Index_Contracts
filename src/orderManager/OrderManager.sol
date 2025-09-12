@@ -5,6 +5,7 @@ import {SafeERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeE
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "../factory/IndexFactory.sol";
+import {CPNFactory} from "../cpn/CPNFactory.sol";
 
 contract OrderManager is Initializable, OwnableUpgradeable {
     using SafeERC20 for IERC20;
@@ -42,6 +43,7 @@ contract OrderManager is Initializable, OwnableUpgradeable {
     OrderNonceInfo public orderNonceInfo;
     address public usdcAddress;
     IndexFactory public factory;
+    CPNFactory public cpnFactory;
 
     mapping(address => bool) public isOperator;
     mapping(uint256 => OrderInfo) public orderInfo; // mapping of orderNonce to OrderInfo
@@ -63,10 +65,7 @@ contract OrderManager is Initializable, OwnableUpgradeable {
         _;
     }
 
-    function initialize(
-        address _usdcAddress,
-        address _indexFactory
-    ) external initializer {
+    function initialize(address _usdcAddress, address _indexFactory) external initializer {
         __Ownable_init(msg.sender);
         usdcAddress = _usdcAddress;
         factory = IndexFactory(_indexFactory);
@@ -98,21 +97,11 @@ contract OrderManager is Initializable, OwnableUpgradeable {
         orderNonceInfo.orderNonce += 1;
     }
 
-    function _transferInputTokenFromCaller(
-        address _inputToken,
-        uint256 _amount
-    ) internal {
-        require(
-            _inputToken != address(0),
-            "OrderManger: invalid token address"
-        );
+    function _transferInputTokenFromCaller(address _inputToken, uint256 _amount) internal {
+        require(_inputToken != address(0), "OrderManger: invalid token address");
         require(_amount > 0, "OrderManger: amount must be greater than 0");
 
-        IERC20(_inputToken).safeTransferFrom(
-            msg.sender,
-            address(this),
-            _amount
-        );
+        IERC20(_inputToken).safeTransferFrom(msg.sender, address(this), _amount);
     }
 
     function _initializeOrder(CreateOrderConfig memory _config) internal {
@@ -143,16 +132,11 @@ contract OrderManager is Initializable, OwnableUpgradeable {
         }
     }
 
-    function createOrder(
-        CreateOrderConfig memory _config
-    ) external onlyOperator returns (uint256 orderNonce) {
+    function createOrder(CreateOrderConfig memory _config) external onlyOperator returns (uint256 orderNonce) {
         // increasing order nonce
         _increaseOrderNonce(_config.isBuyOrder);
         // transfer USDC from caller to order manager contract
-        _transferInputTokenFromCaller(
-            _config.inputTokenAddress,
-            _config.inputTokenAmount
-        );
+        _transferInputTokenFromCaller(_config.inputTokenAddress, _config.inputTokenAmount);
         // initialize the order based on buy or sell
         _initializeOrder(_config);
         //call the provider function
@@ -172,10 +156,7 @@ contract OrderManager is Initializable, OwnableUpgradeable {
     }
 
     function completeOrder(uint256 _orderNonce) external onlyOperator {
-        require(
-            _orderNonce > 0 && _orderNonce <= orderNonceInfo.orderNonce,
-            "OrderManager: invalid order nonce"
-        );
+        require(_orderNonce > 0 && _orderNonce <= orderNonceInfo.orderNonce, "OrderManager: invalid order nonce");
         OrderInfo storage order = orderInfo[_orderNonce];
         require(!order.isExecuted, "OrderManager: order already executed");
         order.isExecuted = true;
@@ -186,15 +167,11 @@ contract OrderManager is Initializable, OwnableUpgradeable {
         uint256 _issuanceNonce,
         address _indexToken,
         address _underlyingTokenAddress,
-        uint _oldTokenValue,
-        uint _newTokenValue
+        uint256 _oldTokenValue,
+        uint256 _newTokenValue
     ) external onlyOperator {
         factory.handleCompleteIssuance(
-            _issuanceNonce,
-            _indexToken,
-            _underlyingTokenAddress,
-            _oldTokenValue,
-            _newTokenValue
+            _issuanceNonce, _indexToken, _underlyingTokenAddress, _oldTokenValue, _newTokenValue
         );
     }
 
@@ -204,11 +181,11 @@ contract OrderManager is Initializable, OwnableUpgradeable {
         address _underlyingTokenAddress,
         uint256 _outputValue
     ) external onlyOperator {
-        factory.handleCompleteRedemption(
-            _redemptionNonce,
-            _indexToken,
-            _underlyingTokenAddress,
-            _outputValue
-        );
+        factory.handleCompleteRedemption(_redemptionNonce, _indexToken, _underlyingTokenAddress, _outputValue);
+    }
+
+    function issuanceWithCPNFactory(address _indexToken, uint256 _inputAmount) public {
+        require(_inputAmount > 0, "Invalid amount!");
+        cpnFactory.issuanceIndexTokens(_indexToken, _inputAmount);
     }
 }

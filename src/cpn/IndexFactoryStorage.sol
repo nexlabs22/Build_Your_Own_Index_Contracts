@@ -6,7 +6,8 @@ import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/Own
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 import {IndexFactory} from "../factory/IndexFactory.sol";
-import {FunctionsOracle} from "./FunctionsOracle.sol";
+// import {FunctionsOracle} from "./FunctionsOracle.sol";
+import {FunctionsOracle} from "../oracle/FunctionsOracle.sol";
 import {IndexToken} from "../token/IndexToken.sol";
 import {Vault} from "../vault/Vault.sol";
 import {StagingCustodyAccount} from "./StagingCustodyAccount.sol";
@@ -23,18 +24,13 @@ contract IndexFactoryStorage is Initializable, OwnableUpgradeable {
     IndexFactory public indexFactory;
     FunctionsOracle public functionsOracle;
     StagingCustodyAccount public sca;
-    // FeeVault public feeVault;
-    // IndexFactoryBalancer public factoryBalancer;
     IERC20 public usdc;
 
-    address public bond;
-    address public riskAssetFactoryAddress;
     address public feeReceiver;
     uint8 public feeRate;
     uint256 public issuanceRoundId;
     uint256 public redemptionRoundId;
     address public nexBot;
-    bool public isMainnet;
     uint256 public latestFeeUpdate;
 
     // BYOI
@@ -103,16 +99,16 @@ contract IndexFactoryStorage is Initializable, OwnableUpgradeable {
         address _stagingCustodyAccount,
         address _vault,
         address _nexBot,
-        address _riskAssetFactoryAddress,
+        // address _riskAssetFactoryAddress,
         address _usdc,
-        address _bond,
+        // address _bond,
         address _feeVault,
         address _indexFactoryBalancer
     ) external initializer {
         require(_nexBot != address(0), "Invalid _nexBot address");
-        require(_riskAssetFactoryAddress != address(0), "Invalid _riskAssetFactoryAddress address");
+        // require(_riskAssetFactoryAddress != address(0), "Invalid _riskAssetFactoryAddress address");
         require(_usdc != address(0), "Invalid _usdc address");
-        require(_bond != address(0), "Invalid _bond address");
+        // require(_bond != address(0), "Invalid _bond address");
 
         __Ownable_init(msg.sender);
 
@@ -123,11 +119,11 @@ contract IndexFactoryStorage is Initializable, OwnableUpgradeable {
         vault = Vault(_vault);
         // feeVault = FeeVault(_feeVault);
         usdc = IERC20(_usdc);
-        bond = _bond;
+        // bond = _bond;
 
         // factoryBalancer = IndexFactoryBalancer(_indexFactoryBalancer);
 
-        riskAssetFactoryAddress = _riskAssetFactoryAddress;
+        // riskAssetFactoryAddress = _riskAssetFactoryAddress;
         nexBot = _nexBot;
         // isMainnet = _isMainnet;
         issuanceRoundId = 1;
@@ -157,16 +153,6 @@ contract IndexFactoryStorage is Initializable, OwnableUpgradeable {
     function setSCA(address _sca) external onlyOwner {
         if (_sca == address(0)) revert InvalidAddress();
         sca = StagingCustodyAccount(_sca);
-    }
-
-    function setIndexToken(address _indexToken) external onlyOwner {
-        if (_indexToken == address(0)) revert InvalidAddress();
-        indexToken = IndexToken(_indexToken);
-    }
-
-    function setVault(address _vault) external onlyOwner {
-        if (_vault == address(0)) revert InvalidAddress();
-        vault = Vault(_vault);
     }
 
     function setFunctionsOracle(address _functionsOracle) external onlyOwner {
@@ -314,40 +300,6 @@ contract IndexFactoryStorage is Initializable, OwnableUpgradeable {
     //     redemptionRequesterByNonce[nonce] = requester;
     // }
 
-    function increaseTokenPendingRebalanceAmount(address _token, uint256 _nonce, uint256 _amount)
-        external
-        onlyFactory
-    {
-        require(_token != address(0), "invalid token address");
-        require(_amount > 0, "Invalid amount");
-        tokenPendingRebalanceAmount[_token] += _amount;
-        tokenPendingRebalanceAmountByNonce[_token][_nonce] += _amount;
-    }
-
-    function decreaseTokenPendingRebalanceAmount(address _token, uint256 _nonce, uint256 _amount)
-        external
-        onlyFactory
-    {
-        require(_token != address(0), "invalid token address");
-        require(_amount > 0, "Invalid amount");
-        require(tokenPendingRebalanceAmount[_token] >= _amount, "Insufficient pending rebalance amount");
-        tokenPendingRebalanceAmount[_token] -= _amount;
-        tokenPendingRebalanceAmountByNonce[_token][_nonce] -= _amount;
-    }
-
-    function resetTokenPendingRebalanceAmount(address _token, uint256 _nonce) public onlyOwnerOrOperator {
-        require(_token != address(0), "invalid token address");
-        tokenPendingRebalanceAmount[_token] = 0;
-        tokenPendingRebalanceAmountByNonce[_token][_nonce] = 0;
-    }
-
-    function resetAllTokenPendingRebalanceAmount(uint256 _nonce) public onlyOwnerOrOperator {
-        for (uint256 i; i < functionsOracle.totalCurrentList(); i++) {
-            address tokenAddress = functionsOracle.currentList(i);
-            resetTokenPendingRebalanceAmount(tokenAddress, _nonce);
-        }
-    }
-
     function recordIssuanceNonce(uint256 roundId, uint256 nonce) external onlyFactory {
         issuanceRoundIdToNonces[roundId].push(nonce);
         nonceToIssuanceRound[nonce] = roundId;
@@ -492,24 +444,23 @@ contract IndexFactoryStorage is Initializable, OwnableUpgradeable {
         return !redemptionRoundActive[prev] && redemptionIsCompleted[prev];
     }
 
-    function getPortfolioValue(uint256 bondPrice, uint256 riskAssetPrice) public view returns (uint256 totalValue) {
-        uint256 tokens = functionsOracle.totalCurrentList();
+    function getPortfolioValue(
+        address indexTokenAddress,
+        address[] memory underlyingAssets, /* underlyingAssets */
+        uint256[] memory prices
+    ) public view returns (uint256 totalValue) {
+        uint256 tokens = functionsOracle.totalCurrentList(indexTokenAddress);
+        require(prices.length >= tokens, "prices length too small");
 
-        for (uint256 i; i < tokens; ++i) {
-            address token = functionsOracle.currentList(i);
-            uint256 balance = IERC20(token).balanceOf(address(vault)) + tokenPendingRebalanceAmount[token];
-            if (balance == 0) continue;
+        for (uint256 i = 0; i < tokens; ++i) {
+            address token = functionsOracle.currentList(indexTokenAddress, i);
+            uint256 price = prices[i]; // price expected in 1e18
+            uint256 balance = IERC20(token).balanceOf(address(vault));
+            if (balance == 0 || price == 0) continue;
 
-            uint8 assetType = functionsOracle.tokenAssetType(token);
-
-            if (assetType == 0) {
-                totalValue += (balance * bondPrice) / 1e18;
-            } else if (assetType == 1) {
-                totalValue += (balance * riskAssetPrice) / 1e18;
-            }
+            // balance is in token decimals (assumed 18), price in 1e18 -> value in 1e18:
+            totalValue += (balance * price) / 1e18;
         }
-
-        return totalValue;
     }
 
     function calculateMintAmount(uint256 oldValue, uint256 newValue) public view returns (uint256 mintAmount) {
