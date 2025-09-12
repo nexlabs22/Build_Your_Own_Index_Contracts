@@ -102,7 +102,7 @@ contract FunctionsOracle is Initializable, FunctionsClient, ConfirmedOwner {
      * @notice Store latest result/error
      * @param requestId The request ID, returned by sendRequest()
      * @param response Aggregated response from the user code
-     * @param err Aggregated error from the user code or from the execution pipeline
+     * @param _err Aggregated error from the user code or from the execution pipeline
      * Either response or error parameter will be set, but never both
      */
     function fulfillRequest(bytes32 requestId, bytes memory response, bytes memory _err) internal override { // Marked 'err' as unused
