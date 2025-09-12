@@ -22,7 +22,7 @@ contract OrderManager is Initializable, OwnableUpgradeable {
         address indexTokenAddress;
         address inputTokenAddress;
         address outputTokenAddress;
-        uint64 assetType; // 1 for ERC20, 2 for ERC721,
+        uint64 providerIndex; // 1 for ERC20, 2 for ERC721,
         uint256 inputTokenAmount;
         uint256 outputTokenAmount; // for buy order, this will be 0 initially
         bool isBuyOrder;
@@ -32,7 +32,7 @@ contract OrderManager is Initializable, OwnableUpgradeable {
     struct OrderInfo {
         address indexTokenAddress;
         address targetTokenAddress;
-        uint64 assetType; // 1 for ERC20, 2 for ERC721, 3 for ERC1155
+        uint64 providerIndex; // 1 for ERC20, 2 for ERC721, 3 for ERC1155
         uint256 usdcAmount;
         uint256 targetTokenAmount; // for buy order, this will be 0 initially
         bool isBuyOrder;
@@ -110,7 +110,7 @@ contract OrderManager is Initializable, OwnableUpgradeable {
             orderInfo[orderNonceInfo.orderNonce] = OrderInfo({
                 indexTokenAddress: _config.indexTokenAddress,
                 targetTokenAddress: _config.outputTokenAddress,
-                assetType: _config.assetType,
+                providerIndex: _config.providerIndex,
                 usdcAmount: _config.inputTokenAmount,
                 targetTokenAmount: 0,
                 isBuyOrder: true,
@@ -122,7 +122,7 @@ contract OrderManager is Initializable, OwnableUpgradeable {
             orderInfo[orderNonceInfo.orderNonce] = OrderInfo({
                 indexTokenAddress: _config.indexTokenAddress,
                 targetTokenAddress: _config.inputTokenAddress,
-                assetType: _config.assetType,
+                providerIndex: _config.providerIndex,
                 usdcAmount: 0,
                 targetTokenAmount: _config.inputTokenAmount,
                 isBuyOrder: false,
