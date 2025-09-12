@@ -90,13 +90,13 @@ contract CPNFactory is Initializable, OwnableUpgradeable, PausableUpgradeable, R
         uint256 nonce = ++issuanceNonce;
         factoryStorage.setIssuanceInputAmount(_indexToken, nonce, _inputAmount);
         factoryStorage.addIssuanceForCurrentRound(msg.sender, _inputAmount);
-        factoryStorage.setIssuanceRoundToNonce(nonce, factoryStorage.issuanceRoundId());
+        factoryStorage.setIssuanceRoundToNonce(_indexToken, nonce, factoryStorage.issuanceRoundId(_indexToken));
 
-        uint256 currentRound = factoryStorage.issuanceRoundId();
-        factoryStorage.recordIssuanceNonce(currentRound, nonce);
+        uint256 currentRound = factoryStorage.issuanceRoundId(_indexToken);
+        factoryStorage.recordIssuanceNonce(_indexToken, currentRound, nonce);
 
         emit RequestIssuance(
-            factoryStorage.issuanceRoundId(),
+            factoryStorage.issuanceRoundId(_indexToken),
             nonce,
             msg.sender,
             address(factoryStorage.usdc()),
@@ -122,13 +122,13 @@ contract CPNFactory is Initializable, OwnableUpgradeable, PausableUpgradeable, R
 
         factoryStorage.setRedemptionInputAmount(_indexToken, nonce, _amount);
         factoryStorage.addRedemptionForCurrentRound(msg.sender, _amount);
-        factoryStorage.setRedemptionRoundToNonce(nonce, factoryStorage.redemptionRoundId());
+        factoryStorage.setRedemptionRoundToNonce(_indexToken, nonce, factoryStorage.redemptionRoundId(_indexToken));
 
-        uint256 currentRedemRound = factoryStorage.redemptionRoundId();
-        factoryStorage.recordRedemptionNonce(currentRedemRound, nonce);
+        uint256 currentRedemRound = factoryStorage.redemptionRoundId(_indexToken);
+        factoryStorage.recordRedemptionNonce(_indexToken, currentRedemRound, nonce);
 
         emit RequestRedemption(
-            factoryStorage.redemptionRoundId(),
+            factoryStorage.redemptionRoundId(_indexToken),
             nonce,
             msg.sender,
             address(factoryStorage.usdc()),
