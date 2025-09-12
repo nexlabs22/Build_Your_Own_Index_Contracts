@@ -304,13 +304,15 @@ contract CoreSender is Initializable, CCIPReceiver, ProposableOwnableUpgradeable
             factoryStorage.setIssuanceOldTokenValue(requestIssuanceNonce, tokenAddresses[i], oldTokenValue);
             factoryStorage.setIssuanceNewTokenValue(requestIssuanceNonce, tokenAddresses[i], newTokenValue);
             factoryStorage.issuanceIncreaseCompletedTokensCount(requestIssuanceNonce);
+            // call the order manager here
+            // ....
         }
-        if (
-            // totalCurrentList
-            factoryStorage.getIssuanceCompletedTokensCount(requestIssuanceNonce) == totalCurrentList
-        ) {
-            completeIssuanceRequest(requestIssuanceNonce, messageId);
-        }
+        // if (
+        //     // totalCurrentList
+        //     factoryStorage.getIssuanceCompletedTokensCount(requestIssuanceNonce) == totalCurrentList
+        // ) {
+        //     completeIssuanceRequest(requestIssuanceNonce, messageId);
+        // }
     }
 
     function sendRedemptionRequest(uint256 _burnPercent, uint256 _redemptionNonce, uint64 _chainSelector)
@@ -438,8 +440,11 @@ contract CoreSender is Initializable, CCIPReceiver, ProposableOwnableUpgradeable
         factoryStorage.increaseRedemptionTotalPortfolioValues(requestRedemptionNonce, crossChainPortfolioValue);
         factoryStorage.increaseRedemptionCompletedTokensCount(requestRedemptionNonce, tokenAddresses.length);
         if (factoryStorage.getRedemptionCompletedTokensCount(requestRedemptionNonce) == totalCurrentList) {
-            completeRedemptionRequest(requestRedemptionNonce, messageId);
+            // completeRedemptionRequest(requestRedemptionNonce, messageId);
         }
+
+        // call the order manager here
+        // ....
     }
 
     /**

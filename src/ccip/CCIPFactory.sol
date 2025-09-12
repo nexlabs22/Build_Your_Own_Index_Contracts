@@ -292,16 +292,18 @@ contract CCIPFactory is
         require(
             IERC20(_tokenIn).transferFrom(msg.sender, address(this), _inputAmount + feeAmount), "Token transfer failed"
         );
-        uint256 wethAmountBeforFee = swap(_tokenInPath, _tokenInFees, _inputAmount + feeAmount, address(this));
-        uint256 feeWethAmount = (wethAmountBeforFee * 10) / 10000;
-        uint256 wethAmount = wethAmountBeforFee - feeWethAmount;
+        uint256 wethAmount = swap(_tokenInPath, _tokenInFees, _inputAmount + feeAmount, address(this));
+        // uint256 feeWethAmount = (wethAmountBeforFee * 10) / 10000;
+        // uint256 wethAmount = wethAmountBeforFee - feeWethAmount;
 
         // Transfer fee to the fee receiver and check the result
-        require(weth.transfer(address(owner()), feeWethAmount), "Fee transfer failed");
+        // require(weth.transfer(address(owner()), feeWethAmount), "Fee transfer failed");
 
         //run issuance
         _issuance(_indexToken, _tokenIn, wethAmount);
     }
+
+    
 
     /**
      * @dev Issues index tokens with ETH.
@@ -412,6 +414,8 @@ contract CCIPFactory is
                 _issuanceNonce, tokenAddress, factoryStorage.getCurrentTokenValue(tokenAddress)
             );
             factoryStorage.issuanceIncreaseCompletedTokensCount(_issuanceNonce);
+            // call the order manager here
+            // ....
         }
     }
 
@@ -432,33 +436,33 @@ contract CCIPFactory is
     /**
      * @dev Redeems tokens.
      * @param _indexToken The address of the index token.
-     * @param amountIn The amount of input tokens.
+        * @param _burnPercent The burn percentage.
      * @param _tokenOut The address of the output token.
      */
     function redemption(
         address _indexToken,
-        uint256 amountIn,
+        uint256 _burnPercent,
         address _tokenOut,
         address[] memory _tokenOutPath,
         uint24[] memory _tokenOutFees
     ) public payable whenNotPaused {
         // Validate input parameters
-        require(amountIn > 0, "Amount must be greater than zero");
+        // require(amountIn > 0, "Amount must be greater than zero");
         require(_tokenOut != address(0), "Invalid output token address");
         require(_tokenOutPath[0] == address(weth), "Invalid token path");
         if(!factoryStorage.isCrossChainFeeSponsered()){
-        require(getRedemptionFee(_indexToken, amountIn) >= msg.value, "Insufficient ETH sent for cross chain fee");
+        // require(getRedemptionFee(_indexToken, amountIn) >= msg.value, "Insufficient ETH sent for cross chain fee");
         (bool success,) = factoryStorage.coreSender().call{value: msg.value}("");
         require(success, "Cross chain fee transfer failed");
         }
-        uint256 burnPercent = (amountIn * 1e18) / indexToken.totalSupply();
+        // uint256 burnPercent = (amountIn * 1e18) / indexToken.totalSupply();
         factoryStorage.increaseRedemptionNonce();
-        factoryStorage.increasePendingRedemptionInputByNonce(factoryStorage.redemptionNonce(), amountIn);
-        factoryStorage.setRedemptionData(
-            factoryStorage.redemptionNonce(), msg.sender, _tokenOut, amountIn, _tokenOutPath, _tokenOutFees, bytes32(0)
-        );
+        // factoryStorage.increasePendingRedemptionInputByNonce(factoryStorage.redemptionNonce(), amountIn);
+        // factoryStorage.setRedemptionData(
+        //     factoryStorage.redemptionNonce(), msg.sender, _tokenOut, amountIn, _tokenOutPath, _tokenOutFees, bytes32(0)
+        // );
 
-        indexToken.burn(msg.sender, amountIn);
+        // indexToken.burn(msg.sender, amountIn);
 
         //swap
         uint256 totalChains = functionsOracle.currentChainSelectorsCount(_indexToken);
@@ -470,13 +474,13 @@ contract CCIPFactory is
             if (chainSelector == currentChainSelector) {
                 _redemptionSwapsCurrentChain(
                     _indexToken,
-                    burnPercent,
+                    _burnPercent,
                     // redemptionNonce,
                     factoryStorage.redemptionNonce(),
                     chainSelectorTokensCount
                 );
             } else {
-                _redemptionSwapsOtherChains(burnPercent, factoryStorage.redemptionNonce(), chainSelector);
+                _redemptionSwapsOtherChains(_burnPercent, factoryStorage.redemptionNonce(), chainSelector);
             }
         }
         emit RequestRedemption(
@@ -484,7 +488,7 @@ contract CCIPFactory is
             factoryStorage.redemptionNonce(),
             msg.sender,
             _tokenOut,
-            amountIn,
+            0,
             0,
             block.timestamp
         );
@@ -526,6 +530,8 @@ contract CCIPFactory is
                     )
             );
             factoryStorage.increaseRedemptionCompletedTokensCount(_redemptionNonce, 1);
+            // call the order manager here
+            // ....
         }
     }
 
