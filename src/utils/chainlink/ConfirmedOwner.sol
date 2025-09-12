@@ -6,7 +6,7 @@ import {ConfirmedOwnerWithProposal} from "./ConfirmedOwnerWithProposal.sol";
 /// @title The ConfirmedOwner contract
 /// @notice A contract with helpers for basic contract ownership.
 contract ConfirmedOwner is ConfirmedOwnerWithProposal {
-    function __ConfirmedOwner_init(address newOwner) internal {
-        __ConfirmedOwnerWithProposal_init(newOwner, address(0));
+    function _ConfirmedOwner_init(address newOwner) internal { // Corrected function name
+        _ConfirmedOwnerWithProposal_init(newOwner, address(0)); // Corrected function name
     }
 }

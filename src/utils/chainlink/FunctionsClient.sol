@@ -10,15 +10,15 @@ import {FunctionsRequest} from "@chainlink/contracts/src/v0.8/functions/v1_0_0/l
 abstract contract FunctionsClient is IFunctionsClient {
     using FunctionsRequest for FunctionsRequest.Request;
 
-    IFunctionsRouter internal i_router;
+    IFunctionsRouter internal iRouter; // Corrected variable name
 
     event RequestSent(bytes32 indexed id);
     event RequestFulfilled(bytes32 indexed id);
 
     error OnlyRouterCanFulfill();
 
-    function __FunctionsClient_init(address router) internal {
-        i_router = IFunctionsRouter(router);
+    function _FunctionsClient_init(address router) internal { // Corrected function name
+        iRouter = IFunctionsRouter(router);
     }
 
     /// @notice Sends a Chainlink Functions request
@@ -31,7 +31,7 @@ abstract contract FunctionsClient is IFunctionsClient {
         returns (bytes32)
     {
         bytes32 requestId =
-            i_router.sendRequest(subscriptionId, data, FunctionsRequest.REQUEST_DATA_VERSION, callbackGasLimit, donId);
+            iRouter.sendRequest(subscriptionId, data, FunctionsRequest.REQUEST_DATA_VERSION, callbackGasLimit, donId);
         emit RequestSent(requestId);
         return requestId;
     }
@@ -45,7 +45,7 @@ abstract contract FunctionsClient is IFunctionsClient {
 
     /// @inheritdoc IFunctionsClient
     function handleOracleFulfillment(bytes32 requestId, bytes memory response, bytes memory err) external override {
-        if (msg.sender != address(i_router)) {
+        if (msg.sender != address(iRouter)) {
             revert OnlyRouterCanFulfill();
         }
         fulfillRequest(requestId, response, err);

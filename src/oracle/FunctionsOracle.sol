@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.25;
 
-import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import "../utils/chainlink/FunctionsClient.sol";
-import "../utils/chainlink/ConfirmedOwner.sol";
-import "@chainlink/contracts/src/v0.8/functions/v1_0_0/libraries/FunctionsRequest.sol";
+// Removed unused import {OwnableUpgradeable}
+import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import {FunctionsClient} from "../utils/chainlink/FunctionsClient.sol";
+import {ConfirmedOwner} from "../utils/chainlink/ConfirmedOwner.sol";
+import {FunctionsRequest} from "@chainlink/contracts/src/v0.8/functions/v1_0_0/libraries/FunctionsRequest.sol";
 
 /// @title FunctionsOracle
 /// @notice Stores data and provides functions for managing index token issuance and redemption
@@ -50,8 +50,8 @@ contract FunctionsOracle is Initializable, FunctionsClient, ConfirmedOwner {
     function initialize(address _functionsRouterAddress, bytes32 _newDonId) external initializer {
         require(_functionsRouterAddress != address(0), "invalid functions router address");
         require(_newDonId.length > 0, "invalid don id");
-        __FunctionsClient_init(_functionsRouterAddress);
-        __ConfirmedOwner_init(msg.sender);
+        _FunctionsClient_init(_functionsRouterAddress); // Corrected function name
+        _ConfirmedOwner_init(msg.sender); // Corrected function name
         donId = _newDonId;
         functionsRouterAddress = _functionsRouterAddress;
     }
@@ -105,7 +105,7 @@ contract FunctionsOracle is Initializable, FunctionsClient, ConfirmedOwner {
      * @param err Aggregated error from the user code or from the execution pipeline
      * Either response or error parameter will be set, but never both
      */
-    function fulfillRequest(bytes32 requestId, bytes memory response, bytes memory err) internal override {
+    function fulfillRequest(bytes32 requestId, bytes memory response, bytes memory _err) internal override { // Marked 'err' as unused
         (address[] memory _tokens, uint256[] memory _marketShares) = abi.decode(response, (address[], uint256[]));
         require(requestId.length > 0, "invalid request id");
         require(_tokens.length > 0, "invalid tokens");
