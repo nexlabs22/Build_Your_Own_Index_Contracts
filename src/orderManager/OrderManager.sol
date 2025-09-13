@@ -186,6 +186,13 @@ contract OrderManager is Initializable, OwnableUpgradeable {
 
     function issuanceWithCPNFactory(address _indexToken, uint256 _inputAmount) public {
         require(_inputAmount > 0, "Invalid amount!");
+        require(_indexToken != address(0), "Invalid address!");
         cpnFactory.issuanceIndexTokens(_indexToken, _inputAmount);
+    }
+
+    function redemptionWithCPNFactory(address _indexToken, uint256 _inputAmount) public {
+        require(_inputAmount > 0, "Invalid amount!");
+        require(_indexToken != address(0), "Invalid address!");
+        cpnFactory.redemption(_indexToken, _inputAmount);
     }
 }

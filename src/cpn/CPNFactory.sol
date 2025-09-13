@@ -13,8 +13,6 @@ import {IndexFactoryStorage} from "./IndexFactoryStorage.sol";
 import {FunctionsOracle} from "./FunctionsOracle.sol";
 import {IndexToken} from "../token/IndexToken.sol";
 import {FeeCalculation} from "../libraries/FeeCalculation.sol";
-import {IRiskAssetFactory} from "./interfaces/IRiskAssetFactory.sol";
-// import {FeeVault} from "../vault/FeeVault.sol";
 
 error ZeroAmount();
 error WrongETHAmount();
@@ -24,7 +22,6 @@ contract CPNFactory is Initializable, OwnableUpgradeable, PausableUpgradeable, R
 
     IndexFactoryStorage factoryStorage;
     FunctionsOracle functionsOracle;
-    // FeeVault feeVault;
 
     uint256 public issuanceNonce;
     uint256 public redemptionNonce;

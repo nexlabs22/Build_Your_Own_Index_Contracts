@@ -7,14 +7,13 @@ import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/ut
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
-import {IRiskAssetFactory} from "./interfaces/IRiskAssetFactory.sol";
 import {IndexFactory} from "../factory/IndexFactory.sol";
 import {IndexToken} from "../token/IndexToken.sol";
 import {IndexFactoryStorage} from "./IndexFactoryStorage.sol";
-// import {FunctionsOracle} from "./FunctionsOracle.sol";
 import {FunctionsOracle} from "../oracle/FunctionsOracle.sol";
 import {FeeCalculation} from "../libraries/FeeCalculation.sol";
 import {Vault} from "../vault/Vault.sol";
+import {OrderManager} from "../orderManager/OrderManager.sol";
 
 error ZeroAmount();
 error ZeroAddress();
@@ -27,12 +26,11 @@ contract StagingCustodyAccount is Initializable, ReentrancyGuardUpgradeable, Own
 
     IndexFactoryStorage factoryStorage;
     FunctionsOracle functionsOracle;
+    OrderManager orderManager;
+    IndexFactory indexFactory;
 
-    address public riskAssetFactoryAddress;
     address public nexBot;
-    address public bond;
 
-    event Rescue(address indexed token, address indexed to, uint256 amount, uint256 indexed timestamp);
     event WithdrawnForPurchase(uint256 indexed roundId, uint256 indexed amount, uint256 indexed timestamp);
     event Refunded(uint256 indexed roundId, address indexed to, uint256 indexed amount, uint256 timestamp);
     event RedemptionSettled(uint256 indexed roundId, uint256 indexed amount, uint256 timestamp);
@@ -75,16 +73,6 @@ contract StagingCustodyAccount is Initializable, ReentrancyGuardUpgradeable, Own
         nexBot = _newNexBotAddress;
     }
 
-    function setRiskAssetFactoryAddress(address _newRiskAssetFactoryAddress) external onlyOwner {
-        if (_newRiskAssetFactoryAddress == address(0)) revert ZeroAddress();
-        riskAssetFactoryAddress = _newRiskAssetFactoryAddress;
-    }
-
-    function setBondAddress(address _newsetBondAddress) external onlyOwner {
-        if (_newsetBondAddress == address(0)) revert ZeroAddress();
-        bond = _newsetBondAddress;
-    }
-
     function setIndexFactoryStorageAddress(address _newIndexFactoryStorageAddress) external onlyOwner {
         if (_newIndexFactoryStorageAddress == address(0)) revert ZeroAddress();
         factoryStorage = IndexFactoryStorage(_newIndexFactoryStorageAddress);
@@ -97,13 +85,6 @@ contract StagingCustodyAccount is Initializable, ReentrancyGuardUpgradeable, Own
         require(balance >= amount, "Insufficient USDC balance");
         IERC20(factoryStorage.usdc()).safeTransfer(nexBot, amount);
         emit WithdrawnForPurchase(roundId, amount, block.timestamp);
-    }
-
-    function rescue(address token, address to, uint256 amount) external onlyOwnerOrOperator {
-        if (token == address(0) || to == address(0)) revert ZeroAddress();
-        if (amount == 0) revert ZeroAmount();
-        IERC20(token).safeTransfer(to, amount);
-        emit Rescue(token, to, amount, block.timestamp);
     }
 
     function requestIssuance(address indexToken, uint256 roundId) public payable onlyOwnerOrOperator {
@@ -150,21 +131,29 @@ contract StagingCustodyAccount is Initializable, ReentrancyGuardUpgradeable, Own
         require(!factoryStorage.issuanceIsCompleted(indexToken, roundId), "Round already completed");
 
         // address[] memory currentList = factoryStorage.functionsOracle().currentList();
-        uint256 oldValue = factoryStorage.getPortfolioValue(indexToken, new address[](0), new uint256[](0));
+        uint256 oldValue = factoryStorage.getPortfolioValue(indexToken, underlyingAssets, prices);
         for (uint256 i; i < factoryStorage.functionsOracle().totalCurrentList(indexToken); i++) {
             address tokenAddress = factoryStorage.functionsOracle().currentList(indexToken, i);
             uint256 balance = IERC20(tokenAddress).balanceOf(address(this));
             IERC20(tokenAddress).safeTransfer(address(vault), balance);
         }
+        uint256 newValue = factoryStorage.getPortfolioValue(indexToken, underlyingAssets, prices);
 
         uint256 total = factoryStorage.totalIssuanceByRound(indexToken, roundId);
         require(total > 0, "Nothing to distribute");
+
+        orderManager.completeIssuance(indexFactory.issuanceNonce(), indexToken, underlyingAssets, oldValue, newValue);
 
         factoryStorage.settleIssuance(indexToken, roundId);
         emit IssuanceSettled(roundId, total, block.timestamp);
     }
 
-    function requestRedemption(address indexToken, uint256 roundId) external payable nonReentrant onlyOwnerOrOperator {
+    function requestRedemption(address indexToken, uint256 roundId, uint256 burnPercent)
+        external
+        payable
+        nonReentrant
+        onlyOwnerOrOperator
+    {
         if (roundId < 1 || roundId > factoryStorage.redemptionRoundId(indexToken)) revert InvalidRoundId();
         uint256 prev = roundId - 1;
         if (roundId > 1) {
@@ -184,13 +173,13 @@ contract StagingCustodyAccount is Initializable, ReentrancyGuardUpgradeable, Own
 
         uint256 supplyBefore = IERC20(indexToken).totalSupply();
         require(supplyBefore > totalIdxThisRound, "IDX supply is zero");
-        uint256 pct1e18 = (totalIdxThisRound * 1e18) / supplyBefore;
+        // uint256 pct1e18 = (totalIdxThisRound * 1e18) / supplyBefore;
 
         uint256 currentList = functionsOracle.totalCurrentList(indexToken);
         uint256 bondSliceTotal;
         for (uint256 i = 0; i < currentList; ++i) {
             address token = factoryStorage.functionsOracle().currentList(indexToken, i);
-            uint256 slice = IERC20(token).balanceOf(address(factoryStorage.vault())) * pct1e18 / 1e18;
+            uint256 slice = IERC20(token).balanceOf(address(factoryStorage.vault())) * burnPercent / 1e18;
 
             if (slice == 0) continue;
 
