@@ -58,13 +58,11 @@ contract CCIPStorage is Initializable, ProposableOwnableUpgradeable {
     uint256 public redemptionNonce;
     uint256 public updatePortfolioNonce;
 
-    
     address public indexFactory;
     address public indexFactoryBalancer;
     address public coreSender;
     address public balancerSender;
     FunctionsOracle public functionsOracle;
-
 
     mapping(uint256 => IssuanceData) public issuanceData;
     mapping(uint256 => RedemptionData) public redemptionData;
@@ -84,8 +82,6 @@ contract CCIPStorage is Initializable, ProposableOwnableUpgradeable {
     mapping(uint256 => mapping(uint64 => uint256)) public chainValueByNonce;
 
     mapping(uint256 => uint256) public reweightExtraPercentage;
-
-    
 
     address public linkToken;
     uint64 public currentChainSelector;
@@ -114,13 +110,12 @@ contract CCIPStorage is Initializable, ProposableOwnableUpgradeable {
     uint256 public totalPendingRedemptionInput;
     uint256 public totalPendingRedemptionHoldValue;
     uint256 public totalPendingExtraWeth;
-    mapping(uint => uint) public pendingIssuanceInputByNonce;
-    mapping(uint => uint) public pendingRedemptionInputByNonce;
-    mapping(uint => uint) public pendingRedemptionHoldValueByNonce;
-    mapping(uint => uint) public pendingExtraWethByNonce;
-    mapping(address => uint) public totalSentAmount;
-    mapping(address => uint) public totalReceivedAmount;
-
+    mapping(uint256 => uint256) public pendingIssuanceInputByNonce;
+    mapping(uint256 => uint256) public pendingRedemptionInputByNonce;
+    mapping(uint256 => uint256) public pendingRedemptionHoldValueByNonce;
+    mapping(uint256 => uint256) public pendingExtraWethByNonce;
+    mapping(address => uint256) public totalSentAmount;
+    mapping(address => uint256) public totalReceivedAmount;
 
     modifier onlyIndexFactory() {
         require(msg.sender == indexFactory || msg.sender == coreSender, "Caller is not index factory contract.");
@@ -137,23 +132,22 @@ contract CCIPStorage is Initializable, ProposableOwnableUpgradeable {
 
     modifier onlySenders() {
         require(
-            msg.sender == coreSender || msg.sender == balancerSender,
-            "Caller is not core sender or balancer sender."
+            msg.sender == coreSender || msg.sender == balancerSender, "Caller is not core sender or balancer sender."
         );
         _;
     }
 
     bool public isCrossChainFeeSponsered;
-    uint public coreSenderGasLimit;
-    uint public balancerSenderGasLimit;
+    uint256 public coreSenderGasLimit;
+    uint256 public balancerSenderGasLimit;
 
-    uint public issuanceFeePercentage;
-    uint public redemptionFeePercentage;
+    uint256 public issuanceFeePercentage;
+    uint256 public redemptionFeePercentage;
 
     /**
      * @dev Initializes the contract with the given parameters.
      * @param _currentChainSelector The current chain selector.
-        * @param _functionsOracle The address of the Functions Oracle contract.
+     * @param _functionsOracle The address of the Functions Oracle contract.
      * @param _toUsdPriceFeed The address of the USD price feed.
      * @param _weth The address of the WETH token.
      * @param _swapRouterV3 The address of the Uniswap V3 swap router.
@@ -207,7 +201,9 @@ contract CCIPStorage is Initializable, ProposableOwnableUpgradeable {
      * @param _coreSenderGasLimit The gas limit for the core sender.
      * @param _balancerSenderGasLimit The gas limit for the balancer sender.
      */
-    function setCoreSenderAndBalancerSenderGasLimits(uint _coreSenderGasLimit, uint _balancerSenderGasLimit) public {
+    function setCoreSenderAndBalancerSenderGasLimits(uint256 _coreSenderGasLimit, uint256 _balancerSenderGasLimit)
+        public
+    {
         require(msg.sender == owner() || functionsOracle.isOperator(msg.sender));
         coreSenderGasLimit = _coreSenderGasLimit;
         balancerSenderGasLimit = _balancerSenderGasLimit;
@@ -218,7 +214,9 @@ contract CCIPStorage is Initializable, ProposableOwnableUpgradeable {
      * @param _issuanceFeePercentage The issuance fee percentage.
      * @param _redemptionFeePercentage The redemption fee percentage.
      */
-    function setIssuanceAndRedemptionFeePercentages(uint _issuanceFeePercentage, uint _redemptionFeePercentage) public {
+    function setIssuanceAndRedemptionFeePercentages(uint256 _issuanceFeePercentage, uint256 _redemptionFeePercentage)
+        public
+    {
         require(msg.sender == owner() || functionsOracle.isOperator(msg.sender));
         issuanceFeePercentage = _issuanceFeePercentage;
         redemptionFeePercentage = _redemptionFeePercentage;
@@ -278,8 +276,6 @@ contract CCIPStorage is Initializable, ProposableOwnableUpgradeable {
         priceOracle = _priceOracle;
     }
 
-    
-
     /**
      * @dev Sets the IndexFactory contract address.
      * @param _indexFactory The address of the IndexFactory contract.
@@ -304,8 +300,6 @@ contract CCIPStorage is Initializable, ProposableOwnableUpgradeable {
         balancerSender = _balancerSender;
     }
 
-    
-
     /**
      * @dev Sets the vault address.
      * @param _vaultAddress The address of the vault.
@@ -313,7 +307,6 @@ contract CCIPStorage is Initializable, ProposableOwnableUpgradeable {
     function setVault(address _vaultAddress) public onlyOwner {
         vault = Vault(_vaultAddress);
     }
-
 
     function increaseIssuanceNonce() public onlyIndexFactory {
         issuanceNonce++;
@@ -501,49 +494,56 @@ contract CCIPStorage is Initializable, ProposableOwnableUpgradeable {
         chainValueByNonce[_updatePortfolioNonce][_chainSelector] += _value;
     }
 
-    function increaseTotalSentAmount(address _tokenAddress, uint _amount) public onlySenders {
+    function increaseTotalSentAmount(address _tokenAddress, uint256 _amount) public onlySenders {
         totalSentAmount[_tokenAddress] += _amount;
     }
-    function increaseTotalReceivedAmount(address _tokenAddress, uint _amount) public onlySenders {
+
+    function increaseTotalReceivedAmount(address _tokenAddress, uint256 _amount) public onlySenders {
         totalReceivedAmount[_tokenAddress] += _amount;
     }
 
-    function increasePendingIssuanceInputByNonce(uint _issuanceNonce, uint _amount) public onlyIndexFactory {
+    function increasePendingIssuanceInputByNonce(uint256 _issuanceNonce, uint256 _amount) public onlyIndexFactory {
         pendingIssuanceInputByNonce[_issuanceNonce] += _amount;
         totalPendingIssuanceInput += _amount;
     }
 
-    function increasePendingRedemptionInputByNonce(uint _redemptionNonce, uint _amount) public onlyIndexFactory {
+    function increasePendingRedemptionInputByNonce(uint256 _redemptionNonce, uint256 _amount) public onlyIndexFactory {
         pendingRedemptionInputByNonce[_redemptionNonce] += _amount;
         totalPendingRedemptionInput += _amount;
     }
 
-    function decreasePendingIssuanceInputByNonce(uint _issuanceNonce) public onlyIndexFactory {
+    function decreasePendingIssuanceInputByNonce(uint256 _issuanceNonce) public onlyIndexFactory {
         totalPendingIssuanceInput -= pendingIssuanceInputByNonce[_issuanceNonce];
         pendingIssuanceInputByNonce[_issuanceNonce] = 0;
     }
 
-    function decreasePendingRedemptionInputByNonce(uint _redemptionNonce) public onlyIndexFactory {
+    function decreasePendingRedemptionInputByNonce(uint256 _redemptionNonce) public onlyIndexFactory {
         totalPendingRedemptionInput -= pendingRedemptionInputByNonce[_redemptionNonce];
         pendingRedemptionInputByNonce[_redemptionNonce] = 0;
     }
 
-    function increasePendingRedemptionHoldValueByNonce(uint _redemptionNonce, uint _amount) public onlyIndexFactory {
+    function increasePendingRedemptionHoldValueByNonce(uint256 _redemptionNonce, uint256 _amount)
+        public
+        onlyIndexFactory
+    {
         pendingRedemptionHoldValueByNonce[_redemptionNonce] += _amount;
         totalPendingRedemptionHoldValue += _amount;
     }
 
-    function decreasePendingRedemptionHoldValueByNonce(uint _redemptionNonce) public onlyIndexFactory {
+    function decreasePendingRedemptionHoldValueByNonce(uint256 _redemptionNonce) public onlyIndexFactory {
         totalPendingRedemptionHoldValue -= pendingRedemptionHoldValueByNonce[_redemptionNonce];
         pendingRedemptionHoldValueByNonce[_redemptionNonce] = 0;
     }
 
-    function increasePendingExtraWethByNonce(uint _updatePortfolioNonce, uint _amount) public onlyIndexFactoryBalancer {
+    function increasePendingExtraWethByNonce(uint256 _updatePortfolioNonce, uint256 _amount)
+        public
+        onlyIndexFactoryBalancer
+    {
         pendingExtraWethByNonce[_updatePortfolioNonce] += _amount;
         totalPendingExtraWeth += _amount;
     }
 
-    function decreasePendingExtraWethByNonce(uint _updatePortfolioNonce) public onlyIndexFactoryBalancer {
+    function decreasePendingExtraWethByNonce(uint256 _updatePortfolioNonce) public onlyIndexFactoryBalancer {
         totalPendingExtraWeth -= pendingExtraWethByNonce[_updatePortfolioNonce];
         pendingExtraWethByNonce[_updatePortfolioNonce] = 0;
     }
@@ -570,8 +570,6 @@ contract CCIPStorage is Initializable, ProposableOwnableUpgradeable {
         }
     }
 
-    
-
     function getCurrentTokenValue(address tokenAddress) external view returns (uint256) {
         (address[] memory toETHPath, uint24[] memory toETHFees) = functionsOracle.getToETHPathData(tokenAddress);
 
@@ -596,7 +594,7 @@ contract CCIPStorage is Initializable, ProposableOwnableUpgradeable {
      * @return The price in Wei.
      */
     function priceInWei() public view returns (uint256) {
-        (uint80 roundId,int price,,uint256 _updatedAt,) = toUsdPriceFeed.latestRoundData();
+        (uint80 roundId, int256 price,, uint256 _updatedAt,) = toUsdPriceFeed.latestRoundData();
         require(roundId != 0, "invalid round id");
         require(_updatedAt != 0 && _updatedAt <= block.timestamp, "invalid updated time");
         require(price > 0, "invalid price");
@@ -619,11 +617,15 @@ contract CCIPStorage is Initializable, ProposableOwnableUpgradeable {
      * @dev Gets the minimum amount out.
      * @return The minimum amount out.
      */
-    function getMinAmountOut(address[] memory path, uint24[] memory fees, uint256 amountIn) public view returns (uint256) {
-        uint amountOut = getAmountOut(path, fees, amountIn);
+    function getMinAmountOut(address[] memory path, uint24[] memory fees, uint256 amountIn)
+        public
+        view
+        returns (uint256)
+    {
+        uint256 amountOut = getAmountOut(path, fees, amountIn);
         return (amountOut * (10000 - slippageTolerance)) / 10000;
     }
-    
+
     /**
      * @dev Returns the amount out for a given swap.
      * @param path The path of the swap.
@@ -704,10 +706,4 @@ contract CCIPStorage is Initializable, ProposableOwnableUpgradeable {
         }
         amountOut = lastAmount;
     }
-
-
-   
-
-   
-    
 }

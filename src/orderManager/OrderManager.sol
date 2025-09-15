@@ -195,4 +195,5 @@ contract OrderManager is Initializable, OwnableUpgradeable {
         require(_indexToken != address(0), "Invalid address!");
         backedFiFactory.redemption(_indexToken, _inputAmount, _burnPercent);
     }
+    
 }

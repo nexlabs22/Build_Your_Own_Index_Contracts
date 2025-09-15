@@ -150,7 +150,13 @@ contract CrossChainIndexFactory is
         require(_recipient != address(0), "Invalid recipient address");
         uint256 amountOutMinimum = factoryStorage.getMinAmountOut(path, fees, amountIn);
         outputAmount = SwapHelpers.swap(
-            factoryStorage.swapRouterV3(), factoryStorage.swapRouterV2(), path, fees, amountIn, amountOutMinimum, _recipient
+            factoryStorage.swapRouterV3(),
+            factoryStorage.swapRouterV2(),
+            path,
+            fees,
+            amountIn,
+            amountOutMinimum,
+            _recipient
         );
     }
 
@@ -197,8 +203,10 @@ contract CrossChainIndexFactory is
         ) = abi.decode(
             any2EvmMessage.data, (uint256, address[], address[], bytes[], bytes[], uint256, uint256[], uint256[])
         ); // abi-decoding of the sent string message
-        if(any2EvmMessage.destTokenAmounts.length > 0) {
-            factoryStorage.increaseTotalReceivedAmount(any2EvmMessage.destTokenAmounts[0].token, any2EvmMessage.destTokenAmounts[0].amount);
+        if (any2EvmMessage.destTokenAmounts.length > 0) {
+            factoryStorage.increaseTotalReceivedAmount(
+                any2EvmMessage.destTokenAmounts[0].token, any2EvmMessage.destTokenAmounts[0].amount
+            );
         }
         if (actionType == 0) {
             Client.EVMTokenAmount[] memory tokenAmounts = any2EvmMessage.destTokenAmounts;

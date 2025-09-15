@@ -8,7 +8,7 @@ library FeeCalculation {
      * @param feeRate The fee rate to apply.
      * @return The calculated fee.
      */
-    function calculateFee(uint amount, uint8 feeRate) internal pure returns (uint) {
+    function calculateFee(uint256 amount, uint8 feeRate) internal pure returns (uint256) {
         return (amount * feeRate) / 10000;
     }
 }

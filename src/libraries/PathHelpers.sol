@@ -2,7 +2,6 @@
 pragma solidity ^0.8.20;
 
 library PathHelpers {
-
     function getFromETHPathBytes(address[] memory _path, uint24[] memory _fees) public pure returns (bytes memory) {
         return abi.encode(_path, _fees);
     }
@@ -37,11 +36,7 @@ library PathHelpers {
         return input;
     }
 
-    function encodePath(address[] memory tokens, uint24[] memory fees)
-        public
-        pure
-        returns (bytes memory path)
-    {
+    function encodePath(address[] memory tokens, uint24[] memory fees) public pure returns (bytes memory path) {
         require(tokens.length == fees.length + 1, "Invalid input arrays");
 
         for (uint256 i = 0; i < fees.length; i++) {
