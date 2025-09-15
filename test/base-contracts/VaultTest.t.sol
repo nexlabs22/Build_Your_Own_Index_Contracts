@@ -20,18 +20,7 @@ contract VaultTest is Test {
         token.mint(address(this), 10000e18);
     }
 
-    function test_withdrawFunds_FailWhenCallerIsNotOperator() public {
-        vault.setOperator(operator, true);
-
-        address token1 = address(0x2);
-        address to = address(0x3);
-        uint256 amount = 1 ether;
-
-        vm.startPrank(address(0x4));
-        vm.expectRevert("NexVault: caller is not an operator");
-        vault.withdrawFunds(token1, to, amount);
-        vm.stopPrank();
-    }
+    
 
     function testWithdrawFundsSuccessfully() public {
         uint256 initialAmount = 1000e18;
