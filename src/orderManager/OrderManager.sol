@@ -5,7 +5,7 @@ import {SafeERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeE
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "../factory/IndexFactory.sol";
-import {CPNFactory} from "../cpn/CPNFactory.sol";
+import {BackedFiFactory} from "../backedfi/BackedFiFactory.sol";
 
 contract OrderManager is Initializable, OwnableUpgradeable {
     using SafeERC20 for IERC20;
@@ -43,7 +43,7 @@ contract OrderManager is Initializable, OwnableUpgradeable {
     OrderNonceInfo public orderNonceInfo;
     address public usdcAddress;
     IndexFactory public factory;
-    CPNFactory public cpnFactory;
+    BackedFiFactory public backedFiFactory;
 
     mapping(address => bool) public isOperator;
     mapping(uint256 => OrderInfo) public orderInfo; // mapping of orderNonce to OrderInfo
@@ -184,15 +184,15 @@ contract OrderManager is Initializable, OwnableUpgradeable {
         factory.handleCompleteRedemption(_redemptionNonce, _indexToken, _underlyingTokenAddress, _outputValue);
     }
 
-    function issuanceWithCPNFactory(address _indexToken, uint256 _inputAmount) public {
+    function issuanceWithBackedFiFactory(address _indexToken, uint256 _inputAmount) public {
         require(_inputAmount > 0, "Invalid amount!");
         require(_indexToken != address(0), "Invalid address!");
-        cpnFactory.issuanceIndexTokens(_indexToken, _inputAmount);
+        backedFiFactory.issuanceIndexTokens(_indexToken, _inputAmount);
     }
 
-    function redemptionWithCPNFactory(address _indexToken, uint256 _inputAmount) public {
+    function redemptionWithBackedFiFactory(address _indexToken, uint256 _inputAmount, uint256 _burnPercent) public {
         require(_inputAmount > 0, "Invalid amount!");
         require(_indexToken != address(0), "Invalid address!");
-        cpnFactory.redemption(_indexToken, _inputAmount);
+        backedFiFactory.redemption(_indexToken, _inputAmount, _burnPercent);
     }
 }

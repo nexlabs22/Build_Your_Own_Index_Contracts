@@ -4,15 +4,14 @@ pragma solidity 0.8.25;
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
 import {IndexFactory} from "../factory/IndexFactory.sol";
-// import {FunctionsOracle} from "./FunctionsOracle.sol";
 import {FunctionsOracle} from "../oracle/FunctionsOracle.sol";
 import {IndexToken} from "../token/IndexToken.sol";
 import {Vault} from "../vault/Vault.sol";
 import {StagingCustodyAccount} from "./StagingCustodyAccount.sol";
 import {IRiskAssetFactory} from "./interfaces/IRiskAssetFactory.sol";
-// import {IndexFactoryBalancer} from "./IndexFactoryBalancer.sol";
 
 error InvalidAddress();
 error ZeroAmount();
@@ -59,6 +58,7 @@ contract IndexFactoryStorage is Initializable, OwnableUpgradeable {
     mapping(address => mapping(uint256 => uint256[])) public issuanceRoundIdToNonces;
     mapping(address => mapping(uint256 => uint256[])) public redemptionRoundIdToNonces;
     mapping(address => address) public indexTokenToVault;
+    mapping(address => mapping(uint256 => uint256)) public ordersBurnPercent;
 
     //   mapping(uint256 => uint256) public issuanceFeeByNonce; // no need
     // mapping(uint256 => uint256) public redemptionFeeByNonce; // no need
@@ -197,6 +197,10 @@ contract IndexFactoryStorage is Initializable, OwnableUpgradeable {
     //     require(_roundId > 0, "Invalid roundId amount");
     //     issuanceRoundIdToAddresses[_roundId] = addresses;
     // }
+
+    function setOrdersBurnPercent(address _indexToken, uint256 _roundId, uint256 _burnPercent) external onlyFactory {
+        ordersBurnPercent[_indexToken][_roundId] = _burnPercent;
+    }
 
     function setIssuanceCompleted(address _indexToken, uint256 _nonce, bool _flag) external onlyFactory {
         issuanceIsCompleted[_indexToken][_nonce] = _flag;
@@ -450,23 +454,49 @@ contract IndexFactoryStorage is Initializable, OwnableUpgradeable {
         return !redemptionRoundActive[_indexToken][prev] && redemptionIsCompleted[_indexToken][prev];
     }
 
-    function getPortfolioValue(
-        address indexTokenAddress,
-        address[] memory, /* underlyingAssets */
-        uint256[] memory prices
-    ) public view returns (uint256 totalValue) {
-        uint256 tokens = functionsOracle.totalCurrentList(indexTokenAddress);
-        require(prices.length >= tokens, "prices length too small");
+    function getPortfolioValue(address _indexToken, address[] memory, /* underlyingAssets */ uint256[] memory _prices)
+        public
+        view
+        returns (uint256 totalValue)
+    {
+        address vaultAddr = indexTokenToVault[_indexToken];
+        require(vaultAddr != address(0), "vault not set");
 
-        for (uint256 i = 0; i < tokens; ++i) {
-            address token = functionsOracle.currentList(indexTokenAddress, i);
-            uint256 price = prices[i]; // price expected in 1e18
-            uint256 balance = IERC20(token).balanceOf(address(vault));
-            if (balance == 0 || price == 0) continue;
+        uint256 tokens = functionsOracle.totalCurrentList(_indexToken);
+        require(_prices.length >= tokens, "prices length too small");
 
-            // balance is in token decimals (assumed 18), price in 1e18 -> value in 1e18:
-            totalValue += (balance * price) / 1e18;
+        for (uint256 i = 0; i < tokens;) {
+            address token = functionsOracle.currentList(_indexToken, i);
+            uint256 price = _prices[i]; // 1e18-scaled
+            if (price != 0) {
+                uint256 balance = IERC20(token).balanceOf(vaultAddr); // assumes token has 18 decimals
+                if (balance != 0) {
+                    // Prefer mulDiv to avoid overflow
+                    totalValue += Math.mulDiv(balance, price, 1e18);
+                }
+            }
+            unchecked {
+                ++i;
+            }
         }
+
+        return totalValue;
+    }
+
+    function getTokenValue(
+        address _indexToken,
+        address _underlyingAsset,
+        uint256 _price // 1e18-scaled
+    ) public view returns (uint256 totalValue) {
+        require(_indexToken != address(0), "invalid index token");
+        address vaultAddr = indexTokenToVault[_indexToken];
+        require(vaultAddr != address(0), "vault not set");
+        if (_price == 0) return 0;
+
+        uint256 balance = IERC20(_underlyingAsset).balanceOf(vaultAddr);
+        if (balance == 0) return 0;
+
+        return Math.mulDiv(balance, _price, 1e18);
     }
 
     // function getIssuanceAmountByRound(uint256 roundId) public view returns (uint256) {
