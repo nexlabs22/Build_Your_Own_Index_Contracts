@@ -4,29 +4,35 @@ pragma solidity 0.8.25;
 import {SafeERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import "../factory/IndexFactory.sol";
+import {CPNFactory} from "../cpn/CPNFactory.sol";
 
 contract OrderManager is Initializable, OwnableUpgradeable {
     using SafeERC20 for IERC20;
 
     struct OrderNonceInfo {
-        uint buyOrderNonce;
-        uint sellOrderNonce;
-        uint orderNonce;
+        uint256 buyOrderNonce;
+        uint256 sellOrderNonce;
+        uint256 orderNonce;
     }
 
     // create order function info in struct
     struct CreateOrderConfig {
+        uint256 requestNonce;
+        address indexTokenAddress;
         address inputTokenAddress;
         address outputTokenAddress;
-        uint64 assetType; // 1 for ERC20, 2 for ERC721,
+        uint64 providerIndex; // 1 for ERC20, 2 for ERC721,
         uint256 inputTokenAmount;
         uint256 outputTokenAmount; // for buy order, this will be 0 initially
         bool isBuyOrder;
+        uint256 burnPercent;
     }
 
     struct OrderInfo {
+        address indexTokenAddress;
         address targetTokenAddress;
-        uint64 assetType; // 1 for ERC20, 2 for ERC721, 3 for ERC1155
+        uint64 providerIndex; // 1 for ERC20, 2 for ERC721, 3 for ERC1155
         uint256 usdcAmount;
         uint256 targetTokenAmount; // for buy order, this will be 0 initially
         bool isBuyOrder;
@@ -35,24 +41,34 @@ contract OrderManager is Initializable, OwnableUpgradeable {
     }
 
     OrderNonceInfo public orderNonceInfo;
-    address usdcAddress;
+    address public usdcAddress;
+    IndexFactory public factory;
+    CPNFactory public cpnFactory;
 
     mapping(address => bool) public isOperator;
-    mapping(uint => OrderInfo) public orderInfo; // mapping of orderNonce to OrderInfo
+    mapping(uint256 => OrderInfo) public orderInfo; // mapping of orderNonce to OrderInfo
 
     event FundsWithdrawn(address token, address to, uint256 amount);
-    event OrderCreated(uint indexed orderNonce, address indexed user, bool isBuyOrder, address inputToken, uint256 inputAmount, address outputToken, uint256 outputAmount);
+    event OrderCreated(
+        address indexed indexToken,
+        uint256 indexed orderNonce,
+        address indexed user,
+        bool isBuyOrder,
+        address inputToken,
+        uint256 inputAmount,
+        address outputToken,
+        uint256 outputAmount
+    );
 
     modifier onlyOperator() {
         require(isOperator[msg.sender], "NexVault: caller is not an operator");
         _;
     }
 
-    function initialize(
-        address _usdcAddress
-        ) external initializer {
+    function initialize(address _usdcAddress, address _indexFactory) external initializer {
         __Ownable_init(msg.sender);
         usdcAddress = _usdcAddress;
+        factory = IndexFactory(_indexFactory);
     }
 
     /// @custom:oz-upgrades-unsafe-allow constructor
@@ -68,8 +84,12 @@ contract OrderManager is Initializable, OwnableUpgradeable {
         usdcAddress = _usdcAddress;
     }
 
+    function setFactoryAddress(address _factoryAddress) external onlyOwner {
+        factory = IndexFactory(_factoryAddress);
+    }
+
     function _increaseOrderNonce(bool isBuyOrder) internal {
-        if(isBuyOrder) {
+        if (isBuyOrder) {
             orderNonceInfo.buyOrderNonce += 1;
         } else {
             orderNonceInfo.sellOrderNonce += 1;
@@ -84,14 +104,13 @@ contract OrderManager is Initializable, OwnableUpgradeable {
         IERC20(_inputToken).safeTransferFrom(msg.sender, address(this), _amount);
     }
 
-    function _initializeOrder(
-        CreateOrderConfig memory _config
-    ) internal {
+    function _initializeOrder(CreateOrderConfig memory _config) internal {
         // logic to initialize buy order
-        if(_config.isBuyOrder) {
+        if (_config.isBuyOrder) {
             orderInfo[orderNonceInfo.orderNonce] = OrderInfo({
+                indexTokenAddress: _config.indexTokenAddress,
                 targetTokenAddress: _config.outputTokenAddress,
-                assetType: _config.assetType,
+                providerIndex: _config.providerIndex,
                 usdcAmount: _config.inputTokenAmount,
                 targetTokenAmount: 0,
                 isBuyOrder: true,
@@ -101,8 +120,9 @@ contract OrderManager is Initializable, OwnableUpgradeable {
         } else {
             // logic to initialize sell order
             orderInfo[orderNonceInfo.orderNonce] = OrderInfo({
+                indexTokenAddress: _config.indexTokenAddress,
                 targetTokenAddress: _config.inputTokenAddress,
-                assetType: _config.assetType,
+                providerIndex: _config.providerIndex,
                 usdcAmount: 0,
                 targetTokenAmount: _config.inputTokenAmount,
                 isBuyOrder: false,
@@ -112,26 +132,68 @@ contract OrderManager is Initializable, OwnableUpgradeable {
         }
     }
 
-    function createOrder(
-        CreateOrderConfig memory _config
-    ) external onlyOperator returns(uint orderNonce) {
+    function createOrder(CreateOrderConfig memory _config) external onlyOperator returns (uint256 orderNonce) {
         // increasing order nonce
         _increaseOrderNonce(_config.isBuyOrder);
         // transfer USDC from caller to order manager contract
         _transferInputTokenFromCaller(_config.inputTokenAddress, _config.inputTokenAmount);
         // initialize the order based on buy or sell
         _initializeOrder(_config);
+        //call the provider function
+
         // emit the event
-        emit OrderCreated(orderNonceInfo.orderNonce, msg.sender, _config.isBuyOrder, _config.inputTokenAddress, _config.inputTokenAmount, _config.outputTokenAddress, _config.outputTokenAmount);
+        emit OrderCreated(
+            _config.indexTokenAddress,
+            orderNonceInfo.orderNonce,
+            msg.sender,
+            _config.isBuyOrder,
+            _config.inputTokenAddress,
+            _config.inputTokenAmount,
+            _config.outputTokenAddress,
+            _config.outputTokenAmount
+        );
         return orderNonceInfo.orderNonce;
     }
 
-
-    function completeOrder(uint _orderNonce) external onlyOperator {
+    function completeOrder(uint256 _orderNonce) external onlyOperator {
         require(_orderNonce > 0 && _orderNonce <= orderNonceInfo.orderNonce, "OrderManager: invalid order nonce");
         OrderInfo storage order = orderInfo[_orderNonce];
         require(!order.isExecuted, "OrderManager: order already executed");
         order.isExecuted = true;
         // logic to handle post order execution can be added here
     }
+
+    function completeIssuance(
+        uint256 _issuanceNonce,
+        address _indexToken,
+        address _underlyingTokenAddress,
+        uint256 _oldTokenValue,
+        uint256 _newTokenValue
+    ) external onlyOperator {
+        factory.handleCompleteIssuance(
+            _issuanceNonce, _indexToken, _underlyingTokenAddress, _oldTokenValue, _newTokenValue
+        );
+    }
+
+    function redemption(
+        uint256 _redemptionNonce,
+        address _indexToken,
+        address _underlyingTokenAddress,
+        uint256 _outputValue
+    ) external onlyOperator {
+        factory.handleCompleteRedemption(_redemptionNonce, _indexToken, _underlyingTokenAddress, _outputValue);
+    }
+
+    function issuanceWithCPNFactory(address _indexToken, uint256 _inputAmount) public {
+        require(_inputAmount > 0, "Invalid amount!");
+        require(_indexToken != address(0), "Invalid address!");
+        cpnFactory.issuanceIndexTokens(_indexToken, _inputAmount);
+    }
+
+    function redemptionWithCPNFactory(address _indexToken, uint256 _inputAmount) public {
+        require(_inputAmount > 0, "Invalid amount!");
+        require(_indexToken != address(0), "Invalid address!");
+        cpnFactory.redemption(_indexToken, _inputAmount);
+    }
+    
 }
