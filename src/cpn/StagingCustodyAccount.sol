@@ -142,7 +142,7 @@ contract StagingCustodyAccount is Initializable, ReentrancyGuardUpgradeable, Own
         uint256 total = factoryStorage.totalIssuanceByRound(indexToken, roundId);
         require(total > 0, "Nothing to distribute");
 
-        orderManager.completeIssuance(indexFactory.issuanceNonce(), indexToken, underlyingAssets, oldValue, newValue);
+        // orderManager.completeIssuance(indexFactory.issuanceNonce(), indexToken, underlyingAssets, oldValue, newValue);
 
         factoryStorage.settleIssuance(indexToken, roundId);
         emit IssuanceSettled(roundId, total, block.timestamp);
