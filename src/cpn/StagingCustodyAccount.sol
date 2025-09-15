@@ -99,7 +99,7 @@ contract StagingCustodyAccount is Initializable, ReentrancyGuardUpgradeable, Own
 
         uint256 balance = factoryStorage.totalIssuanceByRound(indexToken, roundId);
         require(balance > 0, "Total issuance in this round is Zero!");
-
+ 
         if (balance > 0) {
             withdrawForPurchase(roundId, balance);
         }
