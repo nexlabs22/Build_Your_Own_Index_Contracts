@@ -18,6 +18,7 @@ import "../libraries/MessageSender.sol";
 import "../libraries/SwapHelpers.sol";
 import "../interfaces/IUniswapV2Router02.sol";
 import "../interfaces/IWETH.sol";
+import "../orderManager/OrderManager.sol";
 /// @title Index Token
 /// @author NEX Labs Protocol
 /// @notice The main token contract for Index Token (NEX Labs Protocol)
@@ -38,6 +39,7 @@ contract CCIPFactory is Initializable, ProposableOwnableUpgradeable, ReentrancyG
     CCIPStorage public factoryStorage;
     FunctionsOracle public functionsOracle;
     CoreSender public coreSender;
+    OrderManager public orderManager;
 
     uint64 public currentChainSelector;
 
@@ -96,6 +98,7 @@ contract CCIPFactory is Initializable, ProposableOwnableUpgradeable, ReentrancyG
     function initialize(
         uint64 _currentChainSelector,
         address payable _token,
+        address _orderManager,
         address _indexFactoryStorage,
         address _functionsOracle,
         address payable _coreSender,
@@ -113,6 +116,7 @@ contract CCIPFactory is Initializable, ProposableOwnableUpgradeable, ReentrancyG
         //set chain selector
         currentChainSelector = _currentChainSelector;
         indexToken = IndexToken(_token);
+        orderManager = OrderManager(_orderManager);
         factoryStorage = CCIPStorage(_indexFactoryStorage);
         functionsOracle = FunctionsOracle(_functionsOracle);
         coreSender = CoreSender(_coreSender);
@@ -139,6 +143,11 @@ contract CCIPFactory is Initializable, ProposableOwnableUpgradeable, ReentrancyG
     function setIndexToken(address _token) public onlyOwner {
         require(_token != address(0), "Invalid token address");
         indexToken = IndexToken(payable(_token));
+    }
+
+    function setOrderManager(address _orderManager) public onlyOwner {
+        require(_orderManager != address(0), "Invalid order manager address");
+        orderManager = OrderManager(_orderManager);
     }
 
     /**
@@ -416,7 +425,13 @@ contract CCIPFactory is Initializable, ProposableOwnableUpgradeable, ReentrancyG
             );
             factoryStorage.issuanceIncreaseCompletedTokensCount(_issuanceNonce);
             // call the order manager here
-            // ....
+            // orderManager.completeIssuance(
+            //     _issuanceNonce, 
+            //     _indexToken, 
+            //     tokenAddress, 
+            //     factoryStorage.getIssuanceOldTokenValue(_issuanceNonce, tokenAddress),
+            //     factoryStorage.getIssuanceNewTokenValue(_issuanceNonce, tokenAddress)
+            // );
         }
     }
 

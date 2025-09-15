@@ -20,6 +20,8 @@ import "../libraries/MessageSender.sol";
 import "../libraries/SwapHelpers.sol";
 import "../interfaces/IUniswapV2Router02.sol";
 import "../interfaces/IWETH.sol";
+import "../orderManager/OrderManager.sol";
+
 /// @title Index Token
 /// @author NEX Labs Protocol
 /// @notice The main token contract for Index Token (NEX Labs Protocol)
@@ -31,6 +33,7 @@ contract CoreSender is Initializable, CCIPReceiver, ProposableOwnableUpgradeable
     IndexToken public indexToken;
     CCIPStorage public factoryStorage;
     FunctionsOracle public functionsOracle;
+    OrderManager public orderManager;
 
     IWETH public weth;
 
@@ -80,6 +83,7 @@ contract CoreSender is Initializable, CCIPReceiver, ProposableOwnableUpgradeable
     function initialize(
         address payable _token,
         address _indexFactoryStorage,
+        address _orderManager,
         address _functionsOracle,
         address _chainlinkToken,
         //ccip
@@ -98,6 +102,7 @@ contract CoreSender is Initializable, CCIPReceiver, ProposableOwnableUpgradeable
         __ReentrancyGuard_init();
         __ReentrancyGuard_init_unchained();
         indexToken = IndexToken(_token);
+        orderManager = OrderManager(_orderManager);
         factoryStorage = CCIPStorage(_indexFactoryStorage);
         functionsOracle = FunctionsOracle(_functionsOracle);
 
@@ -306,6 +311,13 @@ contract CoreSender is Initializable, CCIPReceiver, ProposableOwnableUpgradeable
             factoryStorage.setIssuanceNewTokenValue(requestIssuanceNonce, tokenAddresses[i], newTokenValue);
             factoryStorage.issuanceIncreaseCompletedTokensCount(requestIssuanceNonce);
             // call the order manager here
+            orderManager.completeIssuance(
+                requestIssuanceNonce, 
+                address(indexToken), 
+                tokenAddresses[i], 
+                oldTokenValue,
+                newTokenValue
+            );
             // ....
         }
         // if (
