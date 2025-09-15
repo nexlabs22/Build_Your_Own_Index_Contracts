@@ -7,7 +7,6 @@ import "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
-
 import "./CCIPReceiver.sol";
 import "./CCIPStorage.sol";
 import "./CoreSender.sol";
@@ -24,12 +23,7 @@ import "../interfaces/IWETH.sol";
 /// @notice The main token contract for Index Token (NEX Labs Protocol)
 /// @dev This contract uses an upgradeable pattern
 
-contract CCIPFactory is
-    Initializable,
-    ProposableOwnableUpgradeable,
-    ReentrancyGuardUpgradeable,
-    PausableUpgradeable
-{
+contract CCIPFactory is Initializable, ProposableOwnableUpgradeable, ReentrancyGuardUpgradeable, PausableUpgradeable {
     // using MessageSender for *;
 
     struct IssuanceSendLocalVars {
@@ -221,19 +215,19 @@ contract CCIPFactory is
 
         uint256 totalCrossChainFee;
         /**
-        for (uint256 i = 0; i < totalChains; i++) {
-            uint64 chainSelector = chainSelectors[i];
-            uint256 chainSelectorTokensCount = functionsOracle.currentChainSelectorTokensCount(_indexToken, chainSelector);
-            if (chainSelector != currentChainSelector) {
-                uint256 totalShares = functionsOracle.getCurrentChainSelectorTotalShares(_indexToken, latestCount, chainSelector);
-                uint256 chainWethAmount = (wethAmount * totalShares) / 100e18;
-                //get the fee
-                uint256 fee = coreSender.calculateIssuanceFee(chainSelector, chainWethAmount);
-                totalCrossChainFee += fee;
-            }
-        }
+         * for (uint256 i = 0; i < totalChains; i++) {
+         *         uint64 chainSelector = chainSelectors[i];
+         *         uint256 chainSelectorTokensCount = functionsOracle.currentChainSelectorTokensCount(_indexToken, chainSelector);
+         *         if (chainSelector != currentChainSelector) {
+         *             uint256 totalShares = functionsOracle.getCurrentChainSelectorTotalShares(_indexToken, latestCount, chainSelector);
+         *             uint256 chainWethAmount = (wethAmount * totalShares) / 100e18;
+         *             //get the fee
+         *             uint256 fee = coreSender.calculateIssuanceFee(chainSelector, chainWethAmount);
+         *             totalCrossChainFee += fee;
+         *         }
+         *     }
          */
-        return (totalCrossChainFee*(100 + 20))/100;
+        return (totalCrossChainFee * (100 + 20)) / 100;
     }
 
     function getRedemptionFee(address _indexToken, uint256 amountIn) public view returns (uint256) {
@@ -250,13 +244,13 @@ contract CCIPFactory is
                 totalCrossChainFee += fee;
             }
         }
-        return (totalCrossChainFee*(100 + 20))/100;
+        return (totalCrossChainFee * (100 + 20)) / 100;
     }
 
     /**
      * @dev Issues index tokens.
      * @param _indexToken The address of the index token.
-
+     *
      * @param _tokenIn The address of the input token.
      * @param _tokenInPath The path of the input token.
      * @param _inputAmount The amount of input token.
@@ -272,13 +266,13 @@ contract CCIPFactory is
         require(_tokenIn != address(0), "Invalid input token address");
         require(_inputAmount > 0, "Input amount must be greater than zero");
         require(_tokenInPath[_tokenInPath.length - 1] == address(weth), "Invalid token path");
-        if(!factoryStorage.isCrossChainFeeSponsered()){
-        require(
-            getIssuanceFee(_indexToken, _tokenIn, _tokenInPath, _tokenInFees, _inputAmount) == msg.value,
-            "Insufficient ETH sent for cross chain fee"
-        );
-        (bool success,) = factoryStorage.coreSender().call{value: msg.value}("");
-        require(success, "Cross chain fee transfer failed");
+        if (!factoryStorage.isCrossChainFeeSponsered()) {
+            require(
+                getIssuanceFee(_indexToken, _tokenIn, _tokenInPath, _tokenInFees, _inputAmount) == msg.value,
+                "Insufficient ETH sent for cross chain fee"
+            );
+            (bool success,) = factoryStorage.coreSender().call{value: msg.value}("");
+            require(success, "Cross chain fee transfer failed");
         }
         IWETH weth = factoryStorage.weth();
         Vault vault = factoryStorage.vault();
@@ -303,11 +297,9 @@ contract CCIPFactory is
         _issuance(_indexToken, _tokenIn, wethAmount);
     }
 
-    
-
     /**
      * @dev Issues index tokens with ETH.
-        * @param _indexToken The address of the index token.
+     * @param _indexToken The address of the index token.
      * @param _inputAmount The amount of input token.
      */
     function issuanceIndexTokensWithEth(address _indexToken, uint256 _inputAmount) external payable whenNotPaused {
@@ -316,15 +308,16 @@ contract CCIPFactory is
         require(msg.value >= _inputAmount, "Insufficient ETH sent");
 
         uint256 feeAmount = FeeCalculation.calculateFee(_inputAmount, 10);
-        uint256 crossChainFee = getIssuanceFee(_indexToken, address(weth), new address[](0), new uint24[](0), _inputAmount);
-        if(!factoryStorage.isCrossChainFeeSponsered()){
-        uint256 finalAmount = _inputAmount + feeAmount + crossChainFee;
-        require(msg.value == finalAmount, "lower than required amount");
-        (bool success,) = factoryStorage.coreSender().call{value: crossChainFee}("");
-        require(success, "Cross chain fee transfer failed");
-        }else{
-        uint256 finalAmount = _inputAmount + feeAmount;
-        require(msg.value == finalAmount, "lower than required amount");
+        uint256 crossChainFee =
+            getIssuanceFee(_indexToken, address(weth), new address[](0), new uint24[](0), _inputAmount);
+        if (!factoryStorage.isCrossChainFeeSponsered()) {
+            uint256 finalAmount = _inputAmount + feeAmount + crossChainFee;
+            require(msg.value == finalAmount, "lower than required amount");
+            (bool success,) = factoryStorage.coreSender().call{value: crossChainFee}("");
+            require(success, "Cross chain fee transfer failed");
+        } else {
+            uint256 finalAmount = _inputAmount + feeAmount;
+            require(msg.value == finalAmount, "lower than required amount");
         }
         //transfer fee to the owner
         weth.deposit{value: _inputAmount + feeAmount}();
@@ -355,13 +348,21 @@ contract CCIPFactory is
         (,, uint64[] memory chainSelectors) = functionsOracle.getCurrentData(_indexToken, latestCount);
         for (uint256 i = 0; i < totalChains; i++) {
             uint64 chainSelector = chainSelectors[i];
-            uint256 chainSelectorTokensCount = functionsOracle.currentChainSelectorTokensCount(_indexToken, chainSelector);
+            uint256 chainSelectorTokensCount =
+                functionsOracle.currentChainSelectorTokensCount(_indexToken, chainSelector);
             if (chainSelector == currentChainSelector) {
                 _issuanceSwapsCurrentChain(
-                    _indexToken, wethAmount, factoryStorage.issuanceNonce(), chainSelectorTokensCount, chainSelector, latestCount
+                    _indexToken,
+                    wethAmount,
+                    factoryStorage.issuanceNonce(),
+                    chainSelectorTokensCount,
+                    chainSelector,
+                    latestCount
                 );
             } else {
-                _issuanceSwapsOtherChains(_indexToken, wethAmount, factoryStorage.issuanceNonce(), chainSelector, latestCount);
+                _issuanceSwapsOtherChains(
+                    _indexToken, wethAmount, factoryStorage.issuanceNonce(), chainSelector, latestCount
+                );
             }
         }
         emit RequestIssuance(
@@ -426,7 +427,8 @@ contract CCIPFactory is
         uint64 _chainSelector,
         uint256 _latestCount
     ) internal {
-        uint256 totalShares = functionsOracle.getCurrentChainSelectorTotalShares(_indexToken, _latestCount, _chainSelector);
+        uint256 totalShares =
+            functionsOracle.getCurrentChainSelectorTotalShares(_indexToken, _latestCount, _chainSelector);
         uint256 chainWethAmount = (_wethAmount * totalShares) / 100e18;
 
         weth.approve(address(coreSender), chainWethAmount);
@@ -436,7 +438,7 @@ contract CCIPFactory is
     /**
      * @dev Redeems tokens.
      * @param _indexToken The address of the index token.
-        * @param _burnPercent The burn percentage.
+     * @param _burnPercent The burn percentage.
      * @param _tokenOut The address of the output token.
      */
     function redemption(
@@ -450,10 +452,10 @@ contract CCIPFactory is
         // require(amountIn > 0, "Amount must be greater than zero");
         require(_tokenOut != address(0), "Invalid output token address");
         require(_tokenOutPath[0] == address(weth), "Invalid token path");
-        if(!factoryStorage.isCrossChainFeeSponsered()){
-        // require(getRedemptionFee(_indexToken, amountIn) >= msg.value, "Insufficient ETH sent for cross chain fee");
-        (bool success,) = factoryStorage.coreSender().call{value: msg.value}("");
-        require(success, "Cross chain fee transfer failed");
+        if (!factoryStorage.isCrossChainFeeSponsered()) {
+            // require(getRedemptionFee(_indexToken, amountIn) >= msg.value, "Insufficient ETH sent for cross chain fee");
+            (bool success,) = factoryStorage.coreSender().call{value: msg.value}("");
+            require(success, "Cross chain fee transfer failed");
         }
         // uint256 burnPercent = (amountIn * 1e18) / indexToken.totalSupply();
         factoryStorage.increaseRedemptionNonce();
@@ -470,7 +472,8 @@ contract CCIPFactory is
         (,, uint64[] memory chainSelectors) = functionsOracle.getCurrentData(_indexToken, latestCount);
         for (uint256 i = 0; i < totalChains; i++) {
             uint64 chainSelector = chainSelectors[i];
-            uint256 chainSelectorTokensCount = functionsOracle.currentChainSelectorTokensCount(_indexToken, chainSelector);
+            uint256 chainSelectorTokensCount =
+                functionsOracle.currentChainSelectorTokensCount(_indexToken, chainSelector);
             if (chainSelector == currentChainSelector) {
                 _redemptionSwapsCurrentChain(
                     _indexToken,

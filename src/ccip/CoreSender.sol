@@ -222,8 +222,7 @@ contract CoreSender is Initializable, CCIPReceiver, ProposableOwnableUpgradeable
         factoryStorage.setIssuanceMessageId(_issuanceNonce, messageId);
     }
 
-    function calculateIssuanceFee(uint64 _chainSelector, uint _wethAmount) public view returns (uint256 totalFee) {
-        
+    function calculateIssuanceFee(uint64 _chainSelector, uint256 _wethAmount) public view returns (uint256 totalFee) {
         // get cross chain token amount
         (address[] memory fromETHPath, uint24[] memory fromETHFees) =
             factoryStorage.getFromETHPathData(factoryStorage.crossChainToken(_chainSelector));
@@ -231,7 +230,9 @@ contract CoreSender is Initializable, CCIPReceiver, ProposableOwnableUpgradeable
         // get cross chain factory
         address crossChainFactory = factoryStorage.crossChainFactoryBySelector(_chainSelector);
         uint256[] memory totalSharesArr = new uint256[](1);
-        totalSharesArr[0] = functionsOracle.getCurrentChainSelectorTotalShares(address(0), functionsOracle.currentFilledCount(address(0)), _chainSelector);
+        totalSharesArr[0] = functionsOracle.getCurrentChainSelectorTotalShares(
+            address(0), functionsOracle.currentFilledCount(address(0)), _chainSelector
+        );
         address crossChainIndexFactory = factoryStorage.crossChainFactoryBySelector(_chainSelector);
 
         //encode data
@@ -370,7 +371,6 @@ contract CoreSender is Initializable, CCIPReceiver, ProposableOwnableUpgradeable
         return IRouterClient(i_router).getFee(_chainSelector, message);
     }
 
-
     function completeRedemptionRequest(uint256 nonce, bytes32 _messageId) internal {
         factoryStorage.decreasePendingRedemptionInputByNonce(nonce);
         factoryStorage.decreasePendingRedemptionHoldValueByNonce(nonce);
@@ -380,7 +380,7 @@ contract CoreSender is Initializable, CCIPReceiver, ProposableOwnableUpgradeable
         address outputToken = factoryStorage.getRedemptionOutputToken(nonce);
         // uint256 fee = FeeCalculation.calculateFee(wethAmount, factoryStorage.feeRate());
         uint256 fee;
-        
+
         require(weth.transfer(address(0), fee), "Fee transfer failed");
         uint256 indexTokenPrice =
             indexToken.totalSupply() != 0 ? (totalPortfolioValues * 1e18) / indexToken.totalSupply() : 0;
@@ -418,7 +418,6 @@ contract CoreSender is Initializable, CCIPReceiver, ProposableOwnableUpgradeable
         }
     }
 
-
     function _handleReceivedRedemption(
         uint256 nonce,
         Client.Any2EVMMessage memory any2EvmMessage,
@@ -436,7 +435,7 @@ contract CoreSender is Initializable, CCIPReceiver, ProposableOwnableUpgradeable
         uint256 wethAmount = swap(toETHPath, toETHFees, amount, address(this));
 
         factoryStorage.increaseRedemptionTotalValue(requestRedemptionNonce, wethAmount);
-        
+
         factoryStorage.increaseRedemptionTotalPortfolioValues(requestRedemptionNonce, crossChainPortfolioValue);
         factoryStorage.increaseRedemptionCompletedTokensCount(requestRedemptionNonce, tokenAddresses.length);
         if (factoryStorage.getRedemptionCompletedTokensCount(requestRedemptionNonce) == totalCurrentList) {
@@ -498,7 +497,13 @@ contract CoreSender is Initializable, CCIPReceiver, ProposableOwnableUpgradeable
         require(receiver != address(0), "Invalid receiver address");
         require(_data.length > 0, "Data cannot be empty");
         return MessageSender.sendMessage(
-            getRouter(), factoryStorage.linkToken(), destinationChainSelector, receiver, _data, payFeesIn, factoryStorage.coreSenderGasLimit()
+            getRouter(),
+            factoryStorage.linkToken(),
+            destinationChainSelector,
+            receiver,
+            _data,
+            payFeesIn,
+            factoryStorage.coreSenderGasLimit()
         );
     }
     /**
@@ -527,8 +532,10 @@ contract CoreSender is Initializable, CCIPReceiver, ProposableOwnableUpgradeable
         ) = abi.decode(
             any2EvmMessage.data, (uint256, address[], address[], bytes[], bytes[], uint256, uint256[], uint256[])
         );
-        if(any2EvmMessage.destTokenAmounts.length > 0) {
-            factoryStorage.increaseTotalReceivedAmount(any2EvmMessage.destTokenAmounts[0].token, any2EvmMessage.destTokenAmounts[0].amount);
+        if (any2EvmMessage.destTokenAmounts.length > 0) {
+            factoryStorage.increaseTotalReceivedAmount(
+                any2EvmMessage.destTokenAmounts[0].token, any2EvmMessage.destTokenAmounts[0].amount
+            );
         }
         if (actionType == 0) {
             _handleReceivedIssuance(nonce, tokenAddresses, value1, value2, totalCurrentList, messageId);

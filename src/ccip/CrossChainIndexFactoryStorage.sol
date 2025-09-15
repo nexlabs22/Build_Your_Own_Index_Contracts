@@ -75,8 +75,8 @@ contract CrossChainIndexFactoryStorage is
     //slipage tolerance
     uint256 public slippageTolerance; // 2000/10000 = 20%
 
-    mapping(address => uint) public totalSentAmount;
-    mapping(address => uint) public totalReceivedAmount;
+    mapping(address => uint256) public totalSentAmount;
+    mapping(address => uint256) public totalReceivedAmount;
 
     modifier onlyFactory() {
         require(msg.sender == crossChainFactory, "Only factory can call this function");
@@ -147,8 +147,7 @@ contract CrossChainIndexFactoryStorage is
     }
 
     function priceInWei() public view returns (uint256) {
-
-        (uint80 roundId,int price,,uint256 _updatedAt,) = toUsdPriceFeed.latestRoundData();
+        (uint80 roundId, int256 price,, uint256 _updatedAt,) = toUsdPriceFeed.latestRoundData();
         require(roundId != 0, "invalid round id");
         require(_updatedAt != 0 && _updatedAt <= block.timestamp, "invalid updated time");
         require(price > 0, "invalid price");
@@ -213,10 +212,11 @@ contract CrossChainIndexFactoryStorage is
         toUsdPriceFeed = AggregatorV3Interface(_newToUsdPriceFeed);
     }
 
-    function increaseTotalSentAmount(address _tokenAddress, uint _amount) public onlyFactory {
+    function increaseTotalSentAmount(address _tokenAddress, uint256 _amount) public onlyFactory {
         totalSentAmount[_tokenAddress] += _amount;
     }
-    function increaseTotalReceivedAmount(address _tokenAddress, uint _amount) public onlyFactory {
+
+    function increaseTotalReceivedAmount(address _tokenAddress, uint256 _amount) public onlyFactory {
         totalReceivedAmount[_tokenAddress] += _amount;
     }
 
@@ -253,8 +253,12 @@ contract CrossChainIndexFactoryStorage is
      * @dev Gets the minimum amount out.
      * @return The minimum amount out.
      */
-    function getMinAmountOut(address[] memory path, uint24[] memory fees, uint256 amountIn) public view returns (uint256) {
-        uint amountOut = getAmountOut(path, fees, amountIn);
+    function getMinAmountOut(address[] memory path, uint24[] memory fees, uint256 amountIn)
+        public
+        view
+        returns (uint256)
+    {
+        uint256 amountOut = getAmountOut(path, fees, amountIn);
         return (amountOut * (10000 - slippageTolerance)) / 10000;
     }
 

@@ -19,14 +19,11 @@ contract Withdraw is OwnerIsCreator {
 
     function withdraw(address beneficiary) public onlyOwner {
         uint256 amount = address(this).balance;
-        (bool sent, ) = beneficiary.call{value: amount}("");
+        (bool sent,) = beneficiary.call{value: amount}("");
         if (!sent) revert FailedToWithdrawEth(msg.sender, beneficiary, amount);
     }
 
-    function withdrawToken(
-        address beneficiary,
-        address token
-    ) public onlyOwner {
+    function withdrawToken(address beneficiary, address token) public onlyOwner {
         uint256 amount = IERC20(token).balanceOf(address(this));
         IERC20(token).safeTransfer(beneficiary, amount);
     }
