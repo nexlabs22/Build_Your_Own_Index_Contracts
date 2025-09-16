@@ -17,7 +17,7 @@ import {FeeCalculation} from "../libraries/FeeCalculation.sol";
 error ZeroAmount();
 error WrongETHAmount();
 
-contract CPNFactory is Initializable, OwnableUpgradeable, PausableUpgradeable, ReentrancyGuardUpgradeable {
+contract BackedFiFactory is Initializable, OwnableUpgradeable, PausableUpgradeable, ReentrancyGuardUpgradeable {
     using SafeERC20 for IERC20;
 
     IndexFactoryStorage factoryStorage;
@@ -27,19 +27,20 @@ contract CPNFactory is Initializable, OwnableUpgradeable, PausableUpgradeable, R
     uint256 public redemptionNonce;
 
     event RequestIssuance(
+        address indexed indexToken,
         uint256 indexed roundId,
         uint256 indexed nonce,
-        address indexed user,
+        address user,
         address inputToken,
         uint256 inputAmount,
-        uint256 feeAmount,
         uint256 time
     );
 
     event RequestRedemption(
+        address indexed indexToken,
         uint256 indexed roundId,
         uint256 indexed nonce,
-        address indexed user,
+        address user,
         address outputToken,
         uint256 inputAmount,
         uint256 time
@@ -59,7 +60,6 @@ contract CPNFactory is Initializable, OwnableUpgradeable, PausableUpgradeable, R
         require(_feeVault != address(0), "Invalid FeeVault");
 
         factoryStorage = IndexFactoryStorage(_indexFactoryStorage);
-        // feeVault = FeeVault(_feeVault);
 
         __Ownable_init(msg.sender);
         __Pausable_init();
@@ -80,9 +80,7 @@ contract CPNFactory is Initializable, OwnableUpgradeable, PausableUpgradeable, R
     {
         if (_inputAmount == 0) revert ZeroAmount();
 
-        uint256 usdcFee = FeeCalculation.calculateFee(_inputAmount, factoryStorage.feeRate());
         IERC20(factoryStorage.usdc()).safeTransferFrom(msg.sender, address(factoryStorage.sca()), _inputAmount);
-        IERC20(factoryStorage.usdc()).safeTransferFrom(msg.sender, address(factoryStorage.feeReceiver()), usdcFee);
 
         uint256 nonce = ++issuanceNonce;
         factoryStorage.setIssuanceInputAmount(_indexToken, nonce, _inputAmount);
@@ -93,18 +91,18 @@ contract CPNFactory is Initializable, OwnableUpgradeable, PausableUpgradeable, R
         factoryStorage.recordIssuanceNonce(_indexToken, currentRound, nonce);
 
         emit RequestIssuance(
+            _indexToken,
             factoryStorage.issuanceRoundId(_indexToken),
             nonce,
             msg.sender,
             address(factoryStorage.usdc()),
             _inputAmount,
-            usdcFee,
             block.timestamp
         );
         return nonce;
     }
 
-    function redemption(address _indexToken, uint256 _amount)
+    function redemption(address _indexToken, uint256 _amount, uint256 _burnPercent)
         external
         payable
         whenNotPaused
@@ -120,11 +118,13 @@ contract CPNFactory is Initializable, OwnableUpgradeable, PausableUpgradeable, R
         factoryStorage.setRedemptionInputAmount(_indexToken, nonce, _amount);
         factoryStorage.addRedemptionForCurrentRound(msg.sender, _amount);
         factoryStorage.setRedemptionRoundToNonce(_indexToken, nonce, factoryStorage.redemptionRoundId(_indexToken));
+        factoryStorage.setOrdersBurnPercent(_indexToken, factoryStorage.redemptionRoundId(_indexToken), _burnPercent);
 
         uint256 currentRedemRound = factoryStorage.redemptionRoundId(_indexToken);
         factoryStorage.recordRedemptionNonce(_indexToken, currentRedemRound, nonce);
 
         emit RequestRedemption(
+            _indexToken,
             factoryStorage.redemptionRoundId(_indexToken),
             nonce,
             msg.sender,
