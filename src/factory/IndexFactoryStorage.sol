@@ -4,12 +4,17 @@ pragma solidity 0.8.25;
 import {OrderManager} from "../orderManager/OrderManager.sol";
 import {FunctionsOracle} from "../oracle/FunctionsOracle.sol";
 
-error ZeroAmount();
-error ZeroAddress();
-error WrongETHAmount();
+// error ZeroAmount();
+// error ZeroAddress();
+// error WrongETHAmount();
 
 contract IndexFactoryStorage {
+
+    address public indexFactory;
+    address public indexFactoryBalancer;
+    address public orderManager;
     address public feeReceiver;
+
     uint8 public feeRate;
 
     mapping(address => address) public indexTokenToVault;
@@ -26,6 +31,23 @@ contract IndexFactoryStorage {
     // issuance completed count
     mapping(address => mapping(uint256 => uint256)) public issuanceCompletedAssetsCount; // issuanceNonce => count
     mapping(address => mapping(uint256 => uint256)) public redemptionCompletedAssetsCount; // redemptionNonce => count
+
+
+    function setIndexFactory(address _indexFactory) external {
+        // if (_indexFactory == address(0)) revert ZeroAddress();
+        indexFactory = _indexFactory;
+    }
+
+    function setIndexFactoryBalancer(address _indexFactoryBalancer) external {
+        // if (_indexFactoryBalancer == address(0)) revert ZeroAddress();
+        indexFactoryBalancer = _indexFactoryBalancer;
+    }
+
+    function setOrderManager(address _orderManager) external {
+        // if (_orderManager == address(0)) revert ZeroAddress();
+        orderManager = _orderManager;
+    }
+
 
     // update issuance requester mapping
     function setIssuanceRequester(address _user, uint256 _issuanceNonce, address _requester) external {
