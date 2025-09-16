@@ -27,18 +27,20 @@ contract BackedFiFactory is Initializable, OwnableUpgradeable, PausableUpgradeab
     uint256 public redemptionNonce;
 
     event RequestIssuance(
+        address indexed indexToken,
         uint256 indexed roundId,
         uint256 indexed nonce,
-        address indexed user,
+        address user,
         address inputToken,
         uint256 inputAmount,
         uint256 time
     );
 
     event RequestRedemption(
+        address indexed indexToken,
         uint256 indexed roundId,
         uint256 indexed nonce,
-        address indexed user,
+        address user,
         address outputToken,
         uint256 inputAmount,
         uint256 time
@@ -58,7 +60,6 @@ contract BackedFiFactory is Initializable, OwnableUpgradeable, PausableUpgradeab
         require(_feeVault != address(0), "Invalid FeeVault");
 
         factoryStorage = IndexFactoryStorage(_indexFactoryStorage);
-        // feeVault = FeeVault(_feeVault);
 
         __Ownable_init(msg.sender);
         __Pausable_init();
@@ -90,12 +91,12 @@ contract BackedFiFactory is Initializable, OwnableUpgradeable, PausableUpgradeab
         factoryStorage.recordIssuanceNonce(_indexToken, currentRound, nonce);
 
         emit RequestIssuance(
+            _indexToken,
             factoryStorage.issuanceRoundId(_indexToken),
             nonce,
             msg.sender,
             address(factoryStorage.usdc()),
             _inputAmount,
-            // usdcFee,
             block.timestamp
         );
         return nonce;
@@ -123,6 +124,7 @@ contract BackedFiFactory is Initializable, OwnableUpgradeable, PausableUpgradeab
         factoryStorage.recordRedemptionNonce(_indexToken, currentRedemRound, nonce);
 
         emit RequestRedemption(
+            _indexToken,
             factoryStorage.redemptionRoundId(_indexToken),
             nonce,
             msg.sender,

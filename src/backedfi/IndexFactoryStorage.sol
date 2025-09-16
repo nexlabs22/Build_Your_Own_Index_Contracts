@@ -75,10 +75,10 @@ contract IndexFactoryStorage is Initializable, OwnableUpgradeable {
     mapping(address => uint256) public tokenPendingRebalanceAmount;
     mapping(address => mapping(uint256 => uint256)) public tokenPendingRebalanceAmountByNonce;
 
-    event IssuanceSettled(uint256 indexed roundId);
-    event RedemptionSettled(uint256 indexed roundId);
-    event IssuanceNonceRecorded(uint256 indexed roundId, uint256 indexed nonce);
-    event RedemptionNonceRecorded(uint256 indexed roundId, uint256 indexed nonce);
+    event IssuanceSettled(address indexed indexToken, uint256 indexed roundId);
+    event RedemptionSettled(address indexed indexToken, uint256 indexed roundId);
+    event IssuanceNonceRecorded(address indexed indexToken, uint256 indexed roundId, uint256 indexed nonce);
+    event RedemptionNonceRecorded(address indexed indexToken, uint256 indexed roundId, uint256 indexed nonce);
 
     modifier onlyFactory() {
         require(
@@ -297,27 +297,27 @@ contract IndexFactoryStorage is Initializable, OwnableUpgradeable {
     function recordIssuanceNonce(address _indexToken, uint256 _roundId, uint256 _nonce) external onlyFactory {
         issuanceRoundIdToNonces[_indexToken][_roundId].push(_nonce);
         nonceToIssuanceRound[_indexToken][_nonce] = _roundId;
-        emit IssuanceNonceRecorded(_roundId, _nonce);
+        emit IssuanceNonceRecorded(_indexToken, _roundId, _nonce);
     }
 
     function recordRedemptionNonce(address _indexToken, uint256 _roundId, uint256 _nonce) external onlyFactory {
         redemptionRoundIdToNonces[_indexToken][_roundId].push(_nonce);
         nonceToRedemptionRound[_indexToken][_nonce] = _roundId;
-        emit RedemptionNonceRecorded(_roundId, _nonce);
+        emit RedemptionNonceRecorded(_indexToken, _roundId, _nonce);
     }
 
     function settleIssuance(address _indexToken, uint256 _roundId) external onlyOwnerOrOperator {
         issuanceIsCompleted[_indexToken][_roundId] = true;
         issuanceRoundActive[_indexToken][_roundId] = false;
 
-        emit IssuanceSettled(_roundId);
+        emit IssuanceSettled(_indexToken, _roundId);
     }
 
     function settleRedemption(address _indexToken, uint256 _roundId) external onlyOwnerOrOperator {
         redemptionIsCompleted[_indexToken][_roundId] = true;
         redemptionRoundActive[_indexToken][_roundId] = false;
 
-        emit RedemptionSettled(_roundId);
+        emit RedemptionSettled(_indexToken, _roundId);
     }
 
     function _pruneAddress(address _indexToken, uint256 _round, address _user) internal {

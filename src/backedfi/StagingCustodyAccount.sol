@@ -153,7 +153,9 @@ contract StagingCustodyAccount is Initializable, ReentrancyGuardUpgradeable, Own
                 IERC20(tokenAddress).safeTransfer(vault, balance);
             }
             uint256 newValue = factoryStorage.getTokenValue(_indexToken, tokenAddress, price);
-            orderManager.completeIssuance(indexFactory.issuanceNonce(), _indexToken, tokenAddress, oldValue, newValue);
+            indexFactory.handleCompleteIssuance(
+                indexFactory.issuanceNonce(), _indexToken, tokenAddress, oldValue, newValue
+            );
 
             unchecked {
                 ++i;
@@ -256,17 +258,9 @@ contract StagingCustodyAccount is Initializable, ReentrancyGuardUpgradeable, Own
             totalUSDC += usdcOut;
 
             if (usdcOut != 0) {
-                // send the USDC output for this asset leg to the order manager
                 usdc.safeTransfer(address(orderManager), usdcOut);
 
-                // If your OrderManager tracks per-asset legs, notify it here
-                // (adjust params to your real signature; using a likely one below)
-                // orderManager.completeRedemption(
-                //     indexFactory.redemptionNonce(), // or nonces[i] if there's a 1:1 mapping
-                //     _indexToken,
-                //     asset,
-                //     usdcOut
-                // );
+                indexFactory.handleCompleteRedemption(indexFactory.redemptionNonce(), _indexToken, asset, usdcOut);
             }
 
             unchecked {
