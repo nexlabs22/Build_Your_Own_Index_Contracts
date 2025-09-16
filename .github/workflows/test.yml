@@ -27,7 +27,6 @@ jobs:
         run: |
           forge --version
 
-
       - name: Run Forge build
         run: |
           forge build
