@@ -247,7 +247,7 @@ contract IndexFactoryStorage is Initializable, OwnableUpgradeable {
             issuanceRoundActive[_indexToken][issuanceRoundId[_indexToken]] = true;
         }
 
-        totalIssuanceByRoundByIndexToken[_indexToken][issuanceRoundId[_indexToken]] += _amount;
+        totalIssuanceByRound[_indexToken][issuanceRoundId[_indexToken]] += _amount;
     }
 
     function addRedemptionForCurrentRound(address _indexToken, uint256 _amount) external onlyFactory {
@@ -255,7 +255,7 @@ contract IndexFactoryStorage is Initializable, OwnableUpgradeable {
 
         if (!redemptionRoundActive[_indexToken][roundId]) redemptionRoundActive[_indexToken][roundId] = true;
 
-        totalRedemptionByRoundByIndexToken[_indexToken][roundId] += _amount;
+        totalRedemptionByRound[_indexToken][roundId] += _amount;
     }
 
     // function addressesInRedemptionRound(uint256 roundId) external view returns (address[] memory) {
