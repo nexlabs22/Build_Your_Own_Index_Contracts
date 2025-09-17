@@ -3,12 +3,14 @@ pragma solidity 0.8.25;
 
 import {OrderManager} from "../orderManager/OrderManager.sol";
 import {FunctionsOracle} from "../oracle/FunctionsOracle.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import "../utils/proposable/ProposableOwnableUpgradeable.sol";
 
 // error ZeroAmount();
 // error ZeroAddress();
 // error WrongETHAmount();
 
-contract IndexFactoryStorage {
+contract IndexFactoryStorage is Initializable, ProposableOwnableUpgradeable  {
 
     address public indexFactory;
     address public indexFactoryBalancer;
@@ -31,6 +33,16 @@ contract IndexFactoryStorage {
     // issuance completed count
     mapping(address => mapping(uint256 => uint256)) public issuanceCompletedAssetsCount; // issuanceNonce => count
     mapping(address => mapping(uint256 => uint256)) public redemptionCompletedAssetsCount; // redemptionNonce => count
+
+    function initialize(
+    ) external initializer {
+        __Ownable_init(msg.sender);
+    }
+
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
+        _disableInitializers();
+    }
 
 
     function setIndexFactory(address _indexFactory) external {

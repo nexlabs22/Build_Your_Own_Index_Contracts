@@ -24,6 +24,7 @@ import "../../src/ccip/CCIPStorage.sol";
 // import "../../src/factory/IndexFactoryBalancer.sol";
 import "../../src/oracle/FunctionsOracle.sol";
 import "../../src/ccip/CCIPStorage.sol";
+import "../../src/orderManager/OrderManager.sol";
 import "../../src/vault/Vault.sol";
 import "../../src/ccip/CrossChainIndexFactory.sol";
 import "../../src/ccip/CrossChainIndexFactoryStorage.sol";
@@ -70,7 +71,7 @@ contract ContractDeployer is
     Token token8;
     Token token9;
 
-    Token usdt;
+    Token usdc;
 
     // Token crossChainToken;
 
@@ -86,6 +87,7 @@ contract ContractDeployer is
     CoreSender public coreSender;
     CCIPFactory public ccipFactory;
     IndexFactory public factory;
+    OrderManager public orderManager;
     // BalancerSender public balancerSender;
     // IndexFactoryBalancer public factoryBalancer;
     // CrossChainFeeSender public crossChainFeeSender;
@@ -186,9 +188,91 @@ contract ContractDeployer is
         returns (
             IndexToken,
             Vault,
-            Vault,
             FunctionsOracle,
-            IndexFactoryStorage,
+            IndexFactoryStorage
+        )
+    {
+       
+        
+
+        
+
+        
+
+        IndexToken indexTokenImpl = new IndexToken();
+        indexToken = IndexToken(
+            payable(
+                address(
+                    new ERC1967Proxy(
+                        address(indexTokenImpl),
+                        abi.encodeCall(IndexToken.initialize, (
+                            "Anti Inflation",
+                            "ANFI",
+                            1e18,
+                            feeReceiver,
+                            1000000e18
+                        ))
+                    )
+                )
+            )
+        );
+
+        
+
+        Vault vaultImpl = new Vault();
+        vault = Vault(
+            payable(
+                address(
+                    new ERC1967Proxy(
+                        address(vaultImpl),
+                        abi.encodeCall(Vault.initialize, (address(this)))
+                    )
+                )
+            )
+        );
+
+        
+        FunctionsOracle functionsOracleImpl = new FunctionsOracle();
+        functionsOracle = FunctionsOracle(
+            payable(
+                address(
+                    new ERC1967Proxy(
+                        address(functionsOracleImpl),
+                        abi.encodeCall(FunctionsOracle.initialize, (
+                            address(oracle),
+                            jobId
+                        ))
+                    )
+                )
+            )
+        );
+
+
+        IndexFactoryStorage indexFactoryStorageImpl = new IndexFactoryStorage();
+        indexFactoryStorage = IndexFactoryStorage(
+            payable(
+                address(
+                    new ERC1967Proxy(
+                        address(indexFactoryStorageImpl),
+                        abi.encodeCall(IndexFactoryStorage.initialize, ())
+                    )
+                )
+            )
+        );
+
+
+        return (
+            indexToken,
+            vault,
+            functionsOracle,
+            indexFactoryStorage
+        );
+    }
+
+    function deployContracts2()
+        public
+        returns (
+            Vault,
             CCIPStorage,
             CrossChainIndexFactory,
             CrossChainIndexFactoryStorage
@@ -251,67 +335,7 @@ contract ContractDeployer is
 
         
 
-        IndexToken indexTokenImpl = new IndexToken();
-        indexToken = IndexToken(
-            payable(
-                address(
-                    new ERC1967Proxy(
-                        address(indexTokenImpl),
-                        abi.encodeCall(IndexToken.initialize, (
-                            "Anti Inflation",
-                            "ANFI",
-                            1e18,
-                            feeReceiver,
-                            1000000e18
-                        ))
-                    )
-                )
-            )
-        );
-
         
-
-        Vault vaultImpl = new Vault();
-        vault = Vault(
-            payable(
-                address(
-                    new ERC1967Proxy(
-                        address(vaultImpl),
-                        abi.encodeCall(Vault.initialize, (address(this)))
-                    )
-                )
-            )
-        );
-
-        
-        FunctionsOracle functionsOracleImpl = new FunctionsOracle();
-        functionsOracle = FunctionsOracle(
-            payable(
-                address(
-                    new ERC1967Proxy(
-                        address(functionsOracleImpl),
-                        abi.encodeCall(FunctionsOracle.initialize, (
-                            address(oracle),
-                            jobId
-                        ))
-                    )
-                )
-            )
-        );
-
-        
-
-        IndexFactoryStorage indexFactoryStorageImpl = new IndexFactoryStorage();
-        indexFactoryStorage = IndexFactoryStorage(
-            payable(
-                address(
-                    new ERC1967Proxy(
-                        address(indexFactoryStorageImpl),
-                        abi.encodeCall(IndexFactoryStorage.initialize, ())
-                    )
-                )
-            )
-        );
         CCIPStorage ccipStorageImpl = new CCIPStorage();
         ccipStorage = CCIPStorage(
             payable(
@@ -335,23 +359,33 @@ contract ContractDeployer is
         );
 
         return (
-            indexToken,
-            vault,
             crossChainVault,
-            functionsOracle,
-            indexFactoryStorage,
             ccipStorage,
             crossChainIndexFactory,
             crossChainIndexFactoryStorage
         );
     }
 
-    function deployContracts2()
+    function deployContracts3()
         public
-        returns (CoreSender, IndexFactory, CCIPFactory)
+        returns (OrderManager, CoreSender, IndexFactory, CCIPFactory)
     {
         
-
+        OrderManager orderManagerImpl = new OrderManager();
+        orderManager = OrderManager(
+            payable(
+                address(
+                    new ERC1967Proxy(
+                        address(orderManagerImpl),
+                        abi.encodeCall(OrderManager.initialize, (
+                            address(usdc),
+                            address(0)
+                        ))
+                    )
+                )
+            )
+        );
+        
         CoreSender coreSenderImpl = new CoreSender();
         coreSender = CoreSender(
             payable(
@@ -380,13 +414,9 @@ contract ContractDeployer is
                     new ERC1967Proxy(
                         address(indexFactoryImpl),
                         abi.encodeCall(IndexFactory.initialize, (
-                            1,
-                            payable(address(indexToken)),
-                            address(0), // order manager
-                            address(indexFactoryStorage),
+                            address(orderManager),
                             address(functionsOracle),
-                            payable(address(coreSender)),
-                            wethAddress
+                            address(indexFactoryStorage)
                         ))
                     )
                 )
@@ -452,7 +482,7 @@ contract ContractDeployer is
         //     )
         // );
 
-        return (coreSender, indexFactory);
+        return (orderManager, coreSender, indexFactory, ccipFactory);
     }
 
     // function deployContracts3() public returns (CrossChainFeeSender, CrossChainFeeReceiver) {
@@ -504,26 +534,26 @@ contract ContractDeployer is
 
         // functionsOracle.setIndexFactoryBalancer(address(factoryBalancer));
         // functionsOracle.setBalancerSender(address(balancerSender));
-
-        indexFactoryStorage.setCrossChainToken(
+        orderManager.setFactoryAddress(address(factory));
+        ccipStorage.setCrossChainToken(
             2,
             address(crossChainToken),
             path,
             feesData
         );
         // indexFactoryStorage.setCrossChainToken(1, address(crossChainToken), path, feesData);
-        indexFactoryStorage.setCrossChainFactory(
+        ccipStorage.setCrossChainFactory(
             address(crossChainIndexFactory),
             2
         );
-        indexFactoryStorage.setIndexFactory(address(factory));
-        indexFactoryStorage.setCoreSender(address(coreSender));
-        indexFactoryStorage.setPriceOracle(address(priceOracleAddress));
-        indexFactoryStorage.setVault(address(vault));
+        ccipStorage.setIndexFactory(address(factory));
+        ccipStorage.setCoreSender(address(coreSender));
+        ccipStorage.setPriceOracle(address(priceOracleAddress));
+        ccipStorage.setVault(address(vault));
         // indexFactoryStorage.setBalancerSender(address(balancerSender));
         // indexFactoryStorage.setIndexFactoryBalancer(address(factoryBalancer));
-        indexFactoryStorage.setCoreSenderAndBalancerSenderGasLimits(2000000, 2000000);
-        indexFactoryStorage.setIssuanceAndRedemptionFeePercentages(20, 20);
+        ccipStorage.setCoreSenderAndBalancerSenderGasLimits(2000000, 2000000);
+        ccipStorage.setIssuanceAndRedemptionFeePercentages(20, 20);
         
         vault.setOperator(address(factory), true);
         // vault.setOperator(address(factoryBalancer), true);
@@ -624,7 +654,7 @@ contract ContractDeployer is
         token7 = tokens[7];
         token8 = tokens[8];
         token9 = tokens[9];
-        usdt = tokens[10];
+        usdc = tokens[10];
         crossChainToken = tokens[11];
 
         (
@@ -643,18 +673,23 @@ contract ContractDeployer is
         (
             indexToken,
             vault,
-            crossChainVault,
             functionsOracle,
-            indexFactoryStorage,
-            crossChainIndexFactory,
-            crossChainIndexFactoryStorage
+            indexFactoryStorage
         ) = deployContracts();
         (
+            crossChainVault,
+            ccipStorage,
+            crossChainIndexFactory,
+            crossChainIndexFactoryStorage
+        ) = deployContracts2();
+        (   
+            orderManager,
             coreSender,
-            factory
+            factory,
+            ccipFactory
             // address(0), // balancerSender
             // address(0), // factoryBalancer
-        ) = deployContracts2();
+        ) = deployContracts3();
         // (
         //     address(0), // crossChainFeeSender
         //     crossChainFeeReceiver
