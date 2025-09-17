@@ -5,9 +5,13 @@ import "forge-std/Test.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
 import {OrderManager} from "../../src/orderManager/OrderManager.sol";
+// import {IndexFactory} from "../src/factory/IndexFactory.sol";
+import {BackedFiFactory} from "../src/backedfi/BackedFiFactory.sol";
+import {IndexFactoryStorage} from "../src/backedfi/IndexFactoryStorage.sol";
+import "./OlympixUnitTest.sol";
 import "./utils/TestERC20.sol";
 
-contract OrderManager_MainTest is Test {
+contract OrderManagerTest is OlympixUnitTest("OrderManager") {
     address owner_ = address(0xA11CE);
     address operator_ = makeAddr("operator");
     address user = address(0xBEEF);
@@ -20,6 +24,10 @@ contract OrderManager_MainTest is Test {
 
     OrderManager orderManagerImpl;
     OrderManager orderManager;
+    BackedFiFactory indexFactoryImpl;
+    BackedFiFactory indexFactory;
+    IndexFactoryStorage indexFactoryStorageImpl;
+    IndexFactoryStorage indexFactoryStorage;
 
     event OrderCreated(
         address indexed indexToken,
@@ -38,21 +46,67 @@ contract OrderManager_MainTest is Test {
         usdc = new TestERC20("USD Coin", "USDC");
         underlying = new TestERC20("Underlying", "UND");
 
+        // ---- implementations ----
         orderManagerImpl = new OrderManager();
+        indexFactoryImpl = new BackedFiFactory();
+        indexFactoryStorageImpl = new IndexFactoryStorage();
 
-        orderManager = OrderManager(
+        // ---- proxy: IndexFactoryStorage ----
+        indexFactoryStorage = IndexFactoryStorage(
             address(
                 new ERC1967Proxy(
-                    address(orderManagerImpl),
-                    abi.encodeCall(OrderManager.initialize, (address(usdc), address(0xDEAD))) // factory addr placeholder
+                    address(indexFactoryStorageImpl),
+                    abi.encodeCall(
+                        IndexFactoryStorage.initialize,
+                        (
+                            address(0xDEAD), // _indexFactory (placeholder, non-zero)
+                            address(0xBEEF), // _functionsOracle (placeholder, non-zero)
+                            address(0xCAFE), // _stagingCustodyAccount (placeholder, non-zero)
+                            address(0xB), // _nexBot (placeholder, non-zero)
+                            address(usdc) // _usdc (real)
+                        )
+                    )
                 )
             )
         );
 
-        orderManager.setOperator(operator_, true);
+        // ---- proxy: BackedFiFactory ----
+        // needs: (_indexFactoryStorage, _feeVault)
+        indexFactory = BackedFiFactory(
+            address(
+                new ERC1967Proxy(
+                    address(indexFactoryImpl),
+                    abi.encodeCall(
+                        BackedFiFactory.initialize,
+                        (address(indexFactoryStorage)) // pass the *proxy* of storage + non-zero fee vault
+                    )
+                )
+            )
+        );
 
+        // After factory proxy exists, set it into storage (owner-only)
+        indexFactoryStorage.setIndexFactory(address(indexFactory));
+
+        // ---- proxy: OrderManager ----
+        // needs: (usdcAddress, indexFactoryAddress)
+        orderManager = OrderManager(
+            address(
+                new ERC1967Proxy(
+                    address(orderManagerImpl),
+                    abi.encodeCall(
+                        OrderManager.initialize,
+                        (address(usdc), address(indexFactory)) // pass the *proxy* of BackedFiFactory (or IndexFactory if you have it)
+                    )
+                )
+            )
+        );
+
+        // operator setup + funds
+        orderManager.setOperator(operator_, true);
+        orderManager.setBackedFiIndexFactory(address(indexFactory));
         usdc.mint(operator_, 1_000_000e18);
         underlying.mint(operator_, 500_000e18);
+
         vm.stopPrank();
 
         vm.startPrank(operator_);
@@ -329,5 +383,108 @@ contract OrderManager_MainTest is Test {
         vm.expectRevert(bytes("OrderManager: invalid order nonce"));
         vm.prank(operator_);
         orderManager.completeOrder(1);
+    }
+
+    function test_issuanceWithBackedFiFactory_Revert_InvalidAmount() public {
+        // Arrange: Deploy minimal mock for backedFiFactory
+        address mockBackedFi = address(0x420420);
+        vm.prank(owner_);
+        orderManager.setFactoryAddress(address(0xDEAD));
+
+        // Note:
+        // We'll set backedFiFactory via storage slot. For now, assume it's initialized to 0.
+        bytes32 slot = bytes32(uint256(6)); // backedFiFactory is the 6th storage slot (after 5 simple types), per inheritance order
+        vm.store(address(orderManager), slot, bytes32(uint256(uint160(mockBackedFi))));
+
+        // _inputAmount == 0 should revert with "Invalid amount!"
+        vm.expectRevert(bytes("Invalid amount!"));
+        orderManager.issuanceWithBackedFiFactory(idxToken, 0);
+    }
+
+    function test_issuanceWithBackedFiFactory_Revert_InvalidAddress() public {
+        // Arrange: Deploy minimal mock for backedFiFactory
+        address mockBackedFi = address(0x420420);
+        vm.prank(owner_);
+        orderManager.setFactoryAddress(address(0xDEAD));
+
+        // Patch backedFiFactory address via low-level store
+        bytes32 slot = bytes32(uint256(6));
+        vm.store(address(orderManager), slot, bytes32(uint256(uint160(mockBackedFi))));
+
+        // Should revert if indexToken is address(0)
+        vm.expectRevert(bytes("Invalid address!"));
+        orderManager.issuanceWithBackedFiFactory(address(0), 100);
+    }
+
+    // Positive branch for opix-target-branch-212-True
+    function test_issuanceWithBackedFiFactory_HappyPath() public {
+        usdc.mint(address(orderManager), 1_000_000e18);
+
+        vm.startPrank(address(orderManager));
+        usdc.approve(address(indexFactory), 1_000_000e18);
+        vm.stopPrank();
+
+        // Arrange: Deploy a minimal backedFiFactory mock that records call
+        address mockBackedFi;
+        {
+            // Deploy a contract which emits log on call to issuanceIndexTokens
+            bytes memory code =
+                hex"608060405234801561001057600080fd5b50610149806100206000396000f3fe6080604052600436106100235760003560e01c80636a9027e514610028575b600080fd5b610038600480360381019061003391906100da565b61003a565b005b8373ffffffffffffffffffffffffffffffffffffffff166323b872dd6040518163ffffffff1660e01b815260040160206040518083038186803b15801561007657600080fd5b505af415801561008a573d6000803e3d6000fd5b5050505056fea2646970667358221220aeed5be69bd77cbb5dc8a798e4fdd9636c3f7e6e51397bf7a10d1671b4d8b65b64736f6c63430008190033"; // minimal stub: just returns, no storage
+            assembly {
+                mockBackedFi := create(0, add(code, 0x20), mload(code))
+            }
+        }
+        vm.prank(owner_);
+        orderManager.setFactoryAddress(address(0xDEAD));
+        // Patch backedFiFactory via storage slot
+        bytes32 slot = bytes32(uint256(6));
+        vm.store(address(orderManager), slot, bytes32(uint256(uint160(mockBackedFi))));
+
+        // Call happy path: nonzero input, valid address
+        orderManager.issuanceWithBackedFiFactory(idxToken, 100);
+    }
+
+    function test_redemptionWithBackedFiFactory_zeroAmount_reverts() public {
+        // Arrange: Set up a minimal mock BackedFiFactory
+        // Setup the storage slot for backedFiFactory. It is slot 6 in OrderManager (after 5 vars used),
+        // but for ownable proxy, the layout is preserved. We'll use slot 6, as in other similar tests above.
+        address mockBackedFi;
+        {
+            // Deploy a contract which has a fallback for .redemption(), just returns (for the revert test, not called)
+            bytes memory code =
+                hex"6080604052348015600f57600080fd5b5060c08061001d6000396000f3fe60806040526004361060295760003560e01c8063b3fecbc514602e575b600080fd5b603c60383660046045565b603e565b005b7fffffffff00000000000000000000000000000000000000000000000000000000000000006020526000908152604090205460ff168156fea264697066735822122044b492ec3765e5486de6d7c33433851ae4b8c5e8ddbed5df10dc9b6ec4eaae6064736f6c63430008190033";
+            assembly {
+                mockBackedFi := create(0, add(code, 0x20), mload(code))
+            }
+        }
+        // Patch the backedFiFactory storage slot
+        vm.prank(owner_);
+        orderManager.setFactoryAddress(address(0xDEAD));
+        bytes32 slot = bytes32(uint256(6));
+        vm.store(address(orderManager), slot, bytes32(uint256(uint160(mockBackedFi))));
+        // test: amount == 0 triggers revert (opix-target-branch-218-True)
+        vm.expectRevert(bytes("Invalid amount!"));
+        orderManager.redemptionWithBackedFiFactory(idxToken, 0, 123);
+    }
+
+    function test_redemptionWithBackedFiFactory_zeroIndexTokenAddress_reverts() public {
+        // Arrange: Set up a minimal mock BackedFiFactory that just returns
+        address mockBackedFi;
+        {
+            // Deploy a contract that has a fallback for .redemption(), does nothing
+            bytes memory code =
+                hex"6080604052348015600f57600080fd5b5060c08061001d6000396000f3fe60806040526004361060295760003560e01c8063b3fecbc514602e575b600080fd5b603c60383660046045565b603e565b005b7fffffffff00000000000000000000000000000000000000000000000000000000000000006020526000908152604090205460ff168156fea264697066735822122044b492ec3765e5486de6d7c33433851ae4b8c5e8ddbed5df10dc9b6ec4eaae6064736f6c63430008190033";
+            assembly {
+                mockBackedFi := create(0, add(code, 0x20), mload(code))
+            }
+        }
+        // Patch the backedFiFactory storage slot in the proxy instance
+        vm.prank(owner_);
+        orderManager.setFactoryAddress(address(0xDEAD));
+        bytes32 slot = bytes32(uint256(6));
+        vm.store(address(orderManager), slot, bytes32(uint256(uint160(mockBackedFi))));
+        // test: indexToken == address(0) triggers revert (opix-target-branch-219-True)
+        vm.expectRevert(bytes("Invalid address!"));
+        orderManager.redemptionWithBackedFiFactory(address(0), 123, 456);
     }
 }

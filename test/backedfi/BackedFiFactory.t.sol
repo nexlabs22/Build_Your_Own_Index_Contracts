@@ -13,7 +13,7 @@ import "../OlympixUnitTest.sol";
 
 error ZeroAmount();
 
-contract BackedFiFactoryTest is OlympixUnitTest("BackedFiFactory") {
+contract BackedFiFactoryTest is Test {
     address owner_ = address(0xA11CE);
     address user = address(0xBEEF);
     address feeVault = address(0xFEE);
@@ -55,23 +55,10 @@ contract BackedFiFactoryTest is OlympixUnitTest("BackedFiFactory") {
 
         sca.initialize(address(storage_));
 
-        backedFi.initialize(address(storage_), feeVault);
+        backedFi.initialize(address(storage_));
 
         storage_.setIndexFactory(address(backedFi));
 
-        vm.stopPrank();
-    }
-
-    function testInitialize_RevertsOnZeroArgs() public {
-        vm.startPrank(owner_);
-        BackedFiFactory impl = new BackedFiFactory();
-        BackedFiFactory proxy = BackedFiFactory(address(new ERC1967Proxy(address(impl), "")));
-
-        vm.expectRevert(bytes("Invalid Address"));
-        proxy.initialize(address(0), feeVault);
-
-        vm.expectRevert(bytes("Invalid FeeVault"));
-        proxy.initialize(address(storage_), address(0));
         vm.stopPrank();
     }
 

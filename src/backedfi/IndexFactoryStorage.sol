@@ -60,18 +60,6 @@ contract IndexFactoryStorage is Initializable, OwnableUpgradeable {
     mapping(address => address) public indexTokenToVault;
     mapping(address => mapping(uint256 => uint256)) public ordersBurnPercent;
 
-    //   mapping(uint256 => uint256) public issuanceFeeByNonce; // no need
-    // mapping(uint256 => uint256) public redemptionFeeByNonce; // no need
-    //     mapping(uint256 => bool) public issuanceRequestCancelled; // no need
-    // mapping(uint256 => bool) public redemptionRequestCancelled; // no need
-    // mapping(uint256 => uint256) public nonceToIssuanceRound; // no need
-    // mapping(uint256 => uint256) public nonceToRedemptionRound; // no need
-    // mapping(uint256 => uint256[]) public issuanceRoundIdToNonces; // no need
-    // mapping(uint256 => uint256[]) public redemptionRoundIdToNonces; // no need
-    // mapping(uint256 => address) public issuanceRequesterByNonce; // no need
-    // mapping(uint256 => address) public redemptionRequesterByNonce; // no need
-    // mapping(uint256 => bool) public issuanceIsCompleted; // no need
-    // mapping(uint256 => bool) public redemptionIsCompleted; // no need
     mapping(address => uint256) public tokenPendingRebalanceAmount;
     mapping(address => mapping(uint256 => uint256)) public tokenPendingRebalanceAmountByNonce;
 
