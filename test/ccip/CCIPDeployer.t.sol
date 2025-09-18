@@ -19,11 +19,11 @@ import "../../src/test/UniswapPositionManagerByteCode.sol";
 import "../../src/ccip/CoreSender.sol";
 import "../../src/factory/IndexFactory.sol";
 import "../../src/factory/IndexFactoryStorage.sol";
-import "../../src/ccip/CCIPFactory.sol";
-import "../../src/ccip/CCIPStorage.sol";
+import "../../src/ccip/MainChainFactory.sol";
+import "../../src/ccip/MainChainStorage.sol";
 // import "../../src/factory/IndexFactoryBalancer.sol";
 import "../../src/oracle/FunctionsOracle.sol";
-import "../../src/ccip/CCIPStorage.sol";
+import "../../src/ccip/MainChainStorage.sol";
 import "../../src/orderManager/OrderManager.sol";
 import "../../src/vault/Vault.sol";
 import "../../src/ccip/CrossChainIndexFactory.sol";
@@ -76,8 +76,8 @@ contract ContractDeployer is
     // Token crossChainToken;
 
     address priceOracleAddress;
-    address factoryAddress;
-    address ccipFactoryAddress;
+    address factoryV3Address;
+    address mainChainFactoryAddress;
     address wethAddress;
     address router;
     address positionManager;
@@ -85,7 +85,7 @@ contract ContractDeployer is
     MockApiOracle public oracle;
     LinkToken link;
     CoreSender public coreSender;
-    CCIPFactory public ccipFactory;
+    MainChainFactory public mainChainFactory;
     IndexFactory public factory;
     OrderManager public orderManager;
     // BalancerSender public balancerSender;
@@ -113,7 +113,7 @@ contract ContractDeployer is
     Vault public crossChainVault4;
     FunctionsOracle public functionsOracle;
     IndexFactoryStorage public indexFactoryStorage;
-    CCIPStorage public ccipStorage;
+    MainChainStorage public mainChainStorage;
     Token public crossChainToken;
     // TestSwap public testSwap;
     MockV3Aggregator public ethPriceOracle;
@@ -121,7 +121,7 @@ contract ContractDeployer is
     IWETH public weth;
     IQuoter public quoter;
 
-    IUniswapV3Factory public factoryV3 = IUniswapV3Factory(factoryAddress);
+    IUniswapV3Factory public factoryV3 = IUniswapV3Factory(factoryV3Address);
     ISwapRouter public swapRouter = ISwapRouter(router);
     // MockRouter mockRouter;
     MockRouter3 mockRouter;
@@ -273,7 +273,7 @@ contract ContractDeployer is
         public
         returns (
             Vault,
-            CCIPStorage,
+            MainChainStorage,
             CrossChainIndexFactory,
             CrossChainIndexFactoryStorage
         )
@@ -306,7 +306,7 @@ contract ContractDeployer is
                             address(mockRouter),
                             wethAddress,
                             router,
-                            ccipFactoryAddress,
+                            mainChainFactoryAddress,
                             router,
                             address(ethPriceOracle)
                         ))
@@ -336,22 +336,22 @@ contract ContractDeployer is
         
 
         
-        CCIPStorage ccipStorageImpl = new CCIPStorage();
-        ccipStorage = CCIPStorage(
+        MainChainStorage mainChainStorageImpl = new MainChainStorage();
+        mainChainStorage = MainChainStorage(
             payable(
                 address(
                     new ERC1967Proxy(
-                        address(ccipStorageImpl),
-                        abi.encodeCall(CCIPStorage.initialize, (
+                        address(mainChainStorageImpl),
+                        abi.encodeCall(MainChainStorage.initialize, (
                             1,
                             address(functionsOracle),
                             address(ethPriceOracle),
                             address(link),
                             wethAddress,
                             router,
-                            ccipFactoryAddress,
+                            mainChainFactoryAddress,
                             router,
-                            ccipFactoryAddress
+                            mainChainFactoryAddress
                         ))
                     )
                 )
@@ -360,7 +360,7 @@ contract ContractDeployer is
 
         return (
             crossChainVault,
-            ccipStorage,
+            mainChainStorage,
             crossChainIndexFactory,
             crossChainIndexFactoryStorage
         );
@@ -368,7 +368,7 @@ contract ContractDeployer is
 
     function deployContracts3()
         public
-        returns (OrderManager, CoreSender, IndexFactory, CCIPFactory)
+        returns (OrderManager, CoreSender, IndexFactory, MainChainFactory)
     {
         
         OrderManager orderManagerImpl = new OrderManager();
@@ -423,13 +423,13 @@ contract ContractDeployer is
             )
         );
 
-        CCIPFactory ccipFactoryImpl = new CCIPFactory();
-        CCIPFactory ccipFactory = CCIPFactory(
+        MainChainFactory mainChainFactoryImpl = new MainChainFactory();
+        MainChainFactory mainChainFactory = MainChainFactory(
             payable(
                 address(
                     new ERC1967Proxy(
-                        address(ccipFactoryImpl),
-                        abi.encodeCall(CCIPFactory.initialize, (
+                        address(mainChainFactoryImpl),
+                        abi.encodeCall(MainChainFactory.initialize, (
                             1,
                             payable(address(indexToken)),
                             address(0), // order manager
@@ -482,7 +482,7 @@ contract ContractDeployer is
         //     )
         // );
 
-        return (orderManager, coreSender, indexFactory, ccipFactory);
+        return (orderManager, coreSender, indexFactory, mainChainFactory);
     }
 
     // function deployContracts3() public returns (CrossChainFeeSender, CrossChainFeeReceiver) {
@@ -535,25 +535,25 @@ contract ContractDeployer is
         // functionsOracle.setIndexFactoryBalancer(address(factoryBalancer));
         // functionsOracle.setBalancerSender(address(balancerSender));
         orderManager.setFactoryAddress(address(factory));
-        ccipStorage.setCrossChainToken(
+        mainChainStorage.setCrossChainToken(
             2,
             address(crossChainToken),
             path,
             feesData
         );
         // indexFactoryStorage.setCrossChainToken(1, address(crossChainToken), path, feesData);
-        ccipStorage.setCrossChainFactory(
+        mainChainStorage.setCrossChainFactory(
             address(crossChainIndexFactory),
             2
         );
-        ccipStorage.setIndexFactory(address(factory));
-        ccipStorage.setCoreSender(address(coreSender));
-        ccipStorage.setPriceOracle(address(priceOracleAddress));
-        ccipStorage.setVault(address(vault));
+        mainChainStorage.setIndexFactory(address(factory));
+        mainChainStorage.setCoreSender(address(coreSender));
+        mainChainStorage.setPriceOracle(address(priceOracleAddress));
+        mainChainStorage.setVault(address(vault));
         // indexFactoryStorage.setBalancerSender(address(balancerSender));
         // indexFactoryStorage.setIndexFactoryBalancer(address(factoryBalancer));
-        ccipStorage.setCoreSenderAndBalancerSenderGasLimits(2000000, 2000000);
-        ccipStorage.setIssuanceAndRedemptionFeePercentages(20, 20);
+        mainChainStorage.setCoreSenderAndBalancerSenderGasLimits(2000000, 2000000);
+        mainChainStorage.setIssuanceAndRedemptionFeePercentages(20, 20);
         
         vault.setOperator(address(factory), true);
         // vault.setOperator(address(factoryBalancer), true);
@@ -618,16 +618,16 @@ contract ContractDeployer is
     {
         // bytes memory bytecode = factoryByteCode;
         address priceOracleAddress = deployByteCode(priceOracleByteCode);
-        address factoryAddress = deployByteCode(factoryByteCode);
+        address factoryV3Address = deployByteCode(factoryByteCode);
         address wethAddress = deployByteCode(WETHByteCode);
         address routerAddress = deployByteCodeWithInputs(
             routerByteCode,
-            abi.encode(factoryAddress, wethAddress)
+            abi.encode(factoryV3Address, wethAddress)
         );
         address positionManagerAddress = deployByteCodeWithInputs(
             positionManagerByteCode,
             abi.encode(
-                factoryAddress,
+                factoryV3Address,
                 wethAddress,
                 0x5FC8d32690cc91D4c39d9d3abcBD16989F875707
             )
@@ -635,7 +635,7 @@ contract ContractDeployer is
         // bytes memory bytecodeWithArgs = abi.encodePacked(bytecode, abi.encode(_initData));
         return (
             priceOracleAddress,
-            factoryAddress,
+            factoryV3Address,
             wethAddress,
             routerAddress,
             positionManagerAddress
@@ -659,12 +659,12 @@ contract ContractDeployer is
 
         (
             priceOracleAddress,
-            factoryAddress,
+            factoryV3Address,
             wethAddress,
             router,
             positionManager
         ) = deployUniswap();
-        factoryV3 = IUniswapV3Factory(factoryAddress);
+        factoryV3 = IUniswapV3Factory(factoryV3Address);
         swapRouter = ISwapRouter(router);
         weth = IWETH(wethAddress);
         // (link, oracle, indexToken, ethPriceOracle, factory, testSwap, crossChainIndexFactory, crossChainVault, indexFactoryStorage, crossChainToken) = deployContracts();
@@ -678,7 +678,7 @@ contract ContractDeployer is
         ) = deployContracts();
         (
             crossChainVault,
-            ccipStorage,
+            mainChainStorage,
             crossChainIndexFactory,
             crossChainIndexFactoryStorage
         ) = deployContracts2();
@@ -686,7 +686,7 @@ contract ContractDeployer is
             orderManager,
             coreSender,
             factory,
-            ccipFactory
+            mainChainFactory
             // address(0), // balancerSender
             // address(0), // factoryBalancer
         ) = deployContracts3();

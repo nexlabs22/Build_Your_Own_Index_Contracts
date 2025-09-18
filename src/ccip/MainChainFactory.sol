@@ -8,7 +8,7 @@ import "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 import "./CCIPReceiver.sol";
-import "./CCIPStorage.sol";
+import "./MainChainStorage.sol";
 import "./CoreSender.sol";
 import "../oracle/FunctionsOracle.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
@@ -24,7 +24,7 @@ import "../orderManager/OrderManager.sol";
 /// @notice The main token contract for Index Token (NEX Labs Protocol)
 /// @dev This contract uses an upgradeable pattern
 
-contract CCIPFactory is Initializable, ProposableOwnableUpgradeable, ReentrancyGuardUpgradeable, PausableUpgradeable {
+contract MainChainFactory is Initializable, ProposableOwnableUpgradeable, ReentrancyGuardUpgradeable, PausableUpgradeable {
     // using MessageSender for *;
 
     struct IssuanceSendLocalVars {
@@ -36,7 +36,7 @@ contract CCIPFactory is Initializable, ProposableOwnableUpgradeable, ReentrancyG
     }
 
     IndexToken public indexToken;
-    CCIPStorage public factoryStorage;
+    MainChainStorage public mainChainStorage;
     FunctionsOracle public functionsOracle;
     CoreSender public coreSender;
     OrderManager public orderManager;
@@ -68,8 +68,8 @@ contract CCIPFactory is Initializable, ProposableOwnableUpgradeable, ReentrancyG
     modifier onlyOwnerOrBalancers() {
         require(
             msg.sender == owner() || functionsOracle.isOperator(msg.sender)
-                || msg.sender == address(factoryStorage.balancerSender())
-                || msg.sender == address(factoryStorage.indexFactoryBalancer()),
+                || msg.sender == address(mainChainStorage.balancerSender())
+                || msg.sender == address(mainChainStorage.mainChainFactoryBalancer()),
             "Not owner or balancer"
         );
         _;
@@ -99,7 +99,7 @@ contract CCIPFactory is Initializable, ProposableOwnableUpgradeable, ReentrancyG
         uint64 _currentChainSelector,
         address payable _token,
         address _orderManager,
-        address _indexFactoryStorage,
+        address _mainChainStorage,
         address _functionsOracle,
         address payable _coreSender,
         //addresses
@@ -117,7 +117,7 @@ contract CCIPFactory is Initializable, ProposableOwnableUpgradeable, ReentrancyG
         currentChainSelector = _currentChainSelector;
         indexToken = IndexToken(_token);
         orderManager = OrderManager(_orderManager);
-        factoryStorage = CCIPStorage(_indexFactoryStorage);
+        mainChainStorage = MainChainStorage(_mainChainStorage);
         functionsOracle = FunctionsOracle(_functionsOracle);
         coreSender = CoreSender(_coreSender);
 
@@ -160,11 +160,11 @@ contract CCIPFactory is Initializable, ProposableOwnableUpgradeable, ReentrancyG
     }
 
     /**
-     * @dev Sets the IndexFactoryStorage contract address.
-     * @param _factoryStorage The address of the IndexFactoryStorage contract.
+     * @dev Sets the MainChainStorage contract address.
+     * @param _mainChainStorage The address of the MainChainStorage contract.
      */
-    function setIndexFactoryStorage(address _factoryStorage) public onlyOwner {
-        factoryStorage = CCIPStorage(_factoryStorage);
+    function setMainChainStorage(address _mainChainStorage) public onlyOwner {
+        mainChainStorage = MainChainStorage(_mainChainStorage);
     }
 
     /**
@@ -196,9 +196,9 @@ contract CCIPFactory is Initializable, ProposableOwnableUpgradeable, ReentrancyG
         internal
         returns (uint256 outputAmount)
     {
-        ISwapRouter swapRouterV3 = factoryStorage.swapRouterV3();
-        IUniswapV2Router02 swapRouterV2 = factoryStorage.swapRouterV2();
-        uint256 amountOutMinimum = factoryStorage.getMinAmountOut(path, fees, amountIn);
+        ISwapRouter swapRouterV3 = mainChainStorage.swapRouterV3();
+        IUniswapV2Router02 swapRouterV2 = mainChainStorage.swapRouterV2();
+        uint256 amountOutMinimum = mainChainStorage.getMinAmountOut(path, fees, amountIn);
         outputAmount = SwapHelpers.swap(swapRouterV3, swapRouterV2, path, fees, amountIn, amountOutMinimum, _recipient);
     }
 
@@ -214,7 +214,7 @@ contract CCIPFactory is Initializable, ProposableOwnableUpgradeable, ReentrancyG
         if (_tokenIn == address(weth)) {
             wethAmount = _inputAmount;
         } else {
-            wethAmount = factoryStorage.getAmountOut(_tokenInPath, _tokenInFees, _inputAmount);
+            wethAmount = mainChainStorage.getAmountOut(_tokenInPath, _tokenInFees, _inputAmount);
         }
 
         // get fee for other chains
@@ -275,22 +275,22 @@ contract CCIPFactory is Initializable, ProposableOwnableUpgradeable, ReentrancyG
         require(_tokenIn != address(0), "Invalid input token address");
         require(_inputAmount > 0, "Input amount must be greater than zero");
         require(_tokenInPath[_tokenInPath.length - 1] == address(weth), "Invalid token path");
-        if (!factoryStorage.isCrossChainFeeSponsered()) {
+        if (!mainChainStorage.isCrossChainFeeSponsered()) {
             require(
                 getIssuanceFee(_indexToken, _tokenIn, _tokenInPath, _tokenInFees, _inputAmount) == msg.value,
                 "Insufficient ETH sent for cross chain fee"
             );
-            (bool success,) = factoryStorage.coreSender().call{value: msg.value}("");
+            (bool success,) = mainChainStorage.coreSender().call{value: msg.value}("");
             require(success, "Cross chain fee transfer failed");
         }
-        IWETH weth = factoryStorage.weth();
-        Vault vault = factoryStorage.vault();
+        IWETH weth = mainChainStorage.weth();
+        Vault vault = mainChainStorage.vault();
 
-        // uint256 feeAmount = FeeCalculation.calculateFee(_inputAmount, factoryStorage.feeRate());
+        // uint256 feeAmount = FeeCalculation.calculateFee(_inputAmount, mainChainStorage.feeRate());
         uint256 feeAmount;
 
-        factoryStorage.increaseIssuanceNonce();
-        factoryStorage.setIssuanceData(factoryStorage.issuanceNonce(), msg.sender, _tokenIn, _inputAmount, bytes32(0));
+        mainChainStorage.increaseIssuanceNonce();
+        mainChainStorage.setIssuanceData(mainChainStorage.issuanceNonce(), msg.sender, _tokenIn, _inputAmount, bytes32(0));
 
         require(
             IERC20(_tokenIn).transferFrom(msg.sender, address(this), _inputAmount + feeAmount), "Token transfer failed"
@@ -319,10 +319,10 @@ contract CCIPFactory is Initializable, ProposableOwnableUpgradeable, ReentrancyG
         uint256 feeAmount = FeeCalculation.calculateFee(_inputAmount, 10);
         uint256 crossChainFee =
             getIssuanceFee(_indexToken, address(weth), new address[](0), new uint24[](0), _inputAmount);
-        if (!factoryStorage.isCrossChainFeeSponsered()) {
+        if (!mainChainStorage.isCrossChainFeeSponsered()) {
             uint256 finalAmount = _inputAmount + feeAmount + crossChainFee;
             require(msg.value == finalAmount, "lower than required amount");
-            (bool success,) = factoryStorage.coreSender().call{value: crossChainFee}("");
+            (bool success,) = mainChainStorage.coreSender().call{value: crossChainFee}("");
             require(success, "Cross chain fee transfer failed");
         } else {
             uint256 finalAmount = _inputAmount + feeAmount;
@@ -334,9 +334,9 @@ contract CCIPFactory is Initializable, ProposableOwnableUpgradeable, ReentrancyG
         require(weth.transfer(address(owner()), feeAmount), "Fee transfer failed");
 
         //set mappings
-        factoryStorage.increaseIssuanceNonce();
-        factoryStorage.setIssuanceData(
-            factoryStorage.issuanceNonce(), msg.sender, address(weth), _inputAmount, bytes32(0)
+        mainChainStorage.increaseIssuanceNonce();
+        mainChainStorage.setIssuanceData(
+            mainChainStorage.issuanceNonce(), msg.sender, address(weth), _inputAmount, bytes32(0)
         );
         //run issuance
         _issuance(_indexToken, address(weth), _inputAmount);
@@ -350,7 +350,7 @@ contract CCIPFactory is Initializable, ProposableOwnableUpgradeable, ReentrancyG
      */
     function _issuance(address _indexToken, address _tokenIn, uint256 _inputAmount) internal {
         uint256 wethAmount = _inputAmount;
-        factoryStorage.increasePendingIssuanceInputByNonce(factoryStorage.issuanceNonce(), wethAmount);
+        mainChainStorage.increasePendingIssuanceInputByNonce(mainChainStorage.issuanceNonce(), wethAmount);
         // swap to underlying assets on all chain
         uint256 totalChains = functionsOracle.currentChainSelectorsCount(_indexToken);
         uint256 latestCount = functionsOracle.currentFilledCount(_indexToken);
@@ -363,23 +363,23 @@ contract CCIPFactory is Initializable, ProposableOwnableUpgradeable, ReentrancyG
                 _issuanceSwapsCurrentChain(
                     _indexToken,
                     wethAmount,
-                    factoryStorage.issuanceNonce(),
+                    mainChainStorage.issuanceNonce(),
                     chainSelectorTokensCount,
                     chainSelector,
                     latestCount
                 );
             } else {
                 _issuanceSwapsOtherChains(
-                    _indexToken, wethAmount, factoryStorage.issuanceNonce(), chainSelector, latestCount
+                    _indexToken, wethAmount, mainChainStorage.issuanceNonce(), chainSelector, latestCount
                 );
             }
         }
         emit RequestIssuance(
-            factoryStorage.getIssuanceMessageId(factoryStorage.issuanceNonce()),
-            factoryStorage.issuanceNonce(),
+            mainChainStorage.getIssuanceMessageId(mainChainStorage.issuanceNonce()),
+            mainChainStorage.issuanceNonce(),
             msg.sender,
             _tokenIn,
-            factoryStorage.getIssuanceInputAmount(factoryStorage.issuanceNonce()),
+            mainChainStorage.getIssuanceInputAmount(mainChainStorage.issuanceNonce()),
             0,
             block.timestamp
         );
@@ -408,29 +408,29 @@ contract CCIPFactory is Initializable, ProposableOwnableUpgradeable, ReentrancyG
             (address[] memory fromETHPath, uint24[] memory fromETHFees) =
                 functionsOracle.getFromETHPathData(tokenAddress);
 
-            factoryStorage.setIssuanceOldTokenValue(
-                _issuanceNonce, tokenAddress, factoryStorage.getCurrentTokenValue(tokenAddress)
+            mainChainStorage.setIssuanceOldTokenValue(
+                _issuanceNonce, tokenAddress, mainChainStorage.getCurrentTokenValue(tokenAddress)
             );
 
             uint256 tokenMarketShare = functionsOracle.tokenCurrentMarketShare(_indexToken, tokenAddress);
             uint256 swapAmount = (_wethAmount * tokenMarketShare) / 100e18;
             if (tokenAddress != address(weth)) {
-                swap(fromETHPath, fromETHFees, swapAmount, address(factoryStorage.vault()));
+                swap(fromETHPath, fromETHFees, swapAmount, address(mainChainStorage.vault()));
             } else {
-                weth.transfer(address(factoryStorage.vault()), swapAmount);
+                weth.transfer(address(mainChainStorage.vault()), swapAmount);
             }
 
-            factoryStorage.setIssuanceNewTokenValue(
-                _issuanceNonce, tokenAddress, factoryStorage.getCurrentTokenValue(tokenAddress)
+            mainChainStorage.setIssuanceNewTokenValue(
+                _issuanceNonce, tokenAddress, mainChainStorage.getCurrentTokenValue(tokenAddress)
             );
-            factoryStorage.issuanceIncreaseCompletedTokensCount(_issuanceNonce);
+            mainChainStorage.issuanceIncreaseCompletedTokensCount(_issuanceNonce);
             // call the order manager here
             // orderManager.completeIssuance(
             //     _issuanceNonce, 
             //     _indexToken, 
             //     tokenAddress, 
-            //     factoryStorage.getIssuanceOldTokenValue(_issuanceNonce, tokenAddress),
-            //     factoryStorage.getIssuanceNewTokenValue(_issuanceNonce, tokenAddress)
+            //     mainChainStorage.getIssuanceOldTokenValue(_issuanceNonce, tokenAddress),
+            //     mainChainStorage.getIssuanceNewTokenValue(_issuanceNonce, tokenAddress)
             // );
         }
     }
@@ -467,16 +467,16 @@ contract CCIPFactory is Initializable, ProposableOwnableUpgradeable, ReentrancyG
         // require(amountIn > 0, "Amount must be greater than zero");
         require(_tokenOut != address(0), "Invalid output token address");
         require(_tokenOutPath[0] == address(weth), "Invalid token path");
-        if (!factoryStorage.isCrossChainFeeSponsered()) {
+        if (!mainChainStorage.isCrossChainFeeSponsered()) {
             // require(getRedemptionFee(_indexToken, amountIn) >= msg.value, "Insufficient ETH sent for cross chain fee");
-            (bool success,) = factoryStorage.coreSender().call{value: msg.value}("");
+            (bool success,) = mainChainStorage.coreSender().call{value: msg.value}("");
             require(success, "Cross chain fee transfer failed");
         }
         // uint256 burnPercent = (amountIn * 1e18) / indexToken.totalSupply();
-        factoryStorage.increaseRedemptionNonce();
-        // factoryStorage.increasePendingRedemptionInputByNonce(factoryStorage.redemptionNonce(), amountIn);
-        // factoryStorage.setRedemptionData(
-        //     factoryStorage.redemptionNonce(), msg.sender, _tokenOut, amountIn, _tokenOutPath, _tokenOutFees, bytes32(0)
+        mainChainStorage.increaseRedemptionNonce();
+        // mainChainStorage.increasePendingRedemptionInputByNonce(mainChainStorage.redemptionNonce(), amountIn);
+        // mainChainStorage.setRedemptionData(
+        //     mainChainStorage.redemptionNonce(), msg.sender, _tokenOut, amountIn, _tokenOutPath, _tokenOutFees, bytes32(0)
         // );
 
         // indexToken.burn(msg.sender, amountIn);
@@ -494,16 +494,16 @@ contract CCIPFactory is Initializable, ProposableOwnableUpgradeable, ReentrancyG
                     _indexToken,
                     _burnPercent,
                     // redemptionNonce,
-                    factoryStorage.redemptionNonce(),
+                    mainChainStorage.redemptionNonce(),
                     chainSelectorTokensCount
                 );
             } else {
-                _redemptionSwapsOtherChains(_burnPercent, factoryStorage.redemptionNonce(), chainSelector);
+                _redemptionSwapsOtherChains(_burnPercent, mainChainStorage.redemptionNonce(), chainSelector);
             }
         }
         emit RequestRedemption(
-            factoryStorage.getRedemptionMessageId(factoryStorage.redemptionNonce()),
-            factoryStorage.redemptionNonce(),
+            mainChainStorage.getRedemptionMessageId(mainChainStorage.redemptionNonce()),
+            mainChainStorage.redemptionNonce(),
             msg.sender,
             _tokenOut,
             0,
@@ -526,28 +526,28 @@ contract CCIPFactory is Initializable, ProposableOwnableUpgradeable, ReentrancyG
         uint256 _chainSelectorTokensCount
     ) internal {
         address[] memory tokens = functionsOracle.allCurrentChainSelectorTokens(_indexToken, currentChainSelector);
-        Vault vault = factoryStorage.vault();
+        Vault vault = mainChainStorage.vault();
         for (uint256 i = 0; i < _chainSelectorTokensCount; i++) {
             address tokenAddress = tokens[i];
             (address[] memory toETHPath, uint24[] memory toETHFees) = functionsOracle.getToETHPathData(tokenAddress);
-            uint256 swapAmount = (_burnPercent * IERC20(tokenAddress).balanceOf(address(factoryStorage.vault()))) / 1e18;
+            uint256 swapAmount = (_burnPercent * IERC20(tokenAddress).balanceOf(address(mainChainStorage.vault()))) / 1e18;
             vault.withdrawFunds(tokenAddress, address(this), swapAmount);
             uint256 swapAmountOut =
                 tokenAddress == address(weth) ? swapAmount : swap(toETHPath, toETHFees, swapAmount, address(coreSender));
             if (tokenAddress == address(weth)) {
                 weth.transfer(address(coreSender), swapAmount);
             }
-            factoryStorage.increasePendingRedemptionHoldValueByNonce(_redemptionNonce, swapAmountOut);
-            factoryStorage.increaseRedemptionTotalValue(_redemptionNonce, swapAmountOut);
-            factoryStorage.increaseRedemptionTotalPortfolioValues(
+            mainChainStorage.increasePendingRedemptionHoldValueByNonce(_redemptionNonce, swapAmountOut);
+            mainChainStorage.increaseRedemptionTotalValue(_redemptionNonce, swapAmountOut);
+            mainChainStorage.increaseRedemptionTotalPortfolioValues(
                 _redemptionNonce,
                 tokenAddress == address(weth)
-                    ? IERC20(tokenAddress).balanceOf(address(factoryStorage.vault()))
-                    : factoryStorage.getAmountOut(
-                        toETHPath, toETHFees, IERC20(tokenAddress).balanceOf(address(factoryStorage.vault()))
+                    ? IERC20(tokenAddress).balanceOf(address(mainChainStorage.vault()))
+                    : mainChainStorage.getAmountOut(
+                        toETHPath, toETHFees, IERC20(tokenAddress).balanceOf(address(mainChainStorage.vault()))
                     )
             );
-            factoryStorage.increaseRedemptionCompletedTokensCount(_redemptionNonce, 1);
+            mainChainStorage.increaseRedemptionCompletedTokensCount(_redemptionNonce, 1);
             // call the order manager here
             // ....
         }

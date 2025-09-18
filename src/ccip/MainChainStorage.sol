@@ -26,7 +26,7 @@ import "../interfaces/IWETH.sol";
 /// @author NEX Labs Protocol
 /// @notice The main token contract for Index Token (NEX Labs Protocol)
 /// @dev This contract uses an upgradeable pattern
-contract CCIPStorage is Initializable, ProposableOwnableUpgradeable {
+contract MainChainStorage is Initializable, ProposableOwnableUpgradeable {
     //nonce
     struct TokenOldAndNewValues {
         uint256 oldTokenValue;
@@ -58,8 +58,8 @@ contract CCIPStorage is Initializable, ProposableOwnableUpgradeable {
     uint256 public redemptionNonce;
     uint256 public updatePortfolioNonce;
 
-    address public indexFactory;
-    address public indexFactoryBalancer;
+    address public mainChainFactory;
+    address public mainChainFactoryBalancer;
     address public coreSender;
     address public balancerSender;
     FunctionsOracle public functionsOracle;
@@ -118,13 +118,13 @@ contract CCIPStorage is Initializable, ProposableOwnableUpgradeable {
     mapping(address => uint256) public totalReceivedAmount;
 
     modifier onlyIndexFactory() {
-        require(msg.sender == indexFactory || msg.sender == coreSender, "Caller is not index factory contract.");
+        require(msg.sender == mainChainFactory || msg.sender == coreSender, "Caller is not index factory contract.");
         _;
     }
 
     modifier onlyIndexFactoryBalancer() {
         require(
-            msg.sender == indexFactoryBalancer || msg.sender == balancerSender,
+            msg.sender == mainChainFactoryBalancer || msg.sender == balancerSender,
             "Caller is not index factory balancer contract."
         );
         _;
@@ -278,10 +278,10 @@ contract CCIPStorage is Initializable, ProposableOwnableUpgradeable {
 
     /**
      * @dev Sets the IndexFactory contract address.
-     * @param _indexFactory The address of the IndexFactory contract.
+     * @param _mainChainFactory The address of the IndexFactory contract.
      */
-    function setIndexFactory(address _indexFactory) public onlyOwner {
-        indexFactory = _indexFactory;
+    function setIndexFactory(address _mainChainFactory) public onlyOwner {
+        mainChainFactory = _mainChainFactory;
     }
 
     /**
