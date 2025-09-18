@@ -8,61 +8,12 @@ import {BackedFiFactory} from "../../src/backedfi/BackedFiFactory.sol";
 import {IndexFactoryStorage} from "../../src/backedfi/IndexFactoryStorage.sol";
 import {StagingCustodyAccount} from "../../src/backedfi/StagingCustodyAccount.sol";
 import {FunctionsOracle} from "../../src/oracle/FunctionsOracle.sol";
+import {TestERC20} from "../utils/TestERC20.sol";
+import "../OlympixUnitTest.sol";
 
 error ZeroAmount();
 
-contract TestERC20 {
-    string public name;
-    string public symbol;
-    uint8 public immutable decimals = 18;
-    uint256 public totalSupply;
-
-    mapping(address => uint256) public balanceOf;
-    mapping(address => mapping(address => uint256)) public allowance;
-
-    event Transfer(address indexed from, address indexed to, uint256 value);
-    event Approval(address indexed owner, address indexed spender, uint256 value);
-
-    constructor(string memory n, string memory s) {
-        name = n;
-        symbol = s;
-    }
-
-    function mint(address to, uint256 amount) external {
-        balanceOf[to] += amount;
-        totalSupply += amount;
-        emit Transfer(address(0), to, amount);
-    }
-
-    function approve(address spender, uint256 amount) external returns (bool) {
-        allowance[msg.sender][spender] = amount;
-        emit Approval(msg.sender, spender, amount);
-        return true;
-    }
-
-    function transfer(address to, uint256 amount) external returns (bool) {
-        require(balanceOf[msg.sender] >= amount, "bal");
-        balanceOf[msg.sender] -= amount;
-        balanceOf[to] += amount;
-        emit Transfer(msg.sender, to, amount);
-        return true;
-    }
-
-    function transferFrom(address from, address to, uint256 amount) external returns (bool) {
-        require(balanceOf[from] >= amount, "bal");
-        uint256 a = allowance[from][msg.sender];
-        require(a >= amount, "allow");
-        if (a != type(uint256).max) {
-            allowance[from][msg.sender] = a - amount;
-        }
-        balanceOf[from] -= amount;
-        balanceOf[to] += amount;
-        emit Transfer(from, to, amount);
-        return true;
-    }
-}
-
-contract BackedFiFactory_MainTest is Test {
+contract BackedFiFactoryTest is Test {
     address owner_ = address(0xA11CE);
     address user = address(0xBEEF);
     address feeVault = address(0xFEE);
@@ -104,23 +55,10 @@ contract BackedFiFactory_MainTest is Test {
 
         sca.initialize(address(storage_));
 
-        backedFi.initialize(address(storage_), feeVault);
+        backedFi.initialize(address(storage_));
 
         storage_.setIndexFactory(address(backedFi));
 
-        vm.stopPrank();
-    }
-
-    function testInitialize_RevertsOnZeroArgs() public {
-        vm.startPrank(owner_);
-        BackedFiFactory impl = new BackedFiFactory();
-        BackedFiFactory proxy = BackedFiFactory(address(new ERC1967Proxy(address(impl), "")));
-
-        vm.expectRevert(bytes("Invalid Address"));
-        proxy.initialize(address(0), feeVault);
-
-        vm.expectRevert(bytes("Invalid FeeVault"));
-        proxy.initialize(address(storage_), address(0));
         vm.stopPrank();
     }
 

@@ -88,6 +88,10 @@ contract OrderManager is Initializable, OwnableUpgradeable {
         factory = IndexFactory(_factoryAddress);
     }
 
+    function setBackedFiIndexFactory(address _backedfiFactoryAddress) external onlyOwner {
+        backedFiFactory = BackedFiFactory(_backedfiFactoryAddress);
+    }
+
     function _increaseOrderNonce(bool isBuyOrder) internal {
         if (isBuyOrder) {
             orderNonceInfo.buyOrderNonce += 1;
@@ -195,5 +199,4 @@ contract OrderManager is Initializable, OwnableUpgradeable {
         require(_indexToken != address(0), "Invalid address!");
         backedFiFactory.redemption(_indexToken, _inputAmount, _burnPercent);
     }
-    
 }
