@@ -153,8 +153,8 @@ contract StagingCustodyAccount is Initializable, ReentrancyGuardUpgradeable, Own
                 IERC20(tokenAddress).safeTransfer(vault, balance);
             }
             uint256 newValue = factoryStorage.getTokenValue(_indexToken, tokenAddress, price);
-            indexFactory.handleCompleteIssuance(
-                indexFactory.issuanceNonce(), _indexToken, tokenAddress, oldValue, newValue
+            factoryStorage.indexFactory().handleCompleteIssuance(
+                factoryStorage.indexFactory().issuanceNonce(), _indexToken, tokenAddress, oldValue, newValue
             );
 
             unchecked {
@@ -261,7 +261,9 @@ contract StagingCustodyAccount is Initializable, ReentrancyGuardUpgradeable, Own
             if (usdcOut != 0) {
                 usdc.safeTransfer(address(orderManager), usdcOut);
 
-                indexFactory.handleCompleteRedemption(indexFactory.redemptionNonce(), _indexToken, asset, usdcOut);
+                factoryStorage.indexFactory().handleCompleteRedemption(
+                    factoryStorage.indexFactory().redemptionNonce(), _indexToken, asset, usdcOut
+                );
             }
 
             unchecked {
