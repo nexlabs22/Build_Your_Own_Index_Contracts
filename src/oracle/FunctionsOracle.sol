@@ -185,6 +185,30 @@ contract FunctionsOracle is Initializable, FunctionsClient, ConfirmedOwner {
         _initData(_indexTokens, _tokens, _marketShares);
     }
 
+    function _initMainOracleData(
+        address indexToken,
+        address token,
+        uint256 marketShares,
+        uint64 providerIndex
+    ) internal {
+        uint256 oracleFilledCount0 = oracleFilledCount[indexToken];
+        oracleData[indexToken][oracleFilledCount0].tokens.push(token);
+        oracleData[indexToken][oracleFilledCount0].marketShares.push(marketShares);
+        oracleData[indexToken][oracleFilledCount0].providerIndexes.push(providerIndex);
+    }
+
+    function _initMainCurrentData(
+        address indexToken,
+        address token,
+        uint256 marketShares,
+        uint64 providerIndex
+    ) internal {
+        uint256 currentFilledCount0 = currentFilledCount[indexToken];
+        currentData[indexToken][currentFilledCount0].tokens.push(token);
+        currentData[indexToken][currentFilledCount0].marketShares.push(marketShares);
+        currentData[indexToken][currentFilledCount0].providerIndexes.push(providerIndex);
+    }
+
     function _initChainSelectorsOracleData(
         address indexToken,
         uint64 chainSelector,
@@ -224,8 +248,8 @@ contract FunctionsOracle is Initializable, FunctionsClient, ConfirmedOwner {
         uint256 oracleFilledCount0 = oracleFilledCount[indexToken];
         if (!oracleData[indexToken][oracleFilledCount0].isOracleProviderIndexStored[providerIndex]) {
             oracleData[indexToken][oracleFilledCount0].isOracleProviderIndexStored[providerIndex] = true;
-            oracleData[indexToken][oracleFilledCount0].oracleProviderIndexTokens[providerIndex].push(token);
         }
+        oracleData[indexToken][oracleFilledCount0].oracleProviderIndexTokens[providerIndex].push(token);
         oracleData[indexToken][oracleFilledCount0].oracleProviderIndexTotalShares[providerIndex] += marketShare;
         oracleData[indexToken][oracleFilledCount0].oracleProviderIndexTokenShares[providerIndex].push(marketShare);
     }
@@ -236,8 +260,8 @@ contract FunctionsOracle is Initializable, FunctionsClient, ConfirmedOwner {
         uint256 currentFilledCount0 = currentFilledCount[indexToken];
         if (!currentData[indexToken][currentFilledCount0].isCurrentProviderIndexStored[providerIndex]) {
             currentData[indexToken][currentFilledCount0].isCurrentProviderIndexStored[providerIndex] = true;
-            currentData[indexToken][currentFilledCount0].currentProviderIndexTokens[providerIndex].push(token);
         }
+        currentData[indexToken][currentFilledCount0].currentProviderIndexTokens[providerIndex].push(token);
         currentData[indexToken][currentFilledCount0].currentProviderIndexTotalShares[providerIndex] += marketShare;
         currentData[indexToken][currentFilledCount0].currentProviderIndexTokenShares[providerIndex].push(marketShare);
     }
@@ -270,10 +294,12 @@ contract FunctionsOracle is Initializable, FunctionsClient, ConfirmedOwner {
             uint64 providerIndex = tokenProviderIndex[token];
             if (chainSelector == 0) revert ChainSelectorIsZero();
             if (providerIndex == 0) revert ProviderIndexIsZero();
+            // oracle main actions
+            _initMainOracleData(indexToken, token, share, providerIndex);
             // oracle asset type actions
             _initProviderIndexOracleData(indexToken, token, providerIndex, share);
             // oracle chain selector actions
-            if (providerIndex == 2) {
+            if (providerIndex == 1 || providerIndex == 2) {
                 _initChainSelectorsOracleData(indexToken, chainSelector, token, share);
             }
 
@@ -281,10 +307,12 @@ contract FunctionsOracle is Initializable, FunctionsClient, ConfirmedOwner {
                 currentList[indexToken][i] = token;
                 tokenCurrentMarketShare[indexToken][token] = share;
                 tokenCurrentListIndex[indexToken][token] = i;
+                // current main actions
+                _initMainCurrentData(indexToken, token, share, providerIndex);
                 // current asset type actions
                 _initProviderIndexCurrentData(indexToken, token, providerIndex, share);
                 // current chain selector actions
-                if (providerIndex == 2) {
+                if (providerIndex == 1 || providerIndex == 2) {
                     _initChainSelectorsCurrentData(indexToken, chainSelector, token, share);
                 }
             }
@@ -417,22 +445,7 @@ contract FunctionsOracle is Initializable, FunctionsClient, ConfirmedOwner {
         tokens = currentData[_indexToken][currentFilledCount[_indexToken]].currentChainSelectorTokens[_chainSelector];
     }
 
-    function allOracleChainSelectorVersions(address _indexToken, uint64 _chainSelector)
-        public
-        view
-        returns (uint256[] memory versions)
-    {
-        versions = oracleData[_indexToken][oracleFilledCount[_indexToken]].oracleChainSelectorVersions[_chainSelector];
-    }
-
-    function allCurrentChainSelectorVersions(address _indexToken, uint64 _chainSelector)
-        public
-        view
-        returns (uint256[] memory versions)
-    {
-        versions =
-            currentData[_indexToken][currentFilledCount[_indexToken]].currentChainSelectorVersions[_chainSelector];
-    }
+    
 
     function allOracleChainSelectorTokenShares(address _indexToken, uint64 _chainSelector)
         public
@@ -476,7 +489,7 @@ contract FunctionsOracle is Initializable, FunctionsClient, ConfirmedOwner {
         return currentData[indexToken][currentFilledCount].providerIndexes;
     }
 
-    function getOracleProviderIndex(address indexToken, uint256 oracleFilledCount)
+    function getOracleProviderIndexes(address indexToken, uint256 oracleFilledCount)
         public
         view
         returns (uint64[] memory)

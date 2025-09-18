@@ -42,7 +42,7 @@ import "../../src/interfaces/IUniswapV3Factory2.sol";
 import "../../src/interfaces/IWETH.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
-contract ContractDeployer is
+contract CCIPDeployer is
     Test,
     UniswapFactoryByteCode,
     UniswapWETHByteCode,
@@ -306,7 +306,7 @@ contract ContractDeployer is
                             address(mockRouter),
                             wethAddress,
                             router,
-                            mainChainFactoryAddress,
+                            factoryV3Address,
                             router,
                             address(ethPriceOracle)
                         ))
@@ -349,13 +349,14 @@ contract ContractDeployer is
                             address(link),
                             wethAddress,
                             router,
-                            mainChainFactoryAddress,
+                            factoryV3Address,
                             router,
-                            mainChainFactoryAddress
-                        ))
+                            factoryV3Address
+                        )
                     )
                 )
             )
+        )
         );
 
         return (
