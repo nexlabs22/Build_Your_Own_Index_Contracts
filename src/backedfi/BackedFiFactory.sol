@@ -55,9 +55,8 @@ contract BackedFiFactory is Initializable, OwnableUpgradeable, PausableUpgradeab
         _;
     }
 
-    function initialize(address _indexFactoryStorage, address _feeVault) external initializer {
+    function initialize(address _indexFactoryStorage) external initializer {
         require(_indexFactoryStorage != address(0), "Invalid Address");
-        require(_feeVault != address(0), "Invalid FeeVault");
 
         factoryStorage = IndexFactoryStorage(_indexFactoryStorage);
 
