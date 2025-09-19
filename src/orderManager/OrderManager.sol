@@ -6,6 +6,7 @@ import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "../factory/IndexFactory.sol";
 import {BackedFiFactory} from "../backedfi/BackedFiFactory.sol";
+import {MainChainFactory} from "../ccip/MainChainFactory.sol";
 
 contract OrderManager is Initializable, OwnableUpgradeable {
     using SafeERC20 for IERC20;
@@ -44,6 +45,9 @@ contract OrderManager is Initializable, OwnableUpgradeable {
     address public usdcAddress;
     IndexFactory public factory;
     BackedFiFactory public backedFiFactory;
+    MainChainFactory public mainChainFactory;
+
+    
 
     mapping(address => bool) public isOperator;
     mapping(uint256 => OrderInfo) public orderInfo; // mapping of orderNonce to OrderInfo
@@ -90,6 +94,10 @@ contract OrderManager is Initializable, OwnableUpgradeable {
 
     function setBackedFiIndexFactory(address _backedfiFactoryAddress) external onlyOwner {
         backedFiFactory = BackedFiFactory(_backedfiFactoryAddress);
+    }
+
+    function setMainChainFactory(address payable _mainChainFactoryAddress) external onlyOwner {
+        mainChainFactory = MainChainFactory(_mainChainFactoryAddress);
     }
 
     function _increaseOrderNonce(bool isBuyOrder) internal {
@@ -144,7 +152,15 @@ contract OrderManager is Initializable, OwnableUpgradeable {
         // initialize the order based on buy or sell
         _initializeOrder(_config);
         //call the provider function
-
+        if(_config.isBuyOrder) {
+            if(_config.providerIndex == 1 || _config.providerIndex == 2) {
+                issuanceWithCCIPFactory(
+                    _config.indexTokenAddress, 
+                    _config.inputTokenAddress,
+                    _config.inputTokenAmount
+                );
+            }
+        }
         // emit the event
         emit OrderCreated(
             _config.indexTokenAddress,
@@ -186,6 +202,16 @@ contract OrderManager is Initializable, OwnableUpgradeable {
         uint256 _outputValue
     ) external onlyOperator {
         factory.handleCompleteRedemption(_redemptionNonce, _indexToken, _underlyingTokenAddress, _outputValue);
+    }
+
+    function issuanceWithCCIPFactory(address _indexToken, address _tokenIn, uint256 _inputAmount) internal {
+        require(_inputAmount > 0, "Invalid amount!");
+        require(_indexToken != address(0), "Invalid address!");
+        mainChainFactory.issuanceIndexTokens(
+            _indexToken,
+            _tokenIn,
+            _inputAmount
+        );
     }
 
     function issuanceWithBackedFiFactory(address _indexToken, uint256 _inputAmount) public {

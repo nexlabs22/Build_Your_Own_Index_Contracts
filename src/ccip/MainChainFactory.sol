@@ -259,21 +259,19 @@ contract MainChainFactory is Initializable, ProposableOwnableUpgradeable, Reentr
     /**
      * @dev Issues index tokens.
      * @param _indexToken The address of the index token.
-     *
      * @param _tokenIn The address of the input token.
-     * @param _tokenInPath The path of the input token.
      * @param _inputAmount The amount of input token.
      */
     function issuanceIndexTokens(
         address _indexToken,
         address _tokenIn,
-        address[] memory _tokenInPath,
-        uint24[] memory _tokenInFees,
         uint256 _inputAmount
     ) public payable whenNotPaused {
         // Validate input parameters
         require(_tokenIn != address(0), "Invalid input token address");
         require(_inputAmount > 0, "Input amount must be greater than zero");
+        (address[] memory _tokenInPath, uint24[] memory _tokenInFees) =
+                functionsOracle.getToETHPathData(_tokenIn);
         require(_tokenInPath[_tokenInPath.length - 1] == address(weth), "Invalid token path");
         if (!mainChainStorage.isCrossChainFeeSponsered()) {
             require(
@@ -286,22 +284,16 @@ contract MainChainFactory is Initializable, ProposableOwnableUpgradeable, Reentr
         IWETH weth = mainChainStorage.weth();
         Vault vault = mainChainStorage.vault();
 
-        // uint256 feeAmount = FeeCalculation.calculateFee(_inputAmount, mainChainStorage.feeRate());
-        uint256 feeAmount;
+        
 
         mainChainStorage.increaseIssuanceNonce();
         mainChainStorage.setIssuanceData(mainChainStorage.issuanceNonce(), msg.sender, _tokenIn, _inputAmount, bytes32(0));
 
         require(
-            IERC20(_tokenIn).transferFrom(msg.sender, address(this), _inputAmount + feeAmount), "Token transfer failed"
+            IERC20(_tokenIn).transferFrom(msg.sender, address(this), _inputAmount), "Token transfer failed"
         );
-        uint256 wethAmount = swap(_tokenInPath, _tokenInFees, _inputAmount + feeAmount, address(this));
-        // uint256 feeWethAmount = (wethAmountBeforFee * 10) / 10000;
-        // uint256 wethAmount = wethAmountBeforFee - feeWethAmount;
-
-        // Transfer fee to the fee receiver and check the result
-        // require(weth.transfer(address(owner()), feeWethAmount), "Fee transfer failed");
-
+        uint256 wethAmount = swap(_tokenInPath, _tokenInFees, _inputAmount, address(this));
+        
         //run issuance
         _issuance(_indexToken, _tokenIn, wethAmount);
     }

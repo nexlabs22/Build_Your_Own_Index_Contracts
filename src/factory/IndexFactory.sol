@@ -96,7 +96,7 @@ contract IndexFactory is Initializable, OwnableUpgradeable, PausableUpgradeable,
         uint256 currentFilledCount = functionsOracle.currentFilledCount(indexToken);
         uint64[] memory currentProviderIndexes =
             functionsOracle.getCurrentProviderIndexes(indexToken, currentFilledCount);
-        for (uint256 i = 0; i <= currentProviderIndexes.length; i++) {
+        for (uint256 i = 0; i < currentProviderIndexes.length; i++) {
             (uint256 totalShares, address[] memory tokens, uint256[] memory marketShares) =
                 functionsOracle.getCurrentProviderIndexData(indexToken, currentFilledCount, currentProviderIndexes[i]);
             uint256 share = (amount * totalShares) / SHARE_DENOMINATOR;
@@ -283,7 +283,7 @@ contract IndexFactory is Initializable, OwnableUpgradeable, PausableUpgradeable,
     function _validateIssuanceInputs(address indexToken, uint256 amount) private view {
         if (amount == 0) revert ZeroAmount();
         if (indexToken == address(0)) revert ZeroAddress();
-        require(supportedIndexTokens[indexToken], "IndexFactory: unsupported index token");
+        // require(supportedIndexTokens[indexToken], "IndexFactory: unsupported index token");
     }
 
     function _validateRedemptionInputs(address indexToken, uint256 amount) private view {
@@ -382,6 +382,7 @@ contract IndexFactory is Initializable, OwnableUpgradeable, PausableUpgradeable,
             isBuyOrder: true,
             burnPercent: 0
         });
+        IERC20(usdc).approve(address(orderManager), share);
         orderNonce = orderManager.createOrder(cfg);
     }
 

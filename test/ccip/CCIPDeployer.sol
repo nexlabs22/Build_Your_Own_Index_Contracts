@@ -533,9 +533,14 @@ contract CCIPDeployer is
         path[0] = address(weth);
         path[1] = address(crossChainToken);
 
+
         // functionsOracle.setIndexFactoryBalancer(address(factoryBalancer));
         // functionsOracle.setBalancerSender(address(balancerSender));
         orderManager.setFactoryAddress(address(factory));
+        orderManager.setMainChainFactory(payable(address(mainChainFactory)));
+        orderManager.setOperator(address(factory), true);
+        indexFactoryStorage.setOrderManager(address(orderManager));
+        indexFactoryStorage.setIndexFactory(address(factory));
         mainChainStorage.setCrossChainToken(
             2,
             address(crossChainToken),

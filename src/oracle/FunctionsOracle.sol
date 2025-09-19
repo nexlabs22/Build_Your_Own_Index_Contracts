@@ -39,11 +39,14 @@ contract FunctionsOracle is Initializable, FunctionsClient, ConfirmedOwner {
 
     // Mappings for token indices
     mapping(address => mapping(address => uint256)) public tokenOracleListIndex;
-    mapping(address => mapping(address => uint256)) public tokenCurrentListIndex;
+    mapping(address => mapping(address => uint256))
+        public tokenCurrentListIndex;
 
     // Mappings for token market shares
-    mapping(address => mapping(address => uint256)) public tokenCurrentMarketShare;
-    mapping(address => mapping(address => uint256)) public tokenOracleMarketShare;
+    mapping(address => mapping(address => uint256))
+        public tokenCurrentMarketShare;
+    mapping(address => mapping(address => uint256))
+        public tokenOracleMarketShare;
 
     // mappings for tokens of each asset type
     mapping(address => uint64) public tokenProviderIndex;
@@ -100,15 +103,24 @@ contract FunctionsOracle is Initializable, FunctionsClient, ConfirmedOwner {
     event RequestFulFilled(bytes32 indexed requestId, uint256 time);
 
     modifier onlyOwnerOrOperator() {
-        require(msg.sender == owner() || isOperator[msg.sender], "Caller is not the owner or operator.");
+        require(
+            msg.sender == owner() || isOperator[msg.sender],
+            "Caller is not the owner or operator."
+        );
         _;
     }
 
     /// @notice Initializes the contract with the given parameters
     /// @param _functionsRouterAddress The address of the functions router
     /// @param _newDonId The don ID for the oracle
-    function initialize(address _functionsRouterAddress, bytes32 _newDonId) external initializer {
-        require(_functionsRouterAddress != address(0), "invalid functions router address");
+    function initialize(
+        address _functionsRouterAddress,
+        bytes32 _newDonId
+    ) external initializer {
+        require(
+            _functionsRouterAddress != address(0),
+            "invalid functions router address"
+        );
         require(_newDonId.length > 0, "invalid don id");
         __FunctionsClient_init(_functionsRouterAddress);
         __ConfirmedOwner_init(msg.sender);
@@ -139,29 +151,48 @@ contract FunctionsOracle is Initializable, FunctionsClient, ConfirmedOwner {
      * @notice Set the Functions Router address
      * @param _functionsRouterAddress New Functions Router address
      */
-    function setFunctionsRouterAddress(address _functionsRouterAddress) external onlyOwner {
-        require(_functionsRouterAddress != address(0), "invalid functions router address");
+    function setFunctionsRouterAddress(
+        address _functionsRouterAddress
+    ) external onlyOwner {
+        require(
+            _functionsRouterAddress != address(0),
+            "invalid functions router address"
+        );
         functionsRouterAddress = _functionsRouterAddress;
     }
 
-    function setFactoryBalancer(address _factoryBalancerAddress) public onlyOwner {
-        require(_factoryBalancerAddress != address(0), "invalid factory balancer address");
+    function setFactoryBalancer(
+        address _factoryBalancerAddress
+    ) public onlyOwner {
+        require(
+            _factoryBalancerAddress != address(0),
+            "invalid factory balancer address"
+        );
         factoryBalancerAddress = _factoryBalancerAddress;
     }
 
     function setMaxProviderIndex(uint64 _maxProviderIndex) public onlyOwner {
-        require(_maxProviderIndex > 0, "max asset types must be greater than zero");
+        require(
+            _maxProviderIndex > 0,
+            "max asset types must be greater than zero"
+        );
         maxProviderIndex = _maxProviderIndex;
     }
 
-    function requestAssetsData(string calldata source, uint64 subscriptionId, uint32 callbackGasLimit)
-        public
-        onlyOwnerOrOperator
-        returns (bytes32)
-    {
+    function requestAssetsData(
+        string calldata source,
+        uint64 subscriptionId,
+        uint32 callbackGasLimit
+    ) public onlyOwnerOrOperator returns (bytes32) {
         FunctionsRequest.Request memory req;
         req.initializeRequestForInlineJavaScript(source);
-        return _sendRequest(req.encodeCBOR(), subscriptionId, callbackGasLimit, donId);
+        return
+            _sendRequest(
+                req.encodeCBOR(),
+                subscriptionId,
+                callbackGasLimit,
+                donId
+            );
     }
 
     /**
@@ -171,11 +202,18 @@ contract FunctionsOracle is Initializable, FunctionsClient, ConfirmedOwner {
      * @param err Aggregated error from the user code or from the execution pipeline
      * Either response or error parameter will be set, but never both
      */
-    function fulfillRequest(bytes32 requestId, bytes memory response, bytes memory err) internal override {
+    function fulfillRequest(
+        bytes32 requestId,
+        bytes memory response,
+        bytes memory err
+    ) internal override {
         // require(requestId != bytes32(0), "invalid request id");
 
-        (address[] memory _indexTokens, address[] memory _tokens, uint256[] memory _marketShares) =
-            abi.decode(response, (address[], address[], uint256[]));
+        (
+            address[] memory _indexTokens,
+            address[] memory _tokens,
+            uint256[] memory _marketShares
+        ) = abi.decode(response, (address[], address[], uint256[]));
         require(_indexTokens.length == _tokens.length, "length mismatch");
         require(_marketShares.length == _tokens.length, "length mismatch");
         require(_indexTokens.length > 0, "invalid index token addresses");
@@ -188,25 +226,25 @@ contract FunctionsOracle is Initializable, FunctionsClient, ConfirmedOwner {
     function _initMainOracleData(
         address indexToken,
         address token,
-        uint256 marketShares,
-        uint64 providerIndex
+        uint256 marketShares
     ) internal {
         uint256 oracleFilledCount0 = oracleFilledCount[indexToken];
         oracleData[indexToken][oracleFilledCount0].tokens.push(token);
-        oracleData[indexToken][oracleFilledCount0].marketShares.push(marketShares);
-        oracleData[indexToken][oracleFilledCount0].providerIndexes.push(providerIndex);
+        oracleData[indexToken][oracleFilledCount0].marketShares.push(
+            marketShares
+        );
     }
 
     function _initMainCurrentData(
         address indexToken,
         address token,
-        uint256 marketShares,
-        uint64 providerIndex
+        uint256 marketShares
     ) internal {
         uint256 currentFilledCount0 = currentFilledCount[indexToken];
         currentData[indexToken][currentFilledCount0].tokens.push(token);
-        currentData[indexToken][currentFilledCount0].marketShares.push(marketShares);
-        currentData[indexToken][currentFilledCount0].providerIndexes.push(providerIndex);
+        currentData[indexToken][currentFilledCount0].marketShares.push(
+            marketShares
+        );
     }
 
     function _initChainSelectorsOracleData(
@@ -216,14 +254,25 @@ contract FunctionsOracle is Initializable, FunctionsClient, ConfirmedOwner {
         uint256 marketShares
     ) internal {
         uint256 oracleFilledCount0 = oracleFilledCount[indexToken];
-        if (!oracleData[indexToken][oracleFilledCount0].isOracleChainSelectorStored[chainSelector]) {
-            oracleData[indexToken][oracleFilledCount0].chainSelectors.push(chainSelector);
-            oracleData[indexToken][oracleFilledCount0].isOracleChainSelectorStored[chainSelector] = true;
+        if (
+            !oracleData[indexToken][oracleFilledCount0]
+                .isOracleChainSelectorStored[chainSelector]
+        ) {
+            oracleData[indexToken][oracleFilledCount0].chainSelectors.push(
+                chainSelector
+            );
+            oracleData[indexToken][oracleFilledCount0]
+                .isOracleChainSelectorStored[chainSelector] = true;
         }
-        oracleData[indexToken][oracleFilledCount0].oracleChainSelectorTokens[chainSelector].push(token);
-        oracleData[indexToken][oracleFilledCount0].oracleChainSelectorTotalShares[chainSelector] += marketShares;
+        oracleData[indexToken][oracleFilledCount0]
+            .oracleChainSelectorTokens[chainSelector]
+            .push(token);
+        oracleData[indexToken][oracleFilledCount0]
+            .oracleChainSelectorTotalShares[chainSelector] += marketShares;
 
-        oracleData[indexToken][oracleFilledCount0].oracleChainSelectorTokenShares[chainSelector].push(marketShares);
+        oracleData[indexToken][oracleFilledCount0]
+            .oracleChainSelectorTokenShares[chainSelector]
+            .push(marketShares);
     }
 
     function _initChainSelectorsCurrentData(
@@ -233,42 +282,85 @@ contract FunctionsOracle is Initializable, FunctionsClient, ConfirmedOwner {
         uint256 marketShares
     ) internal {
         uint256 currentFilledCount0 = currentFilledCount[indexToken];
-        if (!currentData[indexToken][currentFilledCount0].isCurrentChainSelectorStored[chainSelector]) {
-            currentData[indexToken][currentFilledCount0].isCurrentChainSelectorStored[chainSelector] = true;
-            currentData[indexToken][currentFilledCount0].chainSelectors.push(chainSelector);
+        if (
+            !currentData[indexToken][currentFilledCount0]
+                .isCurrentChainSelectorStored[chainSelector]
+        ) {
+            currentData[indexToken][currentFilledCount0]
+                .isCurrentChainSelectorStored[chainSelector] = true;
+            currentData[indexToken][currentFilledCount0].chainSelectors.push(
+                chainSelector
+            );
         }
-        currentData[indexToken][currentFilledCount0].currentChainSelectorTokens[chainSelector].push(token);
-        currentData[indexToken][currentFilledCount0].currentChainSelectorTotalShares[chainSelector] += marketShares;
-        currentData[indexToken][currentFilledCount0].currentChainSelectorTokenShares[chainSelector].push(marketShares);
+        currentData[indexToken][currentFilledCount0]
+            .currentChainSelectorTokens[chainSelector]
+            .push(token);
+        currentData[indexToken][currentFilledCount0]
+            .currentChainSelectorTotalShares[chainSelector] += marketShares;
+        currentData[indexToken][currentFilledCount0]
+            .currentChainSelectorTokenShares[chainSelector]
+            .push(marketShares);
     }
 
-    function _initProviderIndexOracleData(address indexToken, address token, uint64 providerIndex, uint256 marketShare)
-        internal
-    {
+    function _initProviderIndexOracleData(
+        address indexToken,
+        address token,
+        uint64 providerIndex,
+        uint256 marketShare
+    ) internal {
         uint256 oracleFilledCount0 = oracleFilledCount[indexToken];
-        if (!oracleData[indexToken][oracleFilledCount0].isOracleProviderIndexStored[providerIndex]) {
-            oracleData[indexToken][oracleFilledCount0].isOracleProviderIndexStored[providerIndex] = true;
+        if (
+            !oracleData[indexToken][oracleFilledCount0]
+                .isOracleProviderIndexStored[providerIndex]
+        ) {
+            oracleData[indexToken][oracleFilledCount0]
+                .isOracleProviderIndexStored[providerIndex] = true;
+            oracleData[indexToken][oracleFilledCount0].providerIndexes.push(
+                providerIndex
+            );
         }
-        oracleData[indexToken][oracleFilledCount0].oracleProviderIndexTokens[providerIndex].push(token);
-        oracleData[indexToken][oracleFilledCount0].oracleProviderIndexTotalShares[providerIndex] += marketShare;
-        oracleData[indexToken][oracleFilledCount0].oracleProviderIndexTokenShares[providerIndex].push(marketShare);
+        oracleData[indexToken][oracleFilledCount0]
+            .oracleProviderIndexTokens[providerIndex]
+            .push(token);
+        oracleData[indexToken][oracleFilledCount0]
+            .oracleProviderIndexTotalShares[providerIndex] += marketShare;
+        oracleData[indexToken][oracleFilledCount0]
+            .oracleProviderIndexTokenShares[providerIndex]
+            .push(marketShare);
     }
 
-    function _initProviderIndexCurrentData(address indexToken, address token, uint64 providerIndex, uint256 marketShare)
-        internal
-    {
+    function _initProviderIndexCurrentData(
+        address indexToken,
+        address token,
+        uint64 providerIndex,
+        uint256 marketShare
+    ) internal {
         uint256 currentFilledCount0 = currentFilledCount[indexToken];
-        if (!currentData[indexToken][currentFilledCount0].isCurrentProviderIndexStored[providerIndex]) {
-            currentData[indexToken][currentFilledCount0].isCurrentProviderIndexStored[providerIndex] = true;
+        if (
+            !currentData[indexToken][currentFilledCount0]
+                .isCurrentProviderIndexStored[providerIndex]
+        ) {
+            currentData[indexToken][currentFilledCount0]
+                .isCurrentProviderIndexStored[providerIndex] = true;
+            currentData[indexToken][currentFilledCount0].providerIndexes.push(
+                providerIndex
+            );
         }
-        currentData[indexToken][currentFilledCount0].currentProviderIndexTokens[providerIndex].push(token);
-        currentData[indexToken][currentFilledCount0].currentProviderIndexTotalShares[providerIndex] += marketShare;
-        currentData[indexToken][currentFilledCount0].currentProviderIndexTokenShares[providerIndex].push(marketShare);
+        currentData[indexToken][currentFilledCount0]
+            .currentProviderIndexTokens[providerIndex]
+            .push(token);
+        currentData[indexToken][currentFilledCount0]
+            .currentProviderIndexTotalShares[providerIndex] += marketShare;
+        currentData[indexToken][currentFilledCount0]
+            .currentProviderIndexTokenShares[providerIndex]
+            .push(marketShare);
     }
 
-    function _initData(address[] memory _indexTokens, address[] memory _tokens, uint256[] memory _marketShares)
-        private
-    {
+    function _initData(
+        address[] memory _indexTokens,
+        address[] memory _tokens,
+        uint256[] memory _marketShares
+    ) private {
         address[] memory indexTokens = _indexTokens;
         address[] memory tokens0 = _tokens;
         uint256[] memory marketShares0 = _marketShares;
@@ -295,12 +387,22 @@ contract FunctionsOracle is Initializable, FunctionsClient, ConfirmedOwner {
             if (chainSelector == 0) revert ChainSelectorIsZero();
             if (providerIndex == 0) revert ProviderIndexIsZero();
             // oracle main actions
-            _initMainOracleData(indexToken, token, share, providerIndex);
+            _initMainOracleData(indexToken, token, share);
             // oracle asset type actions
-            _initProviderIndexOracleData(indexToken, token, providerIndex, share);
+            _initProviderIndexOracleData(
+                indexToken,
+                token,
+                providerIndex,
+                share
+            );
             // oracle chain selector actions
             if (providerIndex == 1 || providerIndex == 2) {
-                _initChainSelectorsOracleData(indexToken, chainSelector, token, share);
+                _initChainSelectorsOracleData(
+                    indexToken,
+                    chainSelector,
+                    token,
+                    share
+                );
             }
 
             if (totalCurrentList[indexToken] == 0) {
@@ -308,12 +410,22 @@ contract FunctionsOracle is Initializable, FunctionsClient, ConfirmedOwner {
                 tokenCurrentMarketShare[indexToken][token] = share;
                 tokenCurrentListIndex[indexToken][token] = i;
                 // current main actions
-                _initMainCurrentData(indexToken, token, share, providerIndex);
+                _initMainCurrentData(indexToken, token, share);
                 // current asset type actions
-                _initProviderIndexCurrentData(indexToken, token, providerIndex, share);
+                _initProviderIndexCurrentData(
+                    indexToken,
+                    token,
+                    providerIndex,
+                    share
+                );
                 // current chain selector actions
                 if (providerIndex == 1 || providerIndex == 2) {
-                    _initChainSelectorsCurrentData(indexToken, chainSelector, token, share);
+                    _initChainSelectorsCurrentData(
+                        indexToken,
+                        chainSelector,
+                        token,
+                        share
+                    );
                 }
             }
         }
@@ -332,7 +444,9 @@ contract FunctionsOracle is Initializable, FunctionsClient, ConfirmedOwner {
         for (uint256 i = 0; i < totalOracleList[_indexToken]; i++) {
             address tokenAddress = oracleList[_indexToken][i];
             currentList[_indexToken][i] = tokenAddress;
-            tokenCurrentMarketShare[_indexToken][tokenAddress] = tokenOracleMarketShare[_indexToken][tokenAddress];
+            tokenCurrentMarketShare[_indexToken][
+                tokenAddress
+            ] = tokenOracleMarketShare[_indexToken][tokenAddress];
             tokenCurrentListIndex[_indexToken][tokenAddress] = i;
         }
     }
@@ -342,28 +456,37 @@ contract FunctionsOracle is Initializable, FunctionsClient, ConfirmedOwner {
         for (uint256 i = 0; i < totalOracleList[_indexToken]; i++) {
             address tokenAddress = oracleList[_indexToken][i];
             currentList[_indexToken][i] = tokenAddress;
-            tokenCurrentMarketShare[_indexToken][tokenAddress] = tokenOracleMarketShare[_indexToken][tokenAddress];
+            tokenCurrentMarketShare[_indexToken][
+                tokenAddress
+            ] = tokenOracleMarketShare[_indexToken][tokenAddress];
             tokenCurrentListIndex[_indexToken][tokenAddress] = i;
 
             // current chain selector actions
             uint64 chainSelector = tokenChainSelector[tokenAddress];
             uint64 tokenProviderIndex0 = tokenProviderIndex[tokenAddress];
             _initProviderIndexCurrentData(
-                _indexToken, tokenAddress, tokenProviderIndex0, tokenOracleMarketShare[_indexToken][tokenAddress]
+                _indexToken,
+                tokenAddress,
+                tokenProviderIndex0,
+                tokenOracleMarketShare[_indexToken][tokenAddress]
             );
             if (tokenProviderIndex0 == 2) {
                 _initChainSelectorsCurrentData(
-                    _indexToken, chainSelector, tokenAddress, tokenOracleMarketShare[_indexToken][tokenAddress]
+                    _indexToken,
+                    chainSelector,
+                    tokenAddress,
+                    tokenOracleMarketShare[_indexToken][tokenAddress]
                 );
             }
         }
         totalCurrentList[_indexToken] = totalOracleList[_indexToken];
     }
 
-    function updatePathData(uint64[] memory providerIndexes, uint64[] memory chainSelectors, bytes[] memory pathBytes)
-        public
-        onlyOwnerOrOperator
-    {
+    function updatePathData(
+        uint64[] memory providerIndexes,
+        uint64[] memory chainSelectors,
+        bytes[] memory pathBytes
+    ) public onlyOwnerOrOperator {
         require(
             chainSelectors.length == pathBytes.length,
             "The length of the chainSelectors and pathBytes arrays should be the same"
@@ -375,161 +498,240 @@ contract FunctionsOracle is Initializable, FunctionsClient, ConfirmedOwner {
         // emit PathDataUpdated(block.timestamp);
     }
 
-    function _initPathData(uint64 _providerIndex, uint64 _chainSelector, bytes memory _pathBytes) internal {
+    function _initPathData(
+        uint64 _providerIndex,
+        uint64 _chainSelector,
+        bytes memory _pathBytes
+    ) internal {
         // decode pathBytes to get fromETHPath and fromETHFees
-        (address[] memory _fromETHPath, uint24[] memory _fromETHFees) = abi.decode(_pathBytes, (address[], uint24[]));
-        require(_fromETHPath.length == _fromETHFees.length + 1, "Invalid input arrays");
+        (address[] memory _fromETHPath, uint24[] memory _fromETHFees) = abi
+            .decode(_pathBytes, (address[], uint24[]));
+        require(
+            _fromETHPath.length == _fromETHFees.length + 1,
+            "Invalid input arrays"
+        );
         address tokenAddress = _fromETHPath[_fromETHPath.length - 1];
         tokenProviderIndex[tokenAddress] = _providerIndex;
         tokenChainSelector[tokenAddress] = _chainSelector;
         fromETHPath[tokenAddress] = _fromETHPath;
         fromETHFees[tokenAddress] = _fromETHFees;
         // update toETHPath and toETHFees
-        address[] memory _toETHPath = PathHelpers.reverseAddressArray(_fromETHPath);
-        uint24[] memory _toETHFees = PathHelpers.reverseUint24Array(_fromETHFees);
+        address[] memory _toETHPath = PathHelpers.reverseAddressArray(
+            _fromETHPath
+        );
+        uint24[] memory _toETHFees = PathHelpers.reverseUint24Array(
+            _fromETHFees
+        );
         toETHPath[tokenAddress] = _toETHPath;
         toETHFees[tokenAddress] = _toETHFees;
     }
 
-    function getFromETHPathData(address _tokenAddress) public view returns (address[] memory, uint24[] memory) {
+    function updateOnlyPathAndFee(address _token, address[] memory _fromETHPath, uint24[] memory _fromETHFees) public onlyOwnerOrOperator {
+        require(
+            _fromETHPath.length == _fromETHFees.length + 1,
+            "Invalid input arrays"
+        );
+        address tokenAddress = _fromETHPath[_fromETHPath.length - 1];
+        require(tokenAddress == _token, "Token address mismatch");
+        fromETHPath[tokenAddress] = _fromETHPath;
+        fromETHFees[tokenAddress] = _fromETHFees;
+        // update toETHPath and toETHFees
+        address[] memory _toETHPath = PathHelpers.reverseAddressArray(
+            _fromETHPath
+        );
+        uint24[] memory _toETHFees = PathHelpers.reverseUint24Array(
+            _fromETHFees
+        );
+        toETHPath[tokenAddress] = _toETHPath;
+        toETHFees[tokenAddress] = _toETHFees;
+    }
+
+    function getFromETHPathData(
+        address _tokenAddress
+    ) public view returns (address[] memory, uint24[] memory) {
         return (fromETHPath[_tokenAddress], fromETHFees[_tokenAddress]);
     }
 
-    function getToETHPathData(address _tokenAddress) public view returns (address[] memory, uint24[] memory) {
+    function getToETHPathData(
+        address _tokenAddress
+    ) public view returns (address[] memory, uint24[] memory) {
         return (toETHPath[_tokenAddress], toETHFees[_tokenAddress]);
     }
 
-    function getFromETHPathBytesForTokens(address[] memory _tokens) public view returns (bytes[] memory) {
+    function getFromETHPathBytesForTokens(
+        address[] memory _tokens
+    ) public view returns (bytes[] memory) {
         bytes[] memory pathBytes = new bytes[](_tokens.length);
         for (uint256 i = 0; i < _tokens.length; i++) {
-            pathBytes[i] = PathHelpers.getFromETHPathBytes(fromETHPath[_tokens[i]], fromETHFees[_tokens[i]]);
+            pathBytes[i] = PathHelpers.getFromETHPathBytes(
+                fromETHPath[_tokens[i]],
+                fromETHFees[_tokens[i]]
+            );
         }
 
         return pathBytes;
     }
 
-    function oracleChainSelectorsCount(address _indexToken) public view returns (uint256) {
-        return oracleData[_indexToken][oracleFilledCount[_indexToken]].chainSelectors.length;
-    }
-
-    function currentChainSelectorsCount(address _indexToken) public view returns (uint256) {
-        return currentData[_indexToken][currentFilledCount[_indexToken]].chainSelectors.length;
-    }
-
-    function oracleChainSelectorTokensCount(address _indexToken, uint64 _chainSelector) public view returns (uint256) {
-        return oracleData[_indexToken][oracleFilledCount[_indexToken]].oracleChainSelectorTokens[_chainSelector].length;
-    }
-
-    function currentChainSelectorTokensCount(address _indexToken, uint64 _chainSelector)
-        public
-        view
-        returns (uint256)
-    {
+    function oracleChainSelectorsCount(
+        address _indexToken
+    ) public view returns (uint256) {
         return
-            currentData[_indexToken][currentFilledCount[_indexToken]].currentChainSelectorTokens[_chainSelector].length;
+            oracleData[_indexToken][oracleFilledCount[_indexToken]]
+                .chainSelectors
+                .length;
     }
 
-    function allOracleChainSelectorTokens(address _indexToken, uint64 _chainSelector)
-        public
-        view
-        returns (address[] memory tokens)
-    {
-        tokens = oracleData[_indexToken][oracleFilledCount[_indexToken]].oracleChainSelectorTokens[_chainSelector];
+    function currentChainSelectorsCount(
+        address _indexToken
+    ) public view returns (uint256) {
+        return
+            currentData[_indexToken][currentFilledCount[_indexToken]]
+                .chainSelectors
+                .length;
     }
 
-    function allCurrentChainSelectorTokens(address _indexToken, uint64 _chainSelector)
-        public
-        view
-        returns (address[] memory tokens)
-    {
-        tokens = currentData[_indexToken][currentFilledCount[_indexToken]].currentChainSelectorTokens[_chainSelector];
+    function oracleChainSelectorTokensCount(
+        address _indexToken,
+        uint64 _chainSelector
+    ) public view returns (uint256) {
+        return
+            oracleData[_indexToken][oracleFilledCount[_indexToken]]
+                .oracleChainSelectorTokens[_chainSelector]
+                .length;
     }
 
-    
-
-    function allOracleChainSelectorTokenShares(address _indexToken, uint64 _chainSelector)
-        public
-        view
-        returns (uint256[] memory)
-    {
-        return oracleData[_indexToken][oracleFilledCount[_indexToken]].oracleChainSelectorTokenShares[_chainSelector];
+    function currentChainSelectorTokensCount(
+        address _indexToken,
+        uint64 _chainSelector
+    ) public view returns (uint256) {
+        return
+            currentData[_indexToken][currentFilledCount[_indexToken]]
+                .currentChainSelectorTokens[_chainSelector]
+                .length;
     }
 
-    function allCurrentChainSelectorTokenShares(address _indexToken, uint64 _chainSelector)
-        public
-        view
-        returns (uint256[] memory)
-    {
-        return currentData[_indexToken][currentFilledCount[_indexToken]].currentChainSelectorTokenShares[_chainSelector];
+    function allOracleChainSelectorTokens(
+        address _indexToken,
+        uint64 _chainSelector
+    ) public view returns (address[] memory tokens) {
+        tokens = oracleData[_indexToken][oracleFilledCount[_indexToken]]
+            .oracleChainSelectorTokens[_chainSelector];
     }
 
-    function getOracleData(address _indexToken, uint256 _oracleFilledCount)
+    function allCurrentChainSelectorTokens(
+        address _indexToken,
+        uint64 _chainSelector
+    ) public view returns (address[] memory tokens) {
+        tokens = currentData[_indexToken][currentFilledCount[_indexToken]]
+            .currentChainSelectorTokens[_chainSelector];
+    }
+
+    function allOracleChainSelectorTokenShares(
+        address _indexToken,
+        uint64 _chainSelector
+    ) public view returns (uint256[] memory) {
+        return
+            oracleData[_indexToken][oracleFilledCount[_indexToken]]
+                .oracleChainSelectorTokenShares[_chainSelector];
+    }
+
+    function allCurrentChainSelectorTokenShares(
+        address _indexToken,
+        uint64 _chainSelector
+    ) public view returns (uint256[] memory) {
+        return
+            currentData[_indexToken][currentFilledCount[_indexToken]]
+                .currentChainSelectorTokenShares[_chainSelector];
+    }
+
+    function getOracleData(
+        address _indexToken,
+        uint256 _oracleFilledCount
+    )
         public
         view
-        returns (address[] memory tokens, uint256[] memory marketShares, uint64[] memory chainSelectors)
+        returns (
+            address[] memory tokens,
+            uint256[] memory marketShares,
+            uint64[] memory chainSelectors
+        )
     {
         OracleData storage data = oracleData[_indexToken][_oracleFilledCount];
         return (data.tokens, data.marketShares, data.chainSelectors);
     }
 
-    function getCurrentData(address indexToken, uint256 currentFilledCount)
+    function getCurrentData(
+        address indexToken,
+        uint256 currentFilledCount
+    )
         public
         view
-        returns (address[] memory tokens, uint256[] memory marketShares, uint64[] memory chainSelectors)
+        returns (
+            address[] memory tokens,
+            uint256[] memory marketShares,
+            uint64[] memory chainSelectors
+        )
     {
         CurrentData storage data = currentData[indexToken][currentFilledCount];
         return (data.tokens, data.marketShares, data.chainSelectors);
     }
 
-    function getCurrentProviderIndexes(address indexToken, uint256 currentFilledCount)
-        public
-        view
-        returns (uint64[] memory)
-    {
+    function getCurrentProviderIndexes(
+        address indexToken,
+        uint256 currentFilledCount
+    ) public view returns (uint64[] memory) {
         return currentData[indexToken][currentFilledCount].providerIndexes;
     }
 
-    function getOracleProviderIndexes(address indexToken, uint256 oracleFilledCount)
-        public
-        view
-        returns (uint64[] memory)
-    {
+    function getOracleProviderIndexes(
+        address indexToken,
+        uint256 oracleFilledCount
+    ) public view returns (uint64[] memory) {
         return oracleData[indexToken][oracleFilledCount].providerIndexes;
     }
 
-    function getCurrentChainSelectorTotalShares(address indexToken, uint256 currentFilledCount, uint64 chainSelector)
-        public
-        view
-        returns (uint256)
-    {
-        return currentData[indexToken][currentFilledCount].currentChainSelectorTotalShares[chainSelector];
+    function getCurrentChainSelectorTotalShares(
+        address indexToken,
+        uint256 currentFilledCount,
+        uint64 chainSelector
+    ) public view returns (uint256) {
+        return
+            currentData[indexToken][currentFilledCount]
+                .currentChainSelectorTotalShares[chainSelector];
     }
 
-    function getOracleChainSelectorTotalShares(address indexToken, uint256 oracleFilledCount, uint64 chainSelector)
-        public
-        view
-        returns (uint256)
-    {
-        return oracleData[indexToken][oracleFilledCount].oracleChainSelectorTotalShares[chainSelector];
+    function getOracleChainSelectorTotalShares(
+        address indexToken,
+        uint256 oracleFilledCount,
+        uint64 chainSelector
+    ) public view returns (uint256) {
+        return
+            oracleData[indexToken][oracleFilledCount]
+                .oracleChainSelectorTotalShares[chainSelector];
     }
 
-    function getCurrentProviderIndexTotalShares(address indexToken, uint256 currentFilledCount, uint64 providerIndex)
-        public
-        view
-        returns (uint256)
-    {
-        return currentData[indexToken][currentFilledCount].currentProviderIndexTotalShares[providerIndex];
+    function getCurrentProviderIndexTotalShares(
+        address indexToken,
+        uint256 currentFilledCount,
+        uint64 providerIndex
+    ) public view returns (uint256) {
+        return
+            currentData[indexToken][currentFilledCount]
+                .currentProviderIndexTotalShares[providerIndex];
     }
 
-    function getCurrentProviderIndexData(address indexToken, uint256 currentFilledCount, uint64 providerIndex)
-        public
-        view
-        returns (uint256, address[] memory, uint256[] memory)
-    {
+    function getCurrentProviderIndexData(
+        address indexToken,
+        uint256 currentFilledCount,
+        uint64 providerIndex
+    ) public view returns (uint256, address[] memory, uint256[] memory) {
         return (
-            currentData[indexToken][currentFilledCount].currentProviderIndexTotalShares[providerIndex],
-            currentData[indexToken][currentFilledCount].currentProviderIndexTokens[providerIndex],
-            currentData[indexToken][currentFilledCount].currentProviderIndexTokenShares[providerIndex]
+            currentData[indexToken][currentFilledCount]
+                .currentProviderIndexTotalShares[providerIndex],
+            currentData[indexToken][currentFilledCount]
+                .currentProviderIndexTokens[providerIndex],
+            currentData[indexToken][currentFilledCount]
+                .currentProviderIndexTokenShares[providerIndex]
         );
     }
 }
