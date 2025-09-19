@@ -14,4 +14,7 @@ openzeppelin-contracts/=lib/openzeppelin-contracts/
 openzeppelin-upgrades/=lib/openzeppelin-upgrades/
 @uniswap/v3-periphery/=lib/v3-periphery/
 @uniswap/v3-core/=lib/v3-core/
+solady/=lib/solady/
+prp-math/=lib/prb-math/
+@prb/=lib/prb-math/
 
