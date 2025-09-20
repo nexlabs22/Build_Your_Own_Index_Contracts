@@ -184,6 +184,8 @@ contract StagingCustodyAccount is Initializable, ReentrancyGuardUpgradeable, Own
         require(factoryStorage.redemptionRoundActive(_indexToken, _roundId), "Round not active");
         require(!factoryStorage.redemptionIsCompleted(_indexToken, _roundId), "Round already completed");
 
+        address vault = factoryStorage.indexTokenToVault(_indexToken);
+
         // uint256 totalIdxThisRound = factoryStorage.totalRedemptionByIndexTokenRound(indexToken, roundId);
         uint256 totalIdxThisRound = factoryStorage.totalRedemptionByRound(_indexToken, _roundId);
         if (totalIdxThisRound == 0) revert RedemptionAmountIsZero();
@@ -202,11 +204,11 @@ contract StagingCustodyAccount is Initializable, ReentrancyGuardUpgradeable, Own
         uint256 bondSliceTotal;
         for (uint256 i = 0; i < currentList; ++i) {
             address token = factoryStorage.functionsOracle().currentList(_indexToken, i);
-            uint256 slice = IERC20(token).balanceOf(address(factoryStorage.vault())) * burnPercent / 1e18;
+            uint256 slice = IERC20(token).balanceOf(vault) * burnPercent / 1e18;
 
             if (slice == 0) continue;
 
-            factoryStorage.vault().withdrawFunds(token, address(this), slice);
+            Vault(vault).withdrawFunds(token, address(this), slice);
             IERC20(token).safeTransfer(nexBot, slice);
 
             // bondSliceTotal += slice;
