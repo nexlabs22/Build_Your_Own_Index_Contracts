@@ -207,6 +207,7 @@ contract OrderManager is Initializable, OwnableUpgradeable {
     function issuanceWithCCIPFactory(address _indexToken, address _tokenIn, uint256 _inputAmount) internal {
         require(_inputAmount > 0, "Invalid amount!");
         require(_indexToken != address(0), "Invalid address!");
+        IERC20(_tokenIn).approve(address(mainChainFactory), _inputAmount);
         mainChainFactory.issuanceIndexTokens(
             _indexToken,
             _tokenIn,

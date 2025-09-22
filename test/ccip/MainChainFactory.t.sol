@@ -357,9 +357,16 @@ contract CCIPFactoryTest is Test, CCIPDeployer {
     function test_issuance() public {
         updateOracleList();
         
-
+        mockRouter.setFee(0);
         usdc.approve(address(factory), 1001e16);
-        // factory.issuanceIndexTokens(address(indexToken), 1000e16);
+        factory.issuanceIndexTokens(address(indexToken), 1000e16);
+        mockRouter.executeAllMessages();
+        console.log("send count", coreSender.sentCount());
+        console.log("token0 balance after issuance", IERC20(token0).balanceOf(address(vault)));
+        console.log("token4 balance after issuance", IERC20(token4).balanceOf(address(crossChainVault)));
+        console.log("issuance complete token count", mainChainStorage.getIssuanceCompletedTokensCount(1));
+        // console.log("main chain storage", address(coreSender.mainChainStorage()));
+        // console.log("main chain factory", (mainChainStorage.mainChainFactory()));
     }
     /*
     function getIndexTokenPrice() public view returns (uint256) {

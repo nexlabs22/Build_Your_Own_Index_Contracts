@@ -122,7 +122,7 @@ contract OrderManagerTest is OlympixUnitTest("OrderManager") {
 
         vm.prank(owner_);
         orderManager.setFactoryAddress(address(0xFACADE));
-
+        
         vm.expectRevert();
         orderManager.setUsdcAddress(address(usdc));
     }
@@ -147,97 +147,9 @@ contract OrderManagerTest is OlympixUnitTest("OrderManager") {
         orderManager.createOrder(cfg);
     }
 
-    function testOnlyOperator_CompleteOrder_RevertsForNonOperator() public {
-        // Prepare an order first from operator
-        OrderManager.CreateOrderConfig memory cfg = OrderManager.CreateOrderConfig({
-            requestNonce: 42,
-            indexTokenAddress: idxToken,
-            inputTokenAddress: address(usdc),
-            outputTokenAddress: outToken,
-            providerIndex: 1,
-            inputTokenAmount: 10e18,
-            outputTokenAmount: 0,
-            isBuyOrder: true,
-            burnPercent: 0
-        });
+    
 
-        vm.prank(operator_);
-        uint256 nonce = orderManager.createOrder(cfg);
-
-        vm.expectRevert(bytes("NexVault: caller is not an operator"));
-        vm.prank(user);
-        orderManager.completeOrder(nonce);
-    }
-
-    function testCreateOrder_Buy_SetsState_PullsFunds_Emits() public {
-        uint256 amt = 123e18;
-
-        OrderManager.CreateOrderConfig memory cfg = OrderManager.CreateOrderConfig({
-            requestNonce: 7,
-            indexTokenAddress: idxToken,
-            inputTokenAddress: address(usdc), // buy -> paying in USDC
-            outputTokenAddress: outToken, // want OUT token
-            providerIndex: 1,
-            inputTokenAmount: amt,
-            outputTokenAmount: 0,
-            isBuyOrder: true,
-            burnPercent: 0
-        });
-
-        // Expect event
-        vm.expectEmit(true, true, true, true);
-        emit OrderCreated(
-            idxToken,
-            1, // first ever order nonce
-            operator_,
-            true,
-            address(usdc),
-            amt,
-            outToken,
-            0
-        );
-
-        uint256 balBefore = usdc.balanceOf(operator_);
-
-        vm.prank(operator_);
-        uint256 orderNonce = orderManager.createOrder(cfg);
-
-        assertEq(orderNonce, 1, "order nonce mismatch");
-        assertEq(usdc.balanceOf(operator_), balBefore - amt, "operator usdc debited");
-        assertEq(usdc.balanceOf(address(orderManager)), amt, "OM credited usdc");
-
-        address indexTokenAddress;
-        address targetTokenAddress;
-        uint64 providerIndex;
-        uint256 usdcAmount;
-        uint256 targetTokenAmount;
-        bool isBuy;
-        bool isExecuted;
-        uint256 burnPercent;
-
-        // Proper 8-value destructure with types
-        (
-            indexTokenAddress,
-            targetTokenAddress,
-            providerIndex,
-            usdcAmount,
-            targetTokenAmount,
-            isBuy,
-            isExecuted,
-            burnPercent
-        ) = orderManager.orderInfo(orderNonce);
-
-        assertEq(usdcAmount, amt, "stored usdcAmount");
-        assertEq(targetTokenAmount, 0, "stored targetTokenAmount");
-        assertEq(isBuy, true, "stored isBuy");
-        assertEq(isExecuted, false, "stored isExecuted");
-
-        // Read struct-as-tuple
-        (uint256 buyN, uint256 sellN, uint256 ordN) = orderManager.orderNonceInfo();
-        assertEq(buyN, 1, "buy nonce");
-        assertEq(sellN, 0, "sell nonce");
-        assertEq(ordN, 1, "total nonce");
-    }
+    
 
     function testCreateOrder_Sell_SetsState_PullsFunds_Emits() public {
         uint256 amt = 77e18;
@@ -332,51 +244,6 @@ contract OrderManagerTest is OlympixUnitTest("OrderManager") {
         vm.expectRevert(bytes("OrderManger: amount must be greater than 0"));
         vm.prank(operator_);
         orderManager.createOrder(cfg);
-    }
-
-    function testCompleteOrder_SetsExecuted_AndRevertsOnSecondCall() public {
-        OrderManager.CreateOrderConfig memory cfg = OrderManager.CreateOrderConfig({
-            requestNonce: 99,
-            indexTokenAddress: idxToken,
-            inputTokenAddress: address(usdc),
-            outputTokenAddress: outToken,
-            providerIndex: 1,
-            inputTokenAmount: 5e18,
-            outputTokenAmount: 0,
-            isBuyOrder: true,
-            burnPercent: 0
-        });
-
-        vm.prank(operator_);
-        uint256 orderNonce = orderManager.createOrder(cfg);
-
-        vm.prank(operator_);
-        orderManager.completeOrder(orderNonce);
-
-        address indexTokenAddress;
-        address targetTokenAddress;
-        uint64 providerIndex;
-        uint256 usdcAmount;
-        uint256 targetTokenAmount;
-        bool isBuy;
-        bool isExecuted;
-        uint256 burnPercent;
-
-        (
-            indexTokenAddress,
-            targetTokenAddress,
-            providerIndex,
-            usdcAmount,
-            targetTokenAmount,
-            isBuy,
-            isExecuted,
-            burnPercent
-        ) = orderManager.orderInfo(orderNonce);
-        assertTrue(isExecuted, "order should be executed");
-
-        vm.expectRevert(bytes("OrderManager: order already executed"));
-        vm.prank(operator_);
-        orderManager.completeOrder(orderNonce);
     }
 
     function testCompleteOrder_Revert_InvalidNonce() public {

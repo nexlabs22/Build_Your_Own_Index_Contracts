@@ -395,8 +395,8 @@ contract CCIPDeployer is
                         address(coreSenderImpl),
                         abi.encodeCall(CoreSender.initialize, (
                             payable(address(indexToken)),
-                            address(0), // order manager
-                            address(indexFactoryStorage),
+                            address(mainChainStorage),
+                            address(orderManager), // order manager
                             address(functionsOracle),
                             address(link),
                             address(mockRouter), // ccip router
@@ -434,7 +434,7 @@ contract CCIPDeployer is
                             1,
                             payable(address(indexToken)),
                             address(0), // order manager
-                            address(indexFactoryStorage),
+                            address(mainChainStorage),
                             address(functionsOracle),
                             payable(address(coreSender)),
                             wethAddress
@@ -552,7 +552,7 @@ contract CCIPDeployer is
             address(crossChainIndexFactory),
             2
         );
-        mainChainStorage.setIndexFactory(address(factory));
+        mainChainStorage.setIndexFactory(address(mainChainFactory));
         mainChainStorage.setCoreSender(address(coreSender));
         mainChainStorage.setPriceOracle(address(priceOracleAddress));
         mainChainStorage.setVault(address(vault));
@@ -560,7 +560,7 @@ contract CCIPDeployer is
         // indexFactoryStorage.setIndexFactoryBalancer(address(factoryBalancer));
         mainChainStorage.setCoreSenderAndBalancerSenderGasLimits(2000000, 2000000);
         mainChainStorage.setIssuanceAndRedemptionFeePercentages(20, 20);
-        
+        mainChainStorage.setIsCrossChainFeeSponsered(false);
         vault.setOperator(address(factory), true);
         // vault.setOperator(address(factoryBalancer), true);
 
@@ -591,6 +591,7 @@ contract CCIPDeployer is
 
         mockRouter.setFactoryChainSelector(1, address(coreSender));
         mockRouter.setFactoryChainSelector(1, address(factory));
+        mockRouter.setFactoryChainSelector(1, address(mainChainFactory));
         // mockRouter.setFactoryChainSelector(1, address(factoryBalancer));
         // mockRouter.setFactoryChainSelector(1, address(balancerSender));
         mockRouter.setFactoryChainSelector(2, address(crossChainIndexFactory));

@@ -474,6 +474,7 @@ contract CoreSender is Initializable, CCIPReceiver, ProposableOwnableUpgradeable
         Client.EVMTokenAmount[] memory tokensToSendDetails,
         MessageSender.PayFeesIn payFeesIn
     ) internal nonReentrant returns (bytes32) {
+        sentCount += 1;
         mainChainStorage.increaseTotalSentAmount(tokensToSendDetails[0].token, tokensToSendDetails[0].amount);
         bytes32 messageId = MessageSender.sendToken(
             getRouter(),
@@ -489,7 +490,7 @@ contract CoreSender is Initializable, CCIPReceiver, ProposableOwnableUpgradeable
         emit MessageSent(messageId);
         return messageId;
     }
-
+    uint public sentCount;
     /**
      * @dev Sends a message to another chain.
      * @param destinationChainSelector The destination chain selector.
