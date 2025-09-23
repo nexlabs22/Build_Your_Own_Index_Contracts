@@ -66,7 +66,8 @@ contract StagingCustodyAccountTest is Test {
             address(oracle), // _functionsOracle
             address(sca), // _stagingCustodyAccount
             nexBot, // _nexBot
-            address(usdc) // _usdc
+            address(usdc), // _usdc
+            4
         );
 
         // init SCA
@@ -97,7 +98,7 @@ contract StagingCustodyAccountTest is Test {
         // deploy another storage proxy just to switch to
         BackedFiStorage storage2 = BackedFiStorage(address(new ERC1967Proxy(address(storageImpl), "")));
         vm.startPrank(owner_);
-        storage2.initialize(address(0xDEAD), address(oracle), address(sca), nexBot, address(usdc));
+        storage2.initialize(address(0xDEAD), address(oracle), address(sca), nexBot, address(usdc), 4);
         sca.setBackedFiStorageAddress(address(storage2));
         vm.stopPrank();
 

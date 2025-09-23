@@ -29,6 +29,7 @@ contract BackedFiStorage is Initializable, OwnableUpgradeable {
     uint8 public feeRate;
     address public nexBot;
     uint256 public latestFeeUpdate;
+    uint8 public providerIndex;
 
     // BYOI
     mapping(address => uint256) public issuanceRoundId;
@@ -91,13 +92,15 @@ contract BackedFiStorage is Initializable, OwnableUpgradeable {
         address _functionsOracle,
         address _stagingCustodyAccount,
         address _nexBot,
-        address _usdc
+        address _usdc,
+        uint8 _providerIndex
     ) external initializer {
         require(_indexFactory != address(0), "Invalid _indexFactory address");
         require(_functionsOracle != address(0), "Invalid _functionsOracle address");
         require(_stagingCustodyAccount != address(0), "Invalid _stagingCustodyAccount address");
         require(_nexBot != address(0), "Invalid _nexBot address");
         require(_usdc != address(0), "Invalid _usdc address");
+        require(_providerIndex > 0, "Invalid _providerIndex address");
 
         __Ownable_init(msg.sender);
 
@@ -109,6 +112,7 @@ contract BackedFiStorage is Initializable, OwnableUpgradeable {
         nexBot = _nexBot;
         feeRate = 10;
         feeReceiver = msg.sender;
+        providerIndex = _providerIndex;
     }
 
     /// @custom:oz-upgrades-unsafe-allow constructor
@@ -172,14 +176,6 @@ contract BackedFiStorage is Initializable, OwnableUpgradeable {
     function addressesInIssuanceRound(uint256 roundId) external view returns (address[] memory) {
         return issuanceRoundIdToAddresses[roundId];
     }
-
-    // function setIssuanceFeeByNonce(uint256 nonce, uint256 fee) external onlyFactory {
-    //     issuanceFeeByNonce[nonce] = fee;
-    // }
-
-    // function setRedemptionFeeByNonce(uint256 nonce, uint256 fee) external onlyFactory {
-    //     redemptionFeeByNonce[nonce] = fee;
-    // }
 
     // function setIssuanceRoundIdToAddresses(uint256 _roundId, address[] memory addresses) external onlyFactory {
     //     require(_roundId > 0, "Invalid roundId amount");
@@ -450,16 +446,15 @@ contract BackedFiStorage is Initializable, OwnableUpgradeable {
         address vaultAddr = indexTokenToVault[_indexToken];
         require(vaultAddr != address(0), "vault not set");
 
-        (, address[] memory underlyingAssets,) =
-            functionsOracle.getCurrentProviderIndexData(_indexToken, functionsOracle.currentFilledCount(_indexToken), 3);
+        (, address[] memory underlyingAssets,) = functionsOracle.getCurrentProviderIndexData(
+            _indexToken, functionsOracle.currentFilledCount(_indexToken), providerIndex
+        );
 
         uint256 tokens = underlyingAssets.length;
-        // uint256 tokens = functionsOracle.totalCurrentList(_indexToken);
         require(_prices.length >= tokens, "prices length too small");
 
         for (uint256 i = 0; i < tokens;) {
             address token = underlyingAssets[i];
-            // address token = functionsOracle.currentList(_indexToken, i);
             uint256 price = _prices[i]; // 1e18-scaled
             if (price != 0) {
                 uint256 balance = IERC20(token).balanceOf(vaultAddr); // assumes token has 18 decimals
@@ -492,13 +487,13 @@ contract BackedFiStorage is Initializable, OwnableUpgradeable {
         return Math.mulDiv(balance, _price, 1e18);
     }
 
-    // function getIssuanceAmountByRound(uint256 roundId) public view returns (uint256) {
-    //     return totalIssuanceByRound[roundId];
-    // }
+    function getIssuanceAmountByRound(address _indexToken, uint256 _roundId) public view returns (uint256) {
+        return totalIssuanceByRound[_indexToken][_roundId];
+    }
 
-    // function getRedemptionAmountByRound(uint256 roundId) public view returns (uint256) {
-    //     return totalRedemptionByRound[roundId];
-    // }
+    function getRedemptionAmountByRound(address _indexToken, uint256 _roundId) public view returns (uint256) {
+        return totalRedemptionByRound[_indexToken][_roundId];
+    }
 
     uint256[50] private __gap;
 }

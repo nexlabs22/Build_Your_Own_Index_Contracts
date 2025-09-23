@@ -51,7 +51,7 @@ contract BackedFiFactoryTest is Test {
         sca = StagingCustodyAccount(address(new ERC1967Proxy(address(scaImpl), "")));
         backedFi = BackedFiFactory(address(new ERC1967Proxy(address(backedFiImpl), "")));
 
-        storage_.initialize(address(0xDEAD), address(oracle), address(sca), nexBot, address(usdc));
+        storage_.initialize(address(0xDEAD), address(oracle), address(sca), nexBot, address(usdc), 4);
 
         sca.initialize(address(storage_));
 

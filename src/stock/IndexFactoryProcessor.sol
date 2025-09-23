@@ -9,13 +9,15 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 
-import "./dinari/interfaces/IOrderProcessor.sol";
+import {IOrderProcessor} from "./dinari/interfaces/IOrderProcessor.sol";
 import {FeeLib} from "./dinari/common/FeeLib.sol";
-import "./NexVault.sol";
-import "./dinari/WrappedDShare.sol";
-import "./StockStorage.sol";
-import "./OrderManager.sol";
-import "../oracle/FunctionsOracle.sol";
+import {Vault} from "../vault/Vault.sol";
+import {WrappedDShare} from "./dinari/WrappedDShare.sol";
+import {StockStorage} from "./StockStorage.sol";
+import {StockOrderManager} from "./StockOrderManager.sol";
+import {FunctionsOracle} from "../oracle/FunctionsOracle.sol";
+import {IndexFactoryStorage} from "../factory/IndexFactoryStorage.sol";
+import "../orderManager/OrderManager.sol";
 
 /// @title Index Token Factory
 /// @author NEX Labs Protocol
@@ -24,10 +26,19 @@ contract IndexFactoryProcessor is Initializable, OwnableUpgradeable, PausableUpg
     StockStorage public stockStorage;
     IndexFactoryStorage public factoryStorage;
     FunctionsOracle public functionsOracle;
+    OrderManager public orderManager;
 
-    event Issuanced(uint256 indexed nonce, address indexed user, address inputToken, uint256 inputAmount, uint256 time);
+    event Issuanced(
+        address indexed indexToken,
+        uint256 indexed nonce,
+        address indexed user,
+        address inputToken,
+        uint256 inputAmount,
+        uint256 time
+    );
 
     event Redemption(
+        address indexed indexToken,
         uint256 indexed nonce,
         address indexed user,
         address outputToken,
@@ -36,16 +47,20 @@ contract IndexFactoryProcessor is Initializable, OwnableUpgradeable, PausableUpg
         uint256 time
     );
 
-    function initialize(address _indexFactoryStorage, address _stockStorage, address _functionsOracle)
-        external
-        initializer
-    {
+    function initialize(
+        address _indexFactoryStorage,
+        address _stockStorage,
+        address _functionsOracle,
+        address _orderManager
+    ) external initializer {
         require(_indexFactoryStorage != address(0), "invalid _indexFactoryStorage address");
         require(_stockStorage != address(0), "invalid _stockStorage address");
         require(_functionsOracle != address(0), "invalid _functionsOracle address");
+        require(_orderManager != address(0), "invalid _orderManager address");
         factoryStorage = IndexFactoryStorage(_indexFactoryStorage);
         stockStorage = StockStorage(_stockStorage);
         functionsOracle = FunctionsOracle(_functionsOracle);
+        orderManager = OrderManager(_orderManager);
 
         __Ownable_init(msg.sender);
         __Pausable_init();
@@ -73,12 +88,13 @@ contract IndexFactoryProcessor is Initializable, OwnableUpgradeable, PausableUpg
         require(stockStorage.checkIssuanceOrdersStatus(_indexToken, _issuanceNonce), "Orders are not completed");
         require(!stockStorage.issuanceIsCompleted(_indexToken, _issuanceNonce), "Issuance is completed");
         address requester = stockStorage.issuanceRequesterByNonce(_indexToken, _issuanceNonce);
-        IOrderProcessor issuer = stockStorage.issuer();
+        // IOrderProcessor issuer = stockStorage.issuer();
         uint256 primaryPortfolioValue;
         uint256 secondaryPortfolioValue;
 
-        (, address[] memory underlyingAssets,) =
-            functionsOracle.getCurrentProviderIndexData(_indexToken, functionsOracle.currentFilledCount(_indexToken), 3);
+        (, address[] memory underlyingAssets,) = functionsOracle.getCurrentProviderIndexData(
+            _indexToken, functionsOracle.currentFilledCount(_indexToken), stockStorage.providerIndex()
+        );
 
         for (uint256 i; i < underlyingAssets.length; i++) {
             address tokenAddress = underlyingAssets[i];
@@ -86,8 +102,9 @@ contract IndexFactoryProcessor is Initializable, OwnableUpgradeable, PausableUpg
                 getCompleteIssuanceValues(tokenAddress, _indexToken, _issuanceNonce);
             primaryPortfolioValue += primaryValue;
             secondaryPortfolioValue += secondaryValue;
-            OrderManager orderManager = stockStorage.orderManager();
-            orderManager.withdrawFunds(tokenAddress, address(this), balance);
+            StockOrderManager stockOrderManager = stockStorage.stockOrderManager();
+            stockOrderManager.withdrawFunds(tokenAddress, address(this), balance);
+            orderManager.completeIssuance(_issuanceNonce, _indexToken, tokenAddress, primaryValue, secondaryValue);
             _setCompleteIssuanceData(tokenAddress, balance, _indexToken);
         }
         stockStorage.issuanceIndexTokenPrimaryTotalSupply(_indexToken, _issuanceNonce);
@@ -95,6 +112,7 @@ contract IndexFactoryProcessor is Initializable, OwnableUpgradeable, PausableUpg
         stockStorage.setIssuanceIsCompleted(_indexToken, _issuanceNonce, true);
 
         emit Issuanced(
+            _indexToken,
             _issuanceNonce,
             requester,
             stockStorage.usdc(),
@@ -136,24 +154,23 @@ contract IndexFactoryProcessor is Initializable, OwnableUpgradeable, PausableUpg
         IOrderProcessor issuer = stockStorage.issuer();
         uint256 totalBalance;
 
-        (, address[] memory underlyingAssets,) =
-            functionsOracle.getCurrentProviderIndexData(_indexToken, functionsOracle.currentFilledCount(_indexToken), 3);
+        (, address[] memory underlyingAssets,) = functionsOracle.getCurrentProviderIndexData(
+            _indexToken, functionsOracle.currentFilledCount(_indexToken), stockStorage.providerIndex()
+        );
 
-        // for (uint256 i; i < functionsOracle.totalCurrentList(_indexToken); i++) {
+        StockOrderManager stockOrderManager = stockStorage.stockOrderManager();
         for (uint256 i; i < underlyingAssets.length; i++) {
             address tokenAddress = underlyingAssets[i];
-            // address tokenAddress = functionsOracle.currentList(_indexToken, i);
             uint256 tokenRequestId = stockStorage.redemptionRequestId(_indexToken, _redemptionNonce, tokenAddress);
             uint256 balance = issuer.getReceivedAmount(tokenRequestId);
             uint256 feeTaken = issuer.getFeesTaken(tokenRequestId);
+            stockOrderManager.withdrawFunds(stockStorage.usdc(), requester, totalBalance);
+            orderManager.completeRedemption(_redemptionNonce, _indexToken, tokenAddress, balance - feeTaken);
             totalBalance += balance - feeTaken;
         }
-        // uint256 fee = (totalBalance * stockStorage.feeRate()) / 10000;
-        OrderManager orderManager = stockStorage.orderManager();
-        // orderManager.withdrawFunds(stockStorage.usdc(), stockStorage.feeReceiver(), fee);
-        orderManager.withdrawFunds(stockStorage.usdc(), requester, totalBalance);
         stockStorage.setRedemptionIsCompleted(_indexToken, _redemptionNonce, true);
         emit Redemption(
+            _indexToken,
             _redemptionNonce,
             requester,
             stockStorage.usdc(),

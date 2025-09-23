@@ -21,7 +21,7 @@ interface TokenInterface {
         uint256 _feeRatePerDayScaled,
         address _feeReceiver,
         uint256 _supplyCeiling
-    ) external virtual;
+    ) external;
 
     ///=============================================================================================
     /// Mint Logic
@@ -31,18 +31,18 @@ interface TokenInterface {
     /// @dev Mint function can only be called externally by the controller
     /// @param to address
     /// @param amount uint256
-    function mint(address to, uint256 amount) external virtual;
+    function mint(address to, uint256 amount) external;
 
     /// @notice External burn function
     /// @dev burn function can only be called externally by the controller
     /// @param from address
     /// @param amount uint256
-    function burn(address from, uint256 amount) external virtual;
+    function burn(address from, uint256 amount) external;
 
     /// @notice Expands supply and mints fees to fee reciever
     /// @dev Can only be called by the owner externally,
     /// @dev _mintToFeeReciver is the internal function and is called after each supply/rate change
-    function mintToFeeReceiver() external virtual;
+    function mintToFeeReceiver() external;
 
     ///=============================================================================================
     /// Setters
@@ -50,36 +50,36 @@ interface TokenInterface {
 
     /// @notice Only owner function for setting the methodologist
     /// @param _methodologist address
-    function setMethodologist(address _methodologist) external virtual;
+    function setMethodologist(address _methodologist) external;
 
     /// @notice Callable only by the methodoligst to store on chain data about the underlying weight of the token
     /// @param _methodology string
-    function setMethodology(string memory _methodology) external virtual;
+    function setMethodology(string memory _methodology) external;
 
     /// @notice Ownable function to set the fee rate
     /// @dev Given the annual fee rate this function sets and calculates the rate per second
     /// @param _feeRatePerDayScaled uint256
-    function setFeeRate(uint256 _feeRatePerDayScaled) external virtual;
+    function setFeeRate(uint256 _feeRatePerDayScaled) external;
 
     /// @notice Ownable function to set the receiver
     /// @param _feeReceiver address
-    function setFeeReceiver(address _feeReceiver) external virtual;
+    function setFeeReceiver(address _feeReceiver) external;
 
     /// @notice Ownable function to set the contract that controls minting
     /// @param _minter address
-    function setMinter(address _minter, bool _enabled) external virtual;
+    function setMinter(address _minter, bool _enabled) external;
 
     /// @notice Ownable function to set the limit at which the total supply cannot exceed
     /// @param _supplyCeiling uint256
-    function setSupplyCeiling(uint256 _supplyCeiling) external virtual;
+    function setSupplyCeiling(uint256 _supplyCeiling) external;
 
     ///=============================================================================================
     /// Pausable Logic
     ///=============================================================================================
 
-    function pause() external virtual;
+    function pause() external;
 
-    function unpause() external virtual;
+    function unpause() external;
 
     ///=============================================================================================
     /// Restrict
@@ -88,5 +88,5 @@ interface TokenInterface {
     /// @notice Compliance feature to blacklist bad actors
     /// @dev Negates current restriction state
     /// @param who address
-    function toggleRestriction(address who) external virtual;
+    function toggleRestriction(address who) external;
 }

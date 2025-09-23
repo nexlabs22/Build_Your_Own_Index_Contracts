@@ -1,23 +1,23 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.25;
 
-import "../token/IndexToken.sol";
 import "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
 
 import "./dinari/interfaces/IOrderProcessor.sol";
 import "./dinari/WrappedDShare.sol";
-import "./NexVault.sol";
+import "../vault/Vault.sol";
 import "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
-import "./OrderManager.sol";
+import "./StockOrderManager.sol";
 import "../oracle/FunctionsOracle.sol";
 import "../libraries/Commen.sol" as PrbMath;
 import {IndexFactoryStorage} from "../factory/IndexFactoryStorage.sol";
 
-/// @title Index Token Factory Storage
+/// @title Stock Storage
 /// @notice Stores data and provides functions for managing index token issuance and redemption
 contract StockStorage is Initializable, OwnableUpgradeable {
     using FunctionsRequest for FunctionsRequest.Request;
@@ -41,7 +41,7 @@ contract StockStorage is Initializable, OwnableUpgradeable {
     mapping(address => address) public priceFeedByTokenAddress;
 
     // NexVault public vault;
-    OrderManager public orderManager;
+    StockOrderManager public stockOrderManager;
     IOrderProcessor public issuer;
     FunctionsOracle public functionsOracle;
     IndexFactoryStorage public globalFactory;
@@ -53,6 +53,7 @@ contract StockStorage is Initializable, OwnableUpgradeable {
     uint256 public latestFeeUpdate;
     uint8 public latestPriceDecimals;
     address public feeReceiver;
+    uint8 public providerIndex;
 
     // Mappings for issuance and redemption data
     mapping(address => uint256) public issuanceNonce;
@@ -92,14 +93,17 @@ contract StockStorage is Initializable, OwnableUpgradeable {
         address _usdc,
         uint8 _usdcDecimals,
         address _functionsOracle,
-        bool _isMainnet
+        bool _isMainnet,
+        uint8 _providerIndex
     ) external initializer {
         require(_issuer != address(0), "invalid _issuer address");
         require(_indexFactoryStorage != address(0), "invalid _indexFactoryStorage address");
         require(_usdc != address(0), "invalid _usdc address");
         require(_usdcDecimals > 0, "invalid _usdcDecimals");
         require(_functionsOracle != address(0), "invalid _functionsOracle address");
+        require(_providerIndex > 0, "invalid _providerIndex");
         issuer = IOrderProcessor(_issuer);
+        globalFactory = IndexFactoryStorage(_indexFactoryStorage);
         usdc = _usdc;
         usdcDecimals = _usdcDecimals;
         functionsOracle = FunctionsOracle(_functionsOracle);
@@ -107,6 +111,7 @@ contract StockStorage is Initializable, OwnableUpgradeable {
         isMainnet = _isMainnet;
         feeRate = 10;
         feeReceiver = msg.sender;
+        providerIndex = _providerIndex;
     }
 
     /// @custom:oz-upgrades-unsafe-allow constructor
@@ -183,7 +188,7 @@ contract StockStorage is Initializable, OwnableUpgradeable {
     /// @return bool indicating success
     function setOrderManager(address _orderManager) external onlyOwner returns (bool) {
         require(_orderManager != address(0), "invalid order manager address");
-        orderManager = OrderManager(_orderManager);
+        stockOrderManager = StockOrderManager(_orderManager);
         return true;
     }
 
@@ -256,11 +261,10 @@ contract StockStorage is Initializable, OwnableUpgradeable {
     }
 
     function resetAllTokenPendingRebalanceAmount(address _indexToken, uint256 _nonce) public onlyOwnerOrOperator {
-        (, address[] memory underlyingAssets,) =
-            functionsOracle.getCurrentProviderIndexData(_indexToken, functionsOracle.currentFilledCount(_indexToken), 3);
+        (, address[] memory underlyingAssets,) = functionsOracle.getCurrentProviderIndexData(
+            _indexToken, functionsOracle.currentFilledCount(_indexToken), providerIndex
+        );
 
-        // for (uint256 i; i < functionsOracle.totalCurrentList(_indexToken); i++) {
-        //     address tokenAddress = functionsOracle.currentList(_indexToken, i);
         for (uint256 i; i < underlyingAssets.length; i++) {
             address tokenAddress = underlyingAssets[i];
             resetTokenPendingRebalanceAmount(_indexToken, tokenAddress, _nonce);
@@ -413,10 +417,9 @@ contract StockStorage is Initializable, OwnableUpgradeable {
 
     function getVaultDshareBalance(address _indexToken, address _token) public view returns (uint256) {
         require(_token != address(0), "invalid token address");
-        address wrappedDshareAddress = wrappedDshareAddress[_token];
-        uint256 wrappedDshareBalance =
-            IERC20(wrappedDshareAddress).balanceOf(globalFactory.indexTokenToVault(_indexToken));
-        uint256 dshareBalance = WrappedDShare(wrappedDshareAddress).previewRedeem(wrappedDshareBalance);
+        address wrappedDshareAddr = wrappedDshareAddress[_token];
+        uint256 wrappedDshareBalance = IERC20(wrappedDshareAddr).balanceOf(globalFactory.indexTokenToVault(_indexToken));
+        uint256 dshareBalance = WrappedDShare(wrappedDshareAddr).previewRedeem(wrappedDshareBalance);
         uint256 finalDshareBalance = dshareBalance + tokenPendingRebalanceAmount[_indexToken][_token];
         return finalDshareBalance;
     }
@@ -499,15 +502,13 @@ contract StockStorage is Initializable, OwnableUpgradeable {
         uint256 fees;
 
         (uint256 totalMarketShare, address[] memory underlyingAssets, uint256[] memory underlyingMarketShares) =
-            functionsOracle.getCurrentProviderIndexData(_indexToken, functionsOracle.currentFilledCount(_indexToken), 3);
+        functionsOracle.getCurrentProviderIndexData(
+            _indexToken, functionsOracle.currentFilledCount(_indexToken), providerIndex
+        );
 
-        // for (uint256 i; i < functionsOracle.totalCurrentList(_indexToken); i++) {
-        //     address tokenAddress = functionsOracle.currentList(_indexToken, i);
         for (uint256 i; i < underlyingAssets.length; i++) {
-            address tokenAddress = underlyingAssets[i];
+            // address tokenAddress = underlyingAssets[i];
             uint256 amount = _inputAmount * underlyingMarketShares[i] / totalMarketShare;
-            // address tokenAddress = functionsOracle.currentList(_indexToken, i);
-            // uint256 amount = _inputAmount * functionsOracle.tokenCurrentMarketShare(_indexToken, tokenAddress) / 100e18;
             (uint256 flatFee, uint24 percentageFeeRate) = issuer.getStandardFees(false, address(usdc));
             uint256 fee = flatFee + FeeLib.applyPercentageFee(percentageFeeRate, amount);
             fees += fee;
@@ -516,11 +517,10 @@ contract StockStorage is Initializable, OwnableUpgradeable {
     }
 
     function isIssuanceOrderActive(address _indexToken, uint256 _issuanceNonce) public view returns (bool) {
-        (, address[] memory underlyingAssets,) =
-            functionsOracle.getCurrentProviderIndexData(_indexToken, functionsOracle.currentFilledCount(_indexToken), 3);
+        (, address[] memory underlyingAssets,) = functionsOracle.getCurrentProviderIndexData(
+            _indexToken, functionsOracle.currentFilledCount(_indexToken), providerIndex
+        );
 
-        // for (uint256 i; i < functionsOracle.totalCurrentList(_indexToken); i++) {
-        //     address tokenAddress = functionsOracle.currentList(_indexToken, i);
         for (uint256 i; i < underlyingAssets.length; i++) {
             address tokenAddress = underlyingAssets[i];
             uint256 requestId = issuanceRequestId[_indexToken][_issuanceNonce][tokenAddress];
@@ -533,8 +533,9 @@ contract StockStorage is Initializable, OwnableUpgradeable {
 
     function checkIssuanceOrdersStatus(address _indexToken, uint256 _issuanceNonce) public view returns (bool) {
         uint256 completedOrdersCount;
-        (, address[] memory underlyingAssets,) =
-            functionsOracle.getCurrentProviderIndexData(_indexToken, functionsOracle.currentFilledCount(_indexToken), 3);
+        (, address[] memory underlyingAssets,) = functionsOracle.getCurrentProviderIndexData(
+            _indexToken, functionsOracle.currentFilledCount(_indexToken), providerIndex
+        );
 
         // for (uint256 i; i < functionsOracle.totalCurrentList(_indexToken); i++) {
         //     address tokenAddress = functionsOracle.currentList(_indexToken, i);
@@ -555,11 +556,10 @@ contract StockStorage is Initializable, OwnableUpgradeable {
 
     function checkRedemptionOrdersStatus(address _indexToken, uint256 _redemptionNonce) public view returns (bool) {
         uint256 completedOrdersCount;
-        (, address[] memory underlyingAssets,) =
-            functionsOracle.getCurrentProviderIndexData(_indexToken, functionsOracle.currentFilledCount(_indexToken), 3);
+        (, address[] memory underlyingAssets,) = functionsOracle.getCurrentProviderIndexData(
+            _indexToken, functionsOracle.currentFilledCount(_indexToken), providerIndex
+        );
 
-        // for (uint256 i; i < functionsOracle.totalCurrentList(_indexToken); i++) {
-        //     address tokenAddress = functionsOracle.currentList(_indexToken, i);
         for (uint256 i; i < underlyingAssets.length; i++) {
             address tokenAddress = underlyingAssets[i];
             uint256 requestId = redemptionRequestId[_indexToken][_redemptionNonce][tokenAddress];
@@ -567,7 +567,6 @@ contract StockStorage is Initializable, OwnableUpgradeable {
                 completedOrdersCount += 1;
             }
         }
-        // if (completedOrdersCount == functionsOracle.totalCurrentList(_indexToken)) {
         if (completedOrdersCount == underlyingAssets.length) {
             return true;
         } else {
@@ -576,11 +575,10 @@ contract StockStorage is Initializable, OwnableUpgradeable {
     }
 
     function isRedemptionOrderActive(address _indexToken, uint256 _redemptionNonce) public view returns (bool) {
-        (, address[] memory underlyingAssets,) =
-            functionsOracle.getCurrentProviderIndexData(_indexToken, functionsOracle.currentFilledCount(_indexToken), 3);
+        (, address[] memory underlyingAssets,) = functionsOracle.getCurrentProviderIndexData(
+            _indexToken, functionsOracle.currentFilledCount(_indexToken), providerIndex
+        );
 
-        // for (uint256 i; i < functionsOracle.totalCurrentList(_indexToken); i++) {
-        //     address tokenAddress = functionsOracle.currentList(_indexToken, i);
         for (uint256 i; i < underlyingAssets.length; i++) {
             address tokenAddress = underlyingAssets[i];
             uint256 requestId = redemptionRequestId[_indexToken][_redemptionNonce][tokenAddress];

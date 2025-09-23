@@ -14,7 +14,7 @@ import {FeeLib} from "./dinari/common/FeeLib.sol";
 /// @title Order Manager
 /// @author NEX Labs Protocol
 /// @notice Allows User to initiate burn/mint requests and allows issuers to approve or deny them
-contract OrderManager is Initializable, OwnableUpgradeable, PausableUpgradeable, ReentrancyGuardUpgradeable {
+contract StockOrderManager is Initializable, OwnableUpgradeable, PausableUpgradeable, ReentrancyGuardUpgradeable {
     enum RequestStatus {
         NULL,
         PENDING,
@@ -26,6 +26,7 @@ contract OrderManager is Initializable, OwnableUpgradeable, PausableUpgradeable,
     event FundsWithdrawn(address token, address to, uint256 amount);
 
     struct Request {
+        address indexToken;
         address requester; // sender of the request.
         uint256 amount; // amount of token to mint/burn.
         address[] depositAddresses; // issuer's asset address in mint, merchant's asset address in burn.
@@ -41,8 +42,8 @@ contract OrderManager is Initializable, OwnableUpgradeable, PausableUpgradeable,
 
     mapping(address => bool) public isOperator;
 
-    event BuyRequest(uint256 indexed id, uint256 time, uint256 inutAmount);
-    event SellRequest(uint256 indexed id, uint256 time, uint256 inutAmount);
+    event BuyRequest(address indexed indexToken, uint256 indexed id, uint256 time, uint256 inutAmount);
+    event SellRequest(address indexed indexToken, uint256 indexed id, uint256 time, uint256 inutAmount);
 
     function initialize(address _usdc, uint8 _usdcDecimals, address _issuer) external initializer {
         require(_usdc != address(0), "invalid token address");
@@ -98,7 +99,7 @@ contract OrderManager is Initializable, OwnableUpgradeable, PausableUpgradeable,
         return fees;
     }
 
-    function requestBuyOrder(address _token, uint256 _orderAmount, address _receiver)
+    function requestBuyOrder(address _indexToken, address _token, uint256 _orderAmount, address _receiver)
         external
         nonReentrant
         whenNotPaused
@@ -121,17 +122,17 @@ contract OrderManager is Initializable, OwnableUpgradeable, PausableUpgradeable,
 
         uint256 id = issuer.createOrderStandardFees(order);
         // orderInstanceById[id] = order;
-        emit BuyRequest(id, block.timestamp, _orderAmount);
+        emit BuyRequest(_indexToken, id, block.timestamp, _orderAmount);
         return id;
         // return 1;
     }
 
-    function requestBuyOrderFromCurrentBalance(address _token, uint256 _orderAmount, address _receiver)
-        external
-        nonReentrant
-        whenNotPaused
-        returns (uint256)
-    {
+    function requestBuyOrderFromCurrentBalance(
+        address _indexToken,
+        address _token,
+        uint256 _orderAmount,
+        address _receiver
+    ) external nonReentrant whenNotPaused returns (uint256) {
         require(_token != address(0), "invalid token address");
         require(_receiver != address(0), "invalid address");
         require(_orderAmount > 0, "amount must be greater than 0");
@@ -148,7 +149,7 @@ contract OrderManager is Initializable, OwnableUpgradeable, PausableUpgradeable,
 
         uint256 id = issuer.createOrderStandardFees(order);
         // orderInstanceById[id] = order;
-        emit BuyRequest(id, block.timestamp, _orderAmount);
+        emit BuyRequest(_indexToken, id, block.timestamp, _orderAmount);
         return id;
         // return 1;
     }

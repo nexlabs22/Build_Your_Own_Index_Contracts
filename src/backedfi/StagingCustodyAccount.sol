@@ -198,31 +198,23 @@ contract StagingCustodyAccount is Initializable, ReentrancyGuardUpgradeable, Own
 
         uint256 supplyBefore = IERC20(_indexToken).totalSupply();
         require(supplyBefore > totalIdxThisRound, "IDX supply is zero");
-        // uint256 pct1e18 = (totalIdxThisRound * 1e18) / supplyBefore;
 
         uint256 burnPercent = backedFiStorage.ordersBurnPercent(_indexToken, _roundId);
 
-        (, address[] memory underlyingAssets,) =
-            functionsOracle.getCurrentProviderIndexData(_indexToken, functionsOracle.currentFilledCount(_indexToken), 3);
-        // uint256 currentList = functionsOracle.totalCurrentList(_indexToken);
+        (, address[] memory underlyingAssets,) = functionsOracle.getCurrentProviderIndexData(
+            _indexToken, functionsOracle.currentFilledCount(_indexToken), backedFiStorage.providerIndex()
+        );
         uint256 currentList = underlyingAssets.length;
         uint256 bondSliceTotal;
         for (uint256 i = 0; i < currentList; ++i) {
             address token = underlyingAssets[i];
-            // address token = backedFiStorage.functionsOracle().currentList(_indexToken, i);
             uint256 slice = IERC20(token).balanceOf(vault) * burnPercent / 1e18;
 
             if (slice == 0) continue;
 
             Vault(vault).withdrawFunds(token, address(this), slice);
             IERC20(token).safeTransfer(nexBot, slice);
-
-            // bondSliceTotal += slice;
         }
-
-        // if (bondSliceTotal > 0) {
-        //     IERC20(bond).safeTransfer(nexBot, bondSliceTotal);
-        // }
 
         backedFiStorage.increaseRedemptionRoundId(_indexToken);
         backedFiStorage.setRedemptionRoundActive(_indexToken, backedFiStorage.redemptionRoundId(_indexToken), false);

@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.25;
 
-import "../token/IndexToken.sol";
 import "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -9,17 +8,17 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 import "./dinari/interfaces/IOrderProcessor.sol";
-// import {FeeLib} from "../dinary/common/FeeLib.sol";
-import "./NexVault.sol";
-import "./dinari/WrappedDShare.sol";
-import "./StockStorage.sol";
-import "./IndexFactoryProcessor.sol";
-import "./OrderManager.sol";
-// import "./FunctionsOracle.sol";
+
+import {IndexToken} from "../token/IndexToken.sol";
+import {Vault} from "../vault/Vault.sol";
+import {WrappedDShare} from "./dinari/WrappedDShare.sol";
+import {StockStorage} from "./StockStorage.sol";
+import {IndexFactoryProcessor} from "./IndexFactoryProcessor.sol";
+import {StockOrderManager} from "./StockOrderManager.sol";
 import {FunctionsOracle} from "../oracle/FunctionsOracle.sol";
 import {IndexFactoryStorage} from "../factory/IndexFactoryStorage.sol";
 
-/// @title Index Token Factory
+/// @title Stock Factory
 /// @author NEX Labs Protocol
 /// @notice Allows User to initiate burn/mint requests and allows issuers to approve or deny them
 contract StockFactory is Initializable, OwnableUpgradeable, PausableUpgradeable, ReentrancyGuardUpgradeable {
@@ -119,8 +118,8 @@ contract StockFactory is Initializable, OwnableUpgradeable, PausableUpgradeable,
         order.assetToken = address(_token);
         order.paymentTokenQuantity = _orderAmount;
 
-        OrderManager orderManager = stockStorage.orderManager();
-        uint256 id = orderManager.requestBuyOrderFromCurrentBalance(_token, _orderAmount, _receiver);
+        StockOrderManager orderManager = stockStorage.stockOrderManager();
+        uint256 id = orderManager.requestBuyOrderFromCurrentBalance(_indexToken, _token, _orderAmount, _receiver);
         stockStorage.setOrderInstanceById(_indexToken, id, order);
         return id;
     }
@@ -137,7 +136,7 @@ contract StockFactory is Initializable, OwnableUpgradeable, PausableUpgradeable,
         returns (uint256, uint256)
     {
         address wrappedDshare = stockStorage.wrappedDshareAddress(_token);
-        NexVault(factoryStorage.indexTokenToVault(_indexToken)).withdrawFunds(wrappedDshare, address(this), _amount);
+        Vault(factoryStorage.indexTokenToVault(_indexToken)).withdrawFunds(wrappedDshare, address(this), _amount);
         uint256 orderAmount0 = WrappedDShare(wrappedDshare).redeem(_amount, address(this), address(this));
 
         //rounding order
@@ -162,8 +161,8 @@ contract StockFactory is Initializable, OwnableUpgradeable, PausableUpgradeable,
         order.assetTokenQuantity = orderAmount;
         order.recipient = _receiver;
 
-        IERC20(_token).safeTransfer(address(stockStorage.orderManager()), orderAmount);
-        OrderManager orderManager = stockStorage.orderManager();
+        IERC20(_token).safeTransfer(address(stockStorage.stockOrderManager()), orderAmount);
+        StockOrderManager orderManager = stockStorage.stockOrderManager();
         uint256 id = orderManager.requestSellOrderFromCurrentBalance(_token, orderAmount, _receiver);
         _setRequestSellOrderData(_indexToken, id, order);
         // stockStorage.setOrderInstanceById(_indexToken, id, order); //
@@ -196,14 +195,14 @@ contract StockFactory is Initializable, OwnableUpgradeable, PausableUpgradeable,
         } else {
             orderAmount = _amount;
         }
-        uint256 extraAmount = _amount - orderAmount;
+        // uint256 extraAmount = _amount - orderAmount;
 
         IOrderProcessor.Order memory order = stockStorage.getPrimaryOrder(_indexToken, true);
         order.assetToken = _token;
         order.assetTokenQuantity = orderAmount;
         order.recipient = _receiver;
 
-        OrderManager orderManager = stockStorage.orderManager();
+        StockOrderManager orderManager = stockStorage.stockOrderManager();
         uint256 id = orderManager.requestSellOrderFromCurrentBalance(_token, orderAmount, _receiver);
         stockStorage.setOrderInstanceById(_indexToken, id, order);
         return (id, orderAmount);
@@ -245,34 +244,24 @@ contract StockFactory is Initializable, OwnableUpgradeable, PausableUpgradeable,
         require(_inputAmount > 0, "Invalid input amount");
         uint256 orderProcessorFee = stockStorage.calculateIssuanceFee(_indexToken, _inputAmount);
         uint256 quantityIn = orderProcessorFee + _inputAmount;
-        IERC20(stockStorage.usdc()).safeTransferFrom(msg.sender, address(stockStorage.orderManager()), quantityIn);
+        IERC20(stockStorage.usdc()).safeTransferFrom(msg.sender, address(stockStorage.stockOrderManager()), quantityIn);
 
         stockStorage.increaseIssuanceNonce(_indexToken);
         uint256 issuanceNonce = stockStorage.issuanceNonce(_indexToken);
         stockStorage.setIssuanceInputAmount(_indexToken, issuanceNonce, _inputAmount);
 
         (uint256 totalMarketShare, address[] memory underlyingAssets, uint256[] memory underlyingMarketShares) =
-            functionsOracle.getCurrentProviderIndexData(_indexToken, functionsOracle.currentFilledCount(_indexToken), 3);
+        functionsOracle.getCurrentProviderIndexData(
+            _indexToken, functionsOracle.currentFilledCount(_indexToken), stockStorage.providerIndex()
+        );
 
         for (uint256 i; i < underlyingAssets.length; i++) {
             address tokenAddress = underlyingAssets[i];
             uint256 amount = _inputAmount * underlyingMarketShares[i] / totalMarketShare;
 
-            uint256 requestId = requestBuyOrder(_indexToken, tokenAddress, amount, address(stockStorage.orderManager()));
+            uint256 requestId =
+                requestBuyOrder(_indexToken, tokenAddress, amount, address(stockStorage.stockOrderManager()));
             _setIssuanceRequestData(_indexToken, requestId, issuanceNonce, amount, tokenAddress);
-            // stockStorage.setActionInfoById(_indexToken, requestId, StockStorage.ActionInfo(1, issuanceNonce));
-            // stockStorage.setBuyRequestPayedAmountById(_indexToken, requestId, amount);
-            // stockStorage.setIssuanceRequestId(_indexToken, issuanceNonce, tokenAddress, requestId);
-            // stockStorage.setIssuanceRequesterByNonce(_indexToken, issuanceNonce, msg.sender);
-            // uint256 wrappedDsharesBalance = IERC20(stockStorage.wrappedDshareAddress(tokenAddress)).balanceOf(
-            //     factoryStorage.indexTokenToVault(_indexToken)
-            // );
-            // uint256 dShareBalance =
-            //     WrappedDShare(stockStorage.wrappedDshareAddress(tokenAddress)).previewRedeem(wrappedDsharesBalance);
-            // stockStorage.setIssuanceTokenPrimaryBalance(_indexToken, issuanceNonce, tokenAddress, dShareBalance);
-            // stockStorage.setIssuanceIndexTokenPrimaryTotalSupply(
-            //     _indexToken, issuanceNonce, IERC20(_indexToken).totalSupply()
-            // );
         }
         emit RequestIssuance(
             _indexToken, issuanceNonce, msg.sender, stockStorage.usdc(), _inputAmount, 0, block.timestamp
@@ -296,27 +285,22 @@ contract StockFactory is Initializable, OwnableUpgradeable, PausableUpgradeable,
         uint256 redemptionNonce = stockStorage.redemptionNonce(_indexToken);
         stockStorage.setRedemptionInputAmount(_indexToken, redemptionNonce, _inputAmount);
         IndexToken token = IndexToken(_indexToken);
-        // uint256 tokenBurnPercent = _inputAmount * 1e18 / token.totalSupply();
         token.burn(msg.sender, _inputAmount);
         stockStorage.setBurnedTokenAmountByNonce(_indexToken, redemptionNonce, _inputAmount);
 
-        (, address[] memory underlyingAssets,) =
-            functionsOracle.getCurrentProviderIndexData(_indexToken, functionsOracle.currentFilledCount(_indexToken), 3);
+        (, address[] memory underlyingAssets,) = functionsOracle.getCurrentProviderIndexData(
+            _indexToken, functionsOracle.currentFilledCount(_indexToken), stockStorage.providerIndex()
+        );
 
-        // for (uint256 i; i < functionsOracle.totalCurrentList(_indexToken); i++) {
         for (uint256 i; i < underlyingAssets.length; i++) {
             address tokenAddress = underlyingAssets[i];
             uint256 amount = _burnPercent
                 * IERC20(stockStorage.wrappedDshareAddress(tokenAddress)).balanceOf(
                     factoryStorage.indexTokenToVault(_indexToken)
                 ) / 1e18;
-            // address tokenAddress = functionsOracle.currentList(_indexToken, i);
-            // uint256 amount = tokenBurnPercent
-            //     * IERC20(stockStorage.wrappedDshareAddress(tokenAddress)).balanceOf(
-            //         factoryStorage.indexTokenToVault(_indexToken)
-            //     ) / 1e18;
+
             (uint256 requestId, uint256 assetAmount) =
-                requestSellOrder(_indexToken, tokenAddress, amount, address(stockStorage.orderManager()));
+                requestSellOrder(_indexToken, tokenAddress, amount, address(stockStorage.stockOrderManager()));
             stockStorage.setActionInfoById(_indexToken, requestId, StockStorage.ActionInfo(2, redemptionNonce));
             stockStorage.setSellRequestAssetAmountById(_indexToken, requestId, assetAmount);
             stockStorage.setRedemptionRequestId(_indexToken, redemptionNonce, tokenAddress, requestId);
