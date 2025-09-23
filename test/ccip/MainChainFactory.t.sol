@@ -362,6 +362,7 @@ contract CCIPFactoryTest is Test, CCIPDeployer {
         factory.issuanceIndexTokens(address(indexToken), 1000e16);
         mockRouter.executeAllMessages();
         console.log("send count", coreSender.sentCount());
+        console.log("receive count", crossChainIndexFactory.receivedCount());
         console.log("token0 balance after issuance", IERC20(token0).balanceOf(address(vault)));
         console.log("token4 balance after issuance", IERC20(token4).balanceOf(address(crossChainVault)));
         console.log("issuance complete token count", mainChainStorage.getIssuanceCompletedTokensCount(1));

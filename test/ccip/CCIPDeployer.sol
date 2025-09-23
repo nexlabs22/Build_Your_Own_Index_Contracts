@@ -539,6 +539,8 @@ contract CCIPDeployer is
         orderManager.setFactoryAddress(address(factory));
         orderManager.setMainChainFactory(payable(address(mainChainFactory)));
         orderManager.setOperator(address(factory), true);
+        orderManager.setOperator(address(coreSender), true);
+        orderManager.setOperator(address(mainChainFactory), true);
         indexFactoryStorage.setOrderManager(address(orderManager));
         indexFactoryStorage.setIndexFactory(address(factory));
         mainChainStorage.setCrossChainToken(

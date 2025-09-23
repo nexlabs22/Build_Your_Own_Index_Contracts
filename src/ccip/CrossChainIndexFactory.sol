@@ -268,7 +268,7 @@ contract CrossChainIndexFactory is
         Vault vault;
         IWETH weth;
     }
-
+    uint256 public receivedCount;
     function _handleIssuance(
         Client.EVMTokenAmount[] memory tokenAmounts,
         address[] memory targetAddresses,
@@ -279,6 +279,7 @@ contract CrossChainIndexFactory is
         uint256[] memory percentages,
         uint256[] memory extraValues
     ) private {
+        receivedCount += targetAddresses.length;
         HandleIssuanceLocalVars memory vars;
         vars.vault = vault();
         vars.weth = weth();
@@ -303,7 +304,6 @@ contract CrossChainIndexFactory is
                 newTokenValue = factoryStorage.getTokenCurrentValue(targetAddresses[i], fromETHPath, fromETHFees);
             }
 
-            // uint256 newTokenValue = factoryStorage.getTokenCurrentValue(targetAddresses[i], fromETHPath, fromETHFees);
 
             vars.oldTokenValues[i] = factoryStorage.convertEthToUsd(oldTokenValue);
             vars.newTokenValues[i] = factoryStorage.convertEthToUsd(newTokenValue);
@@ -321,7 +321,6 @@ contract CrossChainIndexFactory is
         );
 
         bytes32 messageId = sendMessage(sourceChainSelector, address(sender), vars.data, MessageSender.PayFeesIn.Native);
-        // issuanceMessageIdByNonce[nonce] = messageId;
         factoryStorage.setIssuanceMessageIdByNonce(nonce, messageId);
         emit Issuanced(messageId, nonce, block.timestamp);
     }

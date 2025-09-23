@@ -270,6 +270,7 @@ contract MainChainFactory is
         //         uint256 chainWethAmount = (wethAmount * totalShares) / 100e18;
         //         //get the fee
         //         uint256 fee = coreSender.calculateIssuanceFee(
+        //             _indexToken,
         //             chainSelectors[i],
         //             chainWethAmount
         //         );
@@ -560,6 +561,7 @@ contract MainChainFactory is
 
         weth.approve(address(coreSender), chainWethAmount);
         coreSender.sendIssuanceRequest(
+            _indexToken,
             chainWethAmount,
             _issuanceNonce,
             _chainSelector,
