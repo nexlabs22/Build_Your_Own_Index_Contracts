@@ -17,7 +17,7 @@ error InvalidAddress();
 error ZeroAmount();
 error UnsettledRound(uint256 previousRoundId);
 
-contract IndexFactoryStorage is Initializable, OwnableUpgradeable {
+contract BackedFiStorage is Initializable, OwnableUpgradeable {
     IndexToken public indexToken;
     Vault public vault;
     IndexFactory public indexFactory;
@@ -450,11 +450,16 @@ contract IndexFactoryStorage is Initializable, OwnableUpgradeable {
         address vaultAddr = indexTokenToVault[_indexToken];
         require(vaultAddr != address(0), "vault not set");
 
-        uint256 tokens = functionsOracle.totalCurrentList(_indexToken);
+        (, address[] memory underlyingAssets,) =
+            functionsOracle.getCurrentProviderIndexData(_indexToken, functionsOracle.currentFilledCount(_indexToken), 3);
+
+        uint256 tokens = underlyingAssets.length;
+        // uint256 tokens = functionsOracle.totalCurrentList(_indexToken);
         require(_prices.length >= tokens, "prices length too small");
 
         for (uint256 i = 0; i < tokens;) {
-            address token = functionsOracle.currentList(_indexToken, i);
+            address token = underlyingAssets[i];
+            // address token = functionsOracle.currentList(_indexToken, i);
             uint256 price = _prices[i]; // 1e18-scaled
             if (price != 0) {
                 uint256 balance = IERC20(token).balanceOf(vaultAddr); // assumes token has 18 decimals

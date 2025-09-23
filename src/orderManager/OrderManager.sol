@@ -179,7 +179,7 @@ contract OrderManager is Initializable, OwnableUpgradeable {
         );
     }
 
-    function redemption(
+    function completeRedemption(
         uint256 _redemptionNonce,
         address _indexToken,
         address _underlyingTokenAddress,

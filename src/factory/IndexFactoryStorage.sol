@@ -10,8 +10,7 @@ import "../utils/proposable/ProposableOwnableUpgradeable.sol";
 // error ZeroAddress();
 // error WrongETHAmount();
 
-contract IndexFactoryStorage is Initializable, ProposableOwnableUpgradeable  {
-
+contract IndexFactoryStorage is Initializable, ProposableOwnableUpgradeable {
     address public indexFactory;
     address public indexFactoryBalancer;
     address public orderManager;
@@ -34,8 +33,7 @@ contract IndexFactoryStorage is Initializable, ProposableOwnableUpgradeable  {
     mapping(address => mapping(uint256 => uint256)) public issuanceCompletedAssetsCount; // issuanceNonce => count
     mapping(address => mapping(uint256 => uint256)) public redemptionCompletedAssetsCount; // redemptionNonce => count
 
-    function initialize(
-    ) external initializer {
+    function initialize() external initializer {
         __Ownable_init(msg.sender);
     }
 
@@ -43,7 +41,6 @@ contract IndexFactoryStorage is Initializable, ProposableOwnableUpgradeable  {
     constructor() {
         _disableInitializers();
     }
-
 
     function setIndexFactory(address _indexFactory) external {
         // if (_indexFactory == address(0)) revert ZeroAddress();
@@ -59,7 +56,6 @@ contract IndexFactoryStorage is Initializable, ProposableOwnableUpgradeable  {
         // if (_orderManager == address(0)) revert ZeroAddress();
         orderManager = _orderManager;
     }
-
 
     // update issuance requester mapping
     function setIssuanceRequester(address _user, uint256 _issuanceNonce, address _requester) external {

@@ -5,7 +5,7 @@ import "forge-std/Test.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
 import {BackedFiFactory} from "../../src/backedfi/BackedFiFactory.sol";
-import {IndexFactoryStorage} from "../../src/backedfi/IndexFactoryStorage.sol";
+import {BackedFiStorage} from "../../src/backedfi/BackedFiStorage.sol";
 import {StagingCustodyAccount} from "../../src/backedfi/StagingCustodyAccount.sol";
 import {FunctionsOracle} from "../../src/oracle/FunctionsOracle.sol";
 import {TestERC20} from "../utils/TestERC20.sol";
@@ -23,11 +23,11 @@ contract BackedFiFactoryTest is Test {
     TestERC20 indexToken;
 
     BackedFiFactory backedFiImpl;
-    IndexFactoryStorage storageImpl;
+    BackedFiStorage storageImpl;
     StagingCustodyAccount scaImpl;
 
     BackedFiFactory backedFi;
-    IndexFactoryStorage storage_;
+    BackedFiStorage storage_;
     StagingCustodyAccount sca;
 
     FunctionsOracle oracle;
@@ -43,11 +43,11 @@ contract BackedFiFactoryTest is Test {
 
         oracle = new FunctionsOracle();
 
-        storageImpl = new IndexFactoryStorage();
+        storageImpl = new BackedFiStorage();
         scaImpl = new StagingCustodyAccount();
         backedFiImpl = new BackedFiFactory();
 
-        storage_ = IndexFactoryStorage(address(new ERC1967Proxy(address(storageImpl), "")));
+        storage_ = BackedFiStorage(address(new ERC1967Proxy(address(storageImpl), "")));
         sca = StagingCustodyAccount(address(new ERC1967Proxy(address(scaImpl), "")));
         backedFi = BackedFiFactory(address(new ERC1967Proxy(address(backedFiImpl), "")));
 

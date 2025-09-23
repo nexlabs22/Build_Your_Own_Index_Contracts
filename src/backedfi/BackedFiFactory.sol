@@ -9,7 +9,8 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 import {StagingCustodyAccount} from "./StagingCustodyAccount.sol";
-import {IndexFactoryStorage} from "./IndexFactoryStorage.sol";
+// import {IndexFactoryStorage} from "./IndexFactoryStorage.sol";
+import {BackedFiStorage} from "./BackedFiStorage.sol";
 import {FunctionsOracle} from "./FunctionsOracle.sol";
 import {IndexToken} from "../token/IndexToken.sol";
 import {FeeCalculation} from "../libraries/FeeCalculation.sol";
@@ -20,7 +21,7 @@ error WrongETHAmount();
 contract BackedFiFactory is Initializable, OwnableUpgradeable, PausableUpgradeable, ReentrancyGuardUpgradeable {
     using SafeERC20 for IERC20;
 
-    IndexFactoryStorage factoryStorage;
+    BackedFiStorage backedFiStorage;
     FunctionsOracle functionsOracle;
 
     uint256 public issuanceNonce;
@@ -55,10 +56,10 @@ contract BackedFiFactory is Initializable, OwnableUpgradeable, PausableUpgradeab
         _;
     }
 
-    function initialize(address _indexFactoryStorage) external initializer {
-        require(_indexFactoryStorage != address(0), "Invalid Address");
+    function initialize(address _backedFiStorage) external initializer {
+        require(_backedFiStorage != address(0), "Invalid _backedFiStorage Address");
 
-        factoryStorage = IndexFactoryStorage(_indexFactoryStorage);
+        backedFiStorage = BackedFiStorage(_backedFiStorage);
 
         __Ownable_init(msg.sender);
         __Pausable_init();
@@ -79,22 +80,22 @@ contract BackedFiFactory is Initializable, OwnableUpgradeable, PausableUpgradeab
     {
         if (_inputAmount == 0) revert ZeroAmount();
 
-        IERC20(factoryStorage.usdc()).safeTransferFrom(msg.sender, address(factoryStorage.sca()), _inputAmount);
+        IERC20(backedFiStorage.usdc()).safeTransferFrom(msg.sender, address(backedFiStorage.sca()), _inputAmount);
 
         uint256 nonce = ++issuanceNonce;
-        factoryStorage.setIssuanceInputAmount(_indexToken, nonce, _inputAmount);
-        factoryStorage.addIssuanceForCurrentRound(msg.sender, _inputAmount);
-        factoryStorage.setIssuanceRoundToNonce(_indexToken, nonce, factoryStorage.issuanceRoundId(_indexToken));
+        backedFiStorage.setIssuanceInputAmount(_indexToken, nonce, _inputAmount);
+        backedFiStorage.addIssuanceForCurrentRound(msg.sender, _inputAmount);
+        backedFiStorage.setIssuanceRoundToNonce(_indexToken, nonce, backedFiStorage.issuanceRoundId(_indexToken));
 
-        uint256 currentRound = factoryStorage.issuanceRoundId(_indexToken);
-        factoryStorage.recordIssuanceNonce(_indexToken, currentRound, nonce);
+        uint256 currentRound = backedFiStorage.issuanceRoundId(_indexToken);
+        backedFiStorage.recordIssuanceNonce(_indexToken, currentRound, nonce);
 
         emit RequestIssuance(
             _indexToken,
-            factoryStorage.issuanceRoundId(_indexToken),
+            backedFiStorage.issuanceRoundId(_indexToken),
             nonce,
             msg.sender,
-            address(factoryStorage.usdc()),
+            address(backedFiStorage.usdc()),
             _inputAmount,
             block.timestamp
         );
@@ -110,24 +111,24 @@ contract BackedFiFactory is Initializable, OwnableUpgradeable, PausableUpgradeab
     {
         if (_amount == 0) revert ZeroAmount();
 
-        IERC20(_indexToken).safeTransferFrom(msg.sender, address(factoryStorage.sca()), _amount);
+        IERC20(_indexToken).safeTransferFrom(msg.sender, address(backedFiStorage.sca()), _amount);
 
         nonce = ++redemptionNonce;
 
-        factoryStorage.setRedemptionInputAmount(_indexToken, nonce, _amount);
-        factoryStorage.addRedemptionForCurrentRound(msg.sender, _amount);
-        factoryStorage.setRedemptionRoundToNonce(_indexToken, nonce, factoryStorage.redemptionRoundId(_indexToken));
-        factoryStorage.setOrdersBurnPercent(_indexToken, factoryStorage.redemptionRoundId(_indexToken), _burnPercent);
+        backedFiStorage.setRedemptionInputAmount(_indexToken, nonce, _amount);
+        backedFiStorage.addRedemptionForCurrentRound(msg.sender, _amount);
+        backedFiStorage.setRedemptionRoundToNonce(_indexToken, nonce, backedFiStorage.redemptionRoundId(_indexToken));
+        backedFiStorage.setOrdersBurnPercent(_indexToken, backedFiStorage.redemptionRoundId(_indexToken), _burnPercent);
 
-        uint256 currentRedemRound = factoryStorage.redemptionRoundId(_indexToken);
-        factoryStorage.recordRedemptionNonce(_indexToken, currentRedemRound, nonce);
+        uint256 currentRedemRound = backedFiStorage.redemptionRoundId(_indexToken);
+        backedFiStorage.recordRedemptionNonce(_indexToken, currentRedemRound, nonce);
 
         emit RequestRedemption(
             _indexToken,
-            factoryStorage.redemptionRoundId(_indexToken),
+            backedFiStorage.redemptionRoundId(_indexToken),
             nonce,
             msg.sender,
-            address(factoryStorage.usdc()),
+            address(backedFiStorage.usdc()),
             _amount,
             block.timestamp
         );

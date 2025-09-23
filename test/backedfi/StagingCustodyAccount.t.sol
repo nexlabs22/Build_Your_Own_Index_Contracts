@@ -6,7 +6,8 @@ import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.s
 
 // real contracts from your repo
 import {StagingCustodyAccount} from "../../src/backedfi/StagingCustodyAccount.sol";
-import {IndexFactoryStorage} from "../../src/backedfi/IndexFactoryStorage.sol";
+// import {IndexFactoryStorage} from "../../src/backedfi/IndexFactoryStorage.sol";
+import {BackedFiStorage} from "../../src/backedfi/BackedFiStorage.sol";
 import {FunctionsOracle} from "../../src/oracle/FunctionsOracle.sol";
 import {TestERC20} from "../utils/TestERC20.sol";
 import "../OlympixUnitTest.sol";
@@ -30,11 +31,11 @@ contract StagingCustodyAccountTest is Test {
 
     // implementations
     StagingCustodyAccount scaImpl;
-    IndexFactoryStorage storageImpl;
+    BackedFiStorage storageImpl;
 
     // proxies / instances
     StagingCustodyAccount sca;
-    IndexFactoryStorage storage_;
+    BackedFiStorage storage_;
     FunctionsOracle oracle; // deployed as-is (not proxied here)
 
     function setUp() public {
@@ -52,11 +53,11 @@ contract StagingCustodyAccountTest is Test {
         oracle = new FunctionsOracle();
 
         // implementations
-        storageImpl = new IndexFactoryStorage();
+        storageImpl = new BackedFiStorage();
         scaImpl = new StagingCustodyAccount();
 
         // proxies
-        storage_ = IndexFactoryStorage(address(new ERC1967Proxy(address(storageImpl), "")));
+        storage_ = BackedFiStorage(address(new ERC1967Proxy(address(storageImpl), "")));
         sca = StagingCustodyAccount(address(new ERC1967Proxy(address(scaImpl), "")));
 
         // init storage
@@ -94,15 +95,15 @@ contract StagingCustodyAccountTest is Test {
 
     function testSetIndexFactoryStorageAddress_OnlyOwner() public {
         // deploy another storage proxy just to switch to
-        IndexFactoryStorage storage2 = IndexFactoryStorage(address(new ERC1967Proxy(address(storageImpl), "")));
+        BackedFiStorage storage2 = BackedFiStorage(address(new ERC1967Proxy(address(storageImpl), "")));
         vm.startPrank(owner_);
         storage2.initialize(address(0xDEAD), address(oracle), address(sca), nexBot, address(usdc));
-        sca.setIndexFactoryStorageAddress(address(storage2));
+        sca.setBackedFiStorageAddress(address(storage2));
         vm.stopPrank();
 
         // non-owner cannot
         vm.expectRevert(); // OwnableUpgradeable
-        sca.setIndexFactoryStorageAddress(address(storage_));
+        sca.setBackedFiStorageAddress(address(storage_));
     }
 
     // ============ withdrawForPurchase ============
@@ -285,7 +286,7 @@ contract StagingCustodyAccountTest is Test {
         vm.startPrank(owner_);
         // Should revert with ZeroAddress if given 0 address
         vm.expectRevert(ZeroAddress.selector);
-        sca.setIndexFactoryStorageAddress(address(0));
+        sca.setBackedFiStorageAddress(address(0));
         vm.stopPrank();
     }
 
