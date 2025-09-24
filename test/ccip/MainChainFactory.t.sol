@@ -364,8 +364,29 @@ contract CCIPFactoryTest is Test, CCIPDeployer {
         console.log("send count", coreSender.sentCount());
         console.log("receive count", crossChainIndexFactory.receivedCount());
         console.log("token0 balance after issuance", IERC20(token0).balanceOf(address(vault)));
+        console.log("token1 balance after issuance", IERC20(token1).balanceOf(address(vault)));
+        console.log("token2 balance after issuance", IERC20(token2).balanceOf(address(vault)));
+        console.log("token3 balance after issuance", IERC20(token3).balanceOf(address(vault)));
         console.log("token4 balance after issuance", IERC20(token4).balanceOf(address(crossChainVault)));
         console.log("issuance complete token count", mainChainStorage.getIssuanceCompletedTokensCount(1));
+        console.log("index token balance after issuance", indexToken.balanceOf(address(this)));
+        // console.log("token0", address(token0));
+        // console.log("token0", address(token1));
+        // console.log("token0", address(token2));
+        // console.log("token0", address(token3));
+        // address[] memory tokens = functionsOracle.allCurrentChainSelectorTokens(
+        //     address(indexToken),
+        //     1
+        // );
+        // console.log("token1", tokens[0]);
+        // console.log("token1", tokens[1]);
+        // console.log("token1", tokens[2]);
+        // console.log("token1", tokens[3]);
+        uint burnAmount = indexToken.balanceOf(address(this));
+        indexToken.approve(address(factory), burnAmount);
+        // redeem all index tokens
+        // factory.redemption(address(indexToken), indexToken.balanceOf(address(this)));
+
         // console.log("main chain storage", address(coreSender.mainChainStorage()));
         // console.log("main chain factory", (mainChainStorage.mainChainFactory()));
     }

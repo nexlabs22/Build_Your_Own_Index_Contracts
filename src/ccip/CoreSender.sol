@@ -310,20 +310,14 @@ contract CoreSender is Initializable, CCIPReceiver, ProposableOwnableUpgradeable
             mainChainStorage.issuanceIncreaseCompletedTokensCount(requestIssuanceNonce);
             // call the order manager here
             orderManager.completeIssuance(
+                2, // provider index
                 requestIssuanceNonce, 
                 address(indexToken), 
                 tokenAddresses[i], 
                 oldTokenValue,
                 newTokenValue
             );
-            // ....
         }
-        // if (
-        //     // totalCurrentList
-        //     mainChainStorage.getIssuanceCompletedTokensCount(requestIssuanceNonce) == totalCurrentList
-        // ) {
-        //     completeIssuanceRequest(requestIssuanceNonce, messageId);
-        // }
     }
 
     function sendRedemptionRequest(uint256 _burnPercent, uint256 _redemptionNonce, uint64 _chainSelector)

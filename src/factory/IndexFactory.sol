@@ -19,7 +19,12 @@ error ZeroAmount();
 error ZeroAddress();
 error WrongETHAmount();
 
-contract IndexFactory is Initializable, OwnableUpgradeable, PausableUpgradeable, ReentrancyGuardUpgradeable {
+contract IndexFactory is
+    Initializable,
+    OwnableUpgradeable,
+    PausableUpgradeable,
+    ReentrancyGuardUpgradeable
+{
     using SafeERC20 for IERC20;
 
     OrderManager public orderManager;
@@ -51,12 +56,19 @@ contract IndexFactory is Initializable, OwnableUpgradeable, PausableUpgradeable,
 
     uint256 private constant SHARE_DENOMINATOR = 100e18;
 
-    function initialize(address _orderManager, address _functionsOracle, address _factoryStorage)
-        external
-        initializer
-    {
-        require(_orderManager != address(0), "Invalid address for _orderManager");
-        require(_functionsOracle != address(0), "Invalid address for _functionsOracle");
+    function initialize(
+        address _orderManager,
+        address _functionsOracle,
+        address _factoryStorage
+    ) external initializer {
+        require(
+            _orderManager != address(0),
+            "Invalid address for _orderManager"
+        );
+        require(
+            _functionsOracle != address(0),
+            "Invalid address for _functionsOracle"
+        );
         orderManager = OrderManager(_orderManager);
         functionsOracle = FunctionsOracle(_functionsOracle);
         factoryStorage = IndexFactoryStorage(_factoryStorage);
@@ -75,32 +87,52 @@ contract IndexFactory is Initializable, OwnableUpgradeable, PausableUpgradeable,
     // === External Functions ==
     // =========================
 
-    function issuanceIndexTokens(address indexToken, uint256 amount)
-        public
-        payable
-        whenNotPaused
-        nonReentrant
-        returns (uint256 orderNonce)
-    {
+    function issuanceIndexTokens(
+        address indexToken,
+        uint256 amount
+    ) public payable whenNotPaused nonReentrant returns (uint256 orderNonce) {
         _validateIssuanceInputs(indexToken, amount);
 
         address usdc = orderManager.usdcAddress();
-        uint256 usdcFee = FeeCalculation.calculateFee(amount, factoryStorage.feeRate());
+        uint256 usdcFee = FeeCalculation.calculateFee(
+            amount,
+            factoryStorage.feeRate()
+        );
 
         _collectUsdcAndFee(usdc, amount, usdcFee);
-        factoryStorage.setIssuanceRequester(indexToken, issuanceNonce, msg.sender);
+        factoryStorage.setIssuanceRequester(
+            indexToken,
+            issuanceNonce,
+            msg.sender
+        );
 
         uint256 totalCurrentList = _requireUnderlyings(indexToken);
         _approveForOrderManager(usdc, amount);
 
-        uint256 currentFilledCount = functionsOracle.currentFilledCount(indexToken);
-        uint64[] memory currentProviderIndexes =
-            functionsOracle.getCurrentProviderIndexes(indexToken, currentFilledCount);
+        uint256 currentFilledCount = functionsOracle.currentFilledCount(
+            indexToken
+        );
+        uint64[] memory currentProviderIndexes = functionsOracle
+            .getCurrentProviderIndexes(indexToken, currentFilledCount);
         for (uint256 i = 0; i < currentProviderIndexes.length; i++) {
-            (uint256 totalShares, address[] memory tokens, uint256[] memory marketShares) =
-                functionsOracle.getCurrentProviderIndexData(indexToken, currentFilledCount, currentProviderIndexes[i]);
+            (
+                uint256 totalShares,
+                address[] memory tokens,
+                uint256[] memory marketShares
+            ) = functionsOracle.getCurrentProviderIndexData(
+                    indexToken,
+                    currentFilledCount,
+                    currentProviderIndexes[i]
+                );
             uint256 share = (amount * totalShares) / SHARE_DENOMINATOR;
-            orderNonce = _createBuyOrder(issuanceNonce, indexToken, usdc, address(0), currentProviderIndexes[i], share);
+            orderNonce = _createBuyOrder(
+                issuanceNonce,
+                indexToken,
+                usdc,
+                address(0),
+                currentProviderIndexes[i],
+                share
+            );
             // emit Issuanced(issuanceNonce, msg.sender, indexToken, usdc, underlyings[i], parts[i]);
         }
 
@@ -117,13 +149,10 @@ contract IndexFactory is Initializable, OwnableUpgradeable, PausableUpgradeable,
          */
     }
 
-    function redemption(address indexToken, uint256 amount)
-        external
-        payable
-        whenNotPaused
-        nonReentrant
-        returns (uint256 orderNonce)
-    {
+    function redemption(
+        address indexToken,
+        uint256 amount
+    ) external payable whenNotPaused nonReentrant returns (uint256 orderNonce) {
         _validateRedemptionInputs(indexToken, amount);
 
         // Pull and burn
@@ -131,19 +160,61 @@ contract IndexFactory is Initializable, OwnableUpgradeable, PausableUpgradeable,
         uint256 burnPercent = _computeBurnPercent(indexToken, amount);
         IndexToken(indexToken).burn(address(this), amount);
 
+        uint256 currentFilledCount = functionsOracle.currentFilledCount(
+            indexToken
+        );
+        uint64[] memory currentProviderIndexes = functionsOracle
+            .getCurrentProviderIndexes(indexToken, currentFilledCount);
+        for (uint256 i = 0; i < currentProviderIndexes.length; i++) {
+            // (
+            //     uint256 totalShares,
+            //     address[] memory tokens,
+            //     uint256[] memory marketShares
+            // ) = functionsOracle.getCurrentProviderIndexData(
+            //         indexToken,
+            //         currentFilledCount,
+            //         currentProviderIndexes[i]
+            //     );
+            // uint256 share = (amount * totalShares) / SHARE_DENOMINATOR;
+            // orderNonce = _createBuyOrder(
+            //     issuanceNonce,
+            //     indexToken,
+            //     usdc,
+            //     address(0),
+            //     currentProviderIndexes[i],
+            //     share
+            // );
+            address usdc = orderManager.usdcAddress();
+            orderNonce = _createSellOrder(
+                redemptionNonce,
+                indexToken,
+                address(0), // input token
+                usdc, // output token
+                currentProviderIndexes[i],
+                0,
+                burnPercent
+            );
+        /**
         uint256 totalCurrentList = _requireUnderlyings(indexToken);
         address vaultAddr = _getVault(indexToken);
         address usdc = orderManager.usdcAddress();
 
         for (uint256 i = 0; i < totalCurrentList; i++) {
             address underlying = functionsOracle.currentList(indexToken, i);
-            require(underlying != address(0), "IndexFactory: invalid underlying");
+            require(
+                underlying != address(0),
+                "IndexFactory: invalid underlying"
+            );
 
             uint64 providerIndex = providerIndexes[underlying];
             uint256 withdrawn = 0;
 
             if (providerIndex != 2) {
-                withdrawn = _withdrawProRataFromVault(vaultAddr, underlying, burnPercent);
+                withdrawn = _withdrawProRataFromVault(
+                    vaultAddr,
+                    underlying,
+                    burnPercent
+                );
                 if (withdrawn > 0) {
                     _approveExactForOrderManager(underlying, withdrawn);
                 }
@@ -158,11 +229,22 @@ contract IndexFactory is Initializable, OwnableUpgradeable, PausableUpgradeable,
                 (providerIndex == 2) ? 0 : withdrawn,
                 burnPercent
             );
-
-            emit Redemption(redemptionNonce, msg.sender, indexToken, underlying, address(0), withdrawn);
+            */
+            // emit Redemption(
+            //     redemptionNonce,
+            //     msg.sender,
+            //     indexToken,
+            //     underlying,
+            //     address(0),
+            //     withdrawn
+            // );
         }
 
-        factoryStorage.setRedemptionRequester(indexToken, redemptionNonce, msg.sender);
+        factoryStorage.setRedemptionRequester(
+            indexToken,
+            redemptionNonce,
+            msg.sender
+        );
         redemptionNonce += 1;
         return orderNonce;
     }
@@ -180,16 +262,31 @@ contract IndexFactory is Initializable, OwnableUpgradeable, PausableUpgradeable,
         uint256 _newTokenValue
     ) public {
         // storing data in the mapping
-        factoryStorage.setOldTokenValue(msg.sender, _underlyingTokenAddress, _issuanceNonce, _oldTokenValue);
-        factoryStorage.setNewTokenValue(msg.sender, _underlyingTokenAddress, _issuanceNonce, _newTokenValue);
+        factoryStorage.setOldTokenValue(
+            _indexToken,
+            _underlyingTokenAddress,
+            _issuanceNonce,
+            _oldTokenValue
+        );
+        factoryStorage.setNewTokenValue(
+            _indexToken,
+            _underlyingTokenAddress,
+            _issuanceNonce,
+            _newTokenValue
+        );
 
         // incrementing issuance completed count
-        factoryStorage.incrementIssuanceCompletedAssetsCount(_indexToken, _issuanceNonce);
+        factoryStorage.incrementIssuanceCompletedAssetsCount(
+            _indexToken,
+            _issuanceNonce
+        );
 
         // calling complete issuance
         if (
-            factoryStorage.issuanceCompletedAssetsCount(_indexToken, _issuanceNonce)
-                == functionsOracle.totalCurrentList(_indexToken)
+            factoryStorage.issuanceCompletedAssetsCount(
+                _indexToken,
+                _issuanceNonce
+            ) == functionsOracle.totalCurrentList(_indexToken)
         ) {
             completeIssuance(_issuanceNonce, _indexToken);
         }
@@ -203,48 +300,95 @@ contract IndexFactory is Initializable, OwnableUpgradeable, PausableUpgradeable,
     ) public {
         // storing data in the mapping
         factoryStorage.setRedemptionOutputValuePerToken(
-            _redemptionNonce, _indexToken, _underlyingTokenAddress, _outputValue
+            _redemptionNonce,
+            _indexToken,
+            _underlyingTokenAddress,
+            _outputValue
         );
 
         // incrementing redemption completed count
-        factoryStorage.incrementRedemptionCompletedAssetsCount(_indexToken, _redemptionNonce);
+        factoryStorage.incrementRedemptionCompletedAssetsCount(
+            _indexToken,
+            _redemptionNonce
+        );
 
         // calling complete redemption
         if (
-            factoryStorage.redemptionCompletedAssetsCount(_indexToken, _redemptionNonce)
-                == functionsOracle.totalCurrentList(_indexToken)
+            factoryStorage.redemptionCompletedAssetsCount(
+                _indexToken,
+                _redemptionNonce
+            ) == functionsOracle.totalCurrentList(_indexToken)
         ) {
             completeRedemption(_redemptionNonce, _indexToken);
         }
     }
 
-    function completeIssuance(uint256 _issuanceNonce, address _indexToken) public {
+    function completeIssuance(
+        uint256 _issuanceNonce,
+        address _indexToken
+    ) public {
         uint256 totalOldValues;
         uint256 totalNewValues;
 
         for (uint256 i = 0; i <= _issuanceNonce; i++) {
-            address _underlyingTokenAddress = functionsOracle.currentList(_indexToken, i);
-            totalOldValues += factoryStorage.oldTokenValue(_indexToken, _underlyingTokenAddress, i);
-            totalNewValues += factoryStorage.newTokenValue(_indexToken, _underlyingTokenAddress, i);
+            address _underlyingTokenAddress = functionsOracle.currentList(
+                _indexToken,
+                i
+            );
+            totalOldValues += factoryStorage.oldTokenValue(
+                _indexToken,
+                _underlyingTokenAddress,
+                i
+            );
+            totalNewValues += factoryStorage.newTokenValue(
+                _indexToken,
+                _underlyingTokenAddress,
+                i
+            );
         }
 
-        require(totalNewValues > totalOldValues, "IndexFactory: no new tokens to mint");
+        require(
+            totalNewValues > totalOldValues,
+            "IndexFactory: no new tokens to mint"
+        );
 
-        // calculate the mint amount
         uint256 totalSupply = IERC20(_indexToken).totalSupply();
-        uint256 newTotalSupply = (totalSupply * totalNewValues) / totalOldValues;
-        uint256 mintAmount = newTotalSupply - totalSupply;
+        uint256 mintAmount;
+        if (totalSupply == 0) {
+            mintAmount = (totalNewValues) / 100;
+        } else {
+            uint256 newTotalSupply = (totalSupply * totalNewValues) /
+                totalOldValues;
+            mintAmount = newTotalSupply - totalSupply;
+        }
+        require(mintAmount > 0, "IndexFactory: zero mint amount");
+        // // calculate the mint amount
+        // uint256 totalSupply = IERC20(_indexToken).totalSupply();
+        // uint256 newTotalSupply = (totalSupply * totalNewValues) / totalOldValues;
+        // uint256 mintAmount = newTotalSupply - totalSupply;
 
         // mint index token for requester
-        address requester = factoryStorage.issuanceRequester(_indexToken, _issuanceNonce);
+        address requester = factoryStorage.issuanceRequester(
+            _indexToken,
+            _issuanceNonce
+        );
         require(requester != address(0), "IndexFactory: invalid requester");
         IndexToken(_indexToken).mint(requester, mintAmount);
     }
 
-    function completeRedemption(uint256 _redemptionNonce, address _indexToken) public {
-        uint256 totalOutputValue = factoryStorage.redemptionTotalOutputValue(_indexToken, _redemptionNonce);
+    function completeRedemption(
+        uint256 _redemptionNonce,
+        address _indexToken
+    ) public {
+        uint256 totalOutputValue = factoryStorage.redemptionTotalOutputValue(
+            _indexToken,
+            _redemptionNonce
+        );
         require(totalOutputValue > 0, "IndexFactory: no output value");
-        address requester = factoryStorage.redemptionRequester(_indexToken, _redemptionNonce);
+        address requester = factoryStorage.redemptionRequester(
+            _indexToken,
+            _redemptionNonce
+        );
         require(requester != address(0), "IndexFactory: invalid requester");
         address usdc = orderManager.usdcAddress();
         IERC20(usdc).safeTransfer(requester, totalOutputValue);
@@ -253,7 +397,10 @@ contract IndexFactory is Initializable, OwnableUpgradeable, PausableUpgradeable,
     // =========================
     // ========= Admin =========
     // =========================
-    function setSupportedIndexToken(address token, bool status) external onlyOwner {
+    function setSupportedIndexToken(
+        address token,
+        bool status
+    ) external onlyOwner {
         if (token == address(0)) revert ZeroAddress();
         supportedIndexTokens[token] = status;
         emit SupportedIndexTokenUpdated(token, status);
@@ -264,12 +411,18 @@ contract IndexFactory is Initializable, OwnableUpgradeable, PausableUpgradeable,
         functionsOracle = FunctionsOracle(_oracle);
     }
 
-    function setProviderIndex(address token, uint64 providerIndex) external onlyOwner {
+    function setProviderIndex(
+        address token,
+        uint64 providerIndex
+    ) external onlyOwner {
         if (token == address(0)) revert ZeroAddress();
         providerIndexes[token] = providerIndex;
     }
 
-    function setProviderIndexes(address[] calldata tokens, uint64[] calldata providerIndexes_) external onlyOwner {
+    function setProviderIndexes(
+        address[] calldata tokens,
+        uint64[] calldata providerIndexes_
+    ) external onlyOwner {
         require(tokens.length == providerIndexes_.length, "length mismatch");
         for (uint256 i = 0; i < tokens.length; i++) {
             if (tokens[i] == address(0)) revert ZeroAddress();
@@ -280,26 +433,45 @@ contract IndexFactory is Initializable, OwnableUpgradeable, PausableUpgradeable,
     // ===================================
     // =========== Internals =============
     // ===================================
-    function _validateIssuanceInputs(address indexToken, uint256 amount) private view {
+    function _validateIssuanceInputs(
+        address indexToken,
+        uint256 amount
+    ) private view {
         if (amount == 0) revert ZeroAmount();
         if (indexToken == address(0)) revert ZeroAddress();
         // require(supportedIndexTokens[indexToken], "IndexFactory: unsupported index token");
     }
 
-    function _validateRedemptionInputs(address indexToken, uint256 amount) private view {
+    function _validateRedemptionInputs(
+        address indexToken,
+        uint256 amount
+    ) private view {
         if (amount == 0) revert ZeroAmount();
         if (indexToken == address(0)) revert ZeroAddress();
-        require(supportedIndexTokens[indexToken], "IndexFactory: unsupported index token");
+        // require(
+        //     supportedIndexTokens[indexToken],
+        //     "IndexFactory: unsupported index token"
+        // );
     }
 
-    function _collectUsdcAndFee(address usdc, uint256 amount, uint256 usdcFee) private {
+    function _collectUsdcAndFee(
+        address usdc,
+        uint256 amount,
+        uint256 usdcFee
+    ) private {
         IERC20(usdc).safeTransferFrom(msg.sender, address(this), amount);
         if (usdcFee > 0) {
-            IERC20(usdc).safeTransferFrom(msg.sender, factoryStorage.feeReceiver(), usdcFee);
+            IERC20(usdc).safeTransferFrom(
+                msg.sender,
+                factoryStorage.feeReceiver(),
+                usdcFee
+            );
         }
     }
 
-    function _requireUnderlyings(address indexToken) private view returns (uint256 totalCurrentList) {
+    function _requireUnderlyings(
+        address indexToken
+    ) private view returns (uint256 totalCurrentList) {
         totalCurrentList = functionsOracle.totalCurrentList(indexToken);
         require(totalCurrentList > 0, "IndexFactory: no underlyings");
     }
@@ -309,12 +481,19 @@ contract IndexFactory is Initializable, OwnableUpgradeable, PausableUpgradeable,
         IERC20(token).approve(address(orderManager), amount);
     }
 
-    function _approveExactForOrderManager(address token, uint256 amount) private {
+    function _approveExactForOrderManager(
+        address token,
+        uint256 amount
+    ) private {
         IERC20(token).approve(address(orderManager), 0);
         IERC20(token).approve(address(orderManager), amount);
     }
 
-    function _calcProRataUSDC(address indexToken, uint256 amount, uint256 totalList)
+    function _calcProRataUSDC(
+        address indexToken,
+        uint256 amount,
+        uint256 totalList
+    )
         private
         view
         returns (address[] memory underlyings, uint256[] memory parts)
@@ -325,10 +504,16 @@ contract IndexFactory is Initializable, OwnableUpgradeable, PausableUpgradeable,
         uint256 allocated;
         for (uint256 i = 0; i < totalList; i++) {
             address underlying = functionsOracle.currentList(indexToken, i);
-            require(underlying != address(0), "IndexFactory: invalid underlying");
+            require(
+                underlying != address(0),
+                "IndexFactory: invalid underlying"
+            );
             underlyings[i] = underlying;
 
-            uint256 marketShares = functionsOracle.tokenCurrentMarketShare(indexToken, underlying);
+            uint256 marketShares = functionsOracle.tokenCurrentMarketShare(
+                indexToken,
+                underlying
+            );
             uint256 share = (amount * marketShares) / SHARE_DENOMINATOR;
 
             if (i == totalList - 1) {
@@ -340,21 +525,27 @@ contract IndexFactory is Initializable, OwnableUpgradeable, PausableUpgradeable,
         }
     }
 
-    function _computeBurnPercent(address indexToken, uint256 amount) private view returns (uint256 burnPercent) {
+    function _computeBurnPercent(
+        address indexToken,
+        uint256 amount
+    ) private view returns (uint256 burnPercent) {
         uint256 totalSupply = IERC20(indexToken).totalSupply();
         require(totalSupply > 0, "IndexFactory: zero supply");
-        burnPercent = (amount * 1e18) / totalSupply; // 1e18 scaled
+        burnPercent = (amount * 100e18) / totalSupply; // 1e18 scaled
     }
 
-    function _getVault(address indexToken) private view returns (address vaultAddr) {
+    function _getVault(
+        address indexToken
+    ) private view returns (address vaultAddr) {
         vaultAddr = factoryStorage.indexTokenToVault(indexToken);
         require(vaultAddr != address(0), "IndexFactory: no vault");
     }
 
-    function _withdrawProRataFromVault(address vaultAddr, address underlying, uint256 burnPercent)
-        private
-        returns (uint256 withdrawn)
-    {
+    function _withdrawProRataFromVault(
+        address vaultAddr,
+        address underlying,
+        uint256 burnPercent
+    ) private returns (uint256 withdrawn) {
         uint256 balance = IERC20(underlying).balanceOf(vaultAddr);
         if (balance == 0) return 0;
         withdrawn = (balance * burnPercent) / 1e18;
@@ -371,17 +562,18 @@ contract IndexFactory is Initializable, OwnableUpgradeable, PausableUpgradeable,
         uint64 providerIndex_,
         uint256 share
     ) private returns (uint256 orderNonce) {
-        OrderManager.CreateOrderConfig memory cfg = OrderManager.CreateOrderConfig({
-            requestNonce: requestNonce_,
-            indexTokenAddress: indexToken,
-            inputTokenAddress: usdc,
-            outputTokenAddress: underlying,
-            providerIndex: providerIndex_,
-            inputTokenAmount: share,
-            outputTokenAmount: 0,
-            isBuyOrder: true,
-            burnPercent: 0
-        });
+        OrderManager.CreateOrderConfig memory cfg = OrderManager
+            .CreateOrderConfig({
+                requestNonce: requestNonce_,
+                indexTokenAddress: indexToken,
+                inputTokenAddress: usdc,
+                outputTokenAddress: underlying,
+                providerIndex: providerIndex_,
+                inputTokenAmount: share,
+                outputTokenAmount: 0,
+                isBuyOrder: true,
+                burnPercent: 0
+            });
         IERC20(usdc).approve(address(orderManager), share);
         orderNonce = orderManager.createOrder(cfg);
     }
@@ -395,17 +587,18 @@ contract IndexFactory is Initializable, OwnableUpgradeable, PausableUpgradeable,
         uint256 inputAmount, // 0 when providerIndex==2
         uint256 burnPercent_
     ) private returns (uint256 orderNonce) {
-        OrderManager.CreateOrderConfig memory cfg = OrderManager.CreateOrderConfig({
-            requestNonce: requestNonce_,
-            indexTokenAddress: indexToken,
-            inputTokenAddress: inputToken,
-            outputTokenAddress: outputTokenHint,
-            providerIndex: providerIndex_,
-            inputTokenAmount: inputAmount,
-            outputTokenAmount: 0,
-            isBuyOrder: false,
-            burnPercent: burnPercent_
-        });
+        OrderManager.CreateOrderConfig memory cfg = OrderManager
+            .CreateOrderConfig({
+                requestNonce: requestNonce_,
+                indexTokenAddress: indexToken,
+                inputTokenAddress: inputToken,
+                outputTokenAddress: outputTokenHint,
+                providerIndex: providerIndex_,
+                inputTokenAmount: inputAmount,
+                outputTokenAmount: 0,
+                isBuyOrder: false,
+                burnPercent: burnPercent_
+            });
         orderNonce = orderManager.createOrder(cfg);
     }
 

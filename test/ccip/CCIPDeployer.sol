@@ -433,7 +433,7 @@ contract CCIPDeployer is
                         abi.encodeCall(MainChainFactory.initialize, (
                             1,
                             payable(address(indexToken)),
-                            address(0), // order manager
+                            address(orderManager), // order manager
                             address(mainChainStorage),
                             address(functionsOracle),
                             payable(address(coreSender)),
@@ -563,7 +563,7 @@ contract CCIPDeployer is
         mainChainStorage.setCoreSenderAndBalancerSenderGasLimits(2000000, 2000000);
         mainChainStorage.setIssuanceAndRedemptionFeePercentages(20, 20);
         mainChainStorage.setIsCrossChainFeeSponsered(false);
-        vault.setOperator(address(factory), true);
+        vault.setOperator(address(mainChainFactory), true);
         // vault.setOperator(address(factoryBalancer), true);
 
         // factory.setIndexFactoryStorage(address(indexFactoryStorage));
