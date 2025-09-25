@@ -13,8 +13,8 @@ import {IOrderProcessor} from "./dinari/interfaces/IOrderProcessor.sol";
 import {FeeLib} from "./dinari/common/FeeLib.sol";
 import {Vault} from "../vault/Vault.sol";
 import {WrappedDShare} from "./dinari/WrappedDShare.sol";
-import {StockStorage} from "./StockStorage.sol";
-import {StockOrderManager} from "./StockOrderManager.sol";
+import {DinariStorage} from "./DinariStorage.sol";
+import {DinariOrderManager} from "./DinariOrderManager.sol";
 import {FunctionsOracle} from "../oracle/FunctionsOracle.sol";
 import {IndexFactoryStorage} from "../factory/IndexFactoryStorage.sol";
 import "../orderManager/OrderManager.sol";
@@ -22,8 +22,13 @@ import "../orderManager/OrderManager.sol";
 /// @title Index Token Factory
 /// @author NEX Labs Protocol
 /// @notice Allows User to initiate burn/mint requests and allows issuers to approve or deny them
-contract IndexFactoryProcessor is Initializable, OwnableUpgradeable, PausableUpgradeable, ReentrancyGuardUpgradeable {
-    StockStorage public stockStorage;
+contract DinariFactoryProcessor is
+    Initializable,
+    OwnableUpgradeable,
+    PausableUpgradeable,
+    ReentrancyGuardUpgradeable
+{
+    DinariStorage public dinariStorage;
     IndexFactoryStorage public factoryStorage;
     FunctionsOracle public functionsOracle;
     OrderManager public orderManager;
@@ -49,16 +54,16 @@ contract IndexFactoryProcessor is Initializable, OwnableUpgradeable, PausableUpg
 
     function initialize(
         address _indexFactoryStorage,
-        address _stockStorage,
+        address _dinariStorage,
         address _functionsOracle,
         address _orderManager
     ) external initializer {
         require(_indexFactoryStorage != address(0), "invalid _indexFactoryStorage address");
-        require(_stockStorage != address(0), "invalid _stockStorage address");
+        require(_dinariStorage != address(0), "invalid _dinariStorage address");
         require(_functionsOracle != address(0), "invalid _functionsOracle address");
         require(_orderManager != address(0), "invalid _orderManager address");
         factoryStorage = IndexFactoryStorage(_indexFactoryStorage);
-        stockStorage = StockStorage(_stockStorage);
+        dinariStorage = DinariStorage(_dinariStorage);
         functionsOracle = FunctionsOracle(_functionsOracle);
         orderManager = OrderManager(_orderManager);
 
@@ -80,20 +85,20 @@ contract IndexFactoryProcessor is Initializable, OwnableUpgradeable, PausableUpg
 
     function setIndexFactoryStorage(address _factoryStorage) external onlyOwner returns (bool) {
         require(_factoryStorage != address(0), "invalid factory storage address");
-        stockStorage = StockStorage(_factoryStorage);
+        dinariStorage = DinariStorage(_factoryStorage);
         return true;
     }
 
     function completeIssuance(address _indexToken, uint256 _issuanceNonce) public nonReentrant whenNotPaused {
-        require(stockStorage.checkIssuanceOrdersStatus(_indexToken, _issuanceNonce), "Orders are not completed");
-        require(!stockStorage.issuanceIsCompleted(_indexToken, _issuanceNonce), "Issuance is completed");
-        address requester = stockStorage.issuanceRequesterByNonce(_indexToken, _issuanceNonce);
-        // IOrderProcessor issuer = stockStorage.issuer();
+        require(dinariStorage.checkIssuanceOrdersStatus(_indexToken, _issuanceNonce), "Orders are not completed");
+        require(!dinariStorage.issuanceIsCompleted(_indexToken, _issuanceNonce), "Issuance is completed");
+        address requester = dinariStorage.issuanceRequesterByNonce(_indexToken, _issuanceNonce);
+        // IOrderProcessor issuer = dinariStorage.issuer();
         uint256 primaryPortfolioValue;
         uint256 secondaryPortfolioValue;
 
         (, address[] memory underlyingAssets,) = functionsOracle.getCurrentProviderIndexData(
-            _indexToken, functionsOracle.currentFilledCount(_indexToken), stockStorage.providerIndex()
+            _indexToken, functionsOracle.currentFilledCount(_indexToken), dinariStorage.providerIndex()
         );
 
         for (uint256 i; i < underlyingAssets.length; i++) {
@@ -102,21 +107,21 @@ contract IndexFactoryProcessor is Initializable, OwnableUpgradeable, PausableUpg
                 getCompleteIssuanceValues(tokenAddress, _indexToken, _issuanceNonce);
             primaryPortfolioValue += primaryValue;
             secondaryPortfolioValue += secondaryValue;
-            StockOrderManager stockOrderManager = stockStorage.stockOrderManager();
-            stockOrderManager.withdrawFunds(tokenAddress, address(this), balance);
+            DinariOrderManager dinariOrderManager = dinariStorage.dinariOrderManager();
+            dinariOrderManager.withdrawFunds(tokenAddress, address(this), balance);
             orderManager.completeIssuance(_issuanceNonce, _indexToken, tokenAddress, primaryValue, secondaryValue);
             _setCompleteIssuanceData(tokenAddress, balance, _indexToken);
         }
-        stockStorage.issuanceIndexTokenPrimaryTotalSupply(_indexToken, _issuanceNonce);
+        dinariStorage.issuanceIndexTokenPrimaryTotalSupply(_indexToken, _issuanceNonce);
 
-        stockStorage.setIssuanceIsCompleted(_indexToken, _issuanceNonce, true);
+        dinariStorage.setIssuanceIsCompleted(_indexToken, _issuanceNonce, true);
 
         emit Issuanced(
             _indexToken,
             _issuanceNonce,
             requester,
-            stockStorage.usdc(),
-            stockStorage.issuanceInputAmount(_indexToken, _issuanceNonce),
+            dinariStorage.usdc(),
+            dinariStorage.issuanceInputAmount(_indexToken, _issuanceNonce),
             block.timestamp
         );
     }
@@ -126,72 +131,72 @@ contract IndexFactoryProcessor is Initializable, OwnableUpgradeable, PausableUpg
         view
         returns (uint256 primaryValue, uint256 secondaryValue, uint256 balance)
     {
-        IOrderProcessor issuer = stockStorage.issuer();
+        IOrderProcessor issuer = dinariStorage.issuer();
 
-        uint256 tokenRequestId = stockStorage.issuanceRequestId(_indexToken, _issuanceNonce, _tokenAddress);
-        uint256 price = stockStorage.priceInWei(_tokenAddress);
+        uint256 tokenRequestId = dinariStorage.issuanceRequestId(_indexToken, _issuanceNonce, _tokenAddress);
+        uint256 price = dinariStorage.priceInWei(_tokenAddress);
         balance = issuer.getReceivedAmount(tokenRequestId);
         uint256 receivedValue = balance * price / 1e18;
-        uint256 primaryBalance = stockStorage.issuanceTokenPrimaryBalance(_indexToken, _issuanceNonce, _tokenAddress);
+        uint256 primaryBalance = dinariStorage.issuanceTokenPrimaryBalance(_indexToken, _issuanceNonce, _tokenAddress);
         primaryValue = primaryBalance * price / 1e18;
         secondaryValue = primaryValue + receivedValue;
     }
 
     function _setCompleteIssuanceData(address _tokenAddress, uint256 _balance, address _indexToken) internal {
-        IERC20(_tokenAddress).approve(stockStorage.wrappedDshareAddress(_tokenAddress), _balance);
-        WrappedDShare(stockStorage.wrappedDshareAddress(_tokenAddress)).deposit(
+        IERC20(_tokenAddress).approve(dinariStorage.wrappedDshareAddress(_tokenAddress), _balance);
+        WrappedDShare(dinariStorage.wrappedDshareAddress(_tokenAddress)).deposit(
             _balance, address(factoryStorage.indexTokenToVault(_indexToken))
         );
     }
 
     function completeRedemption(address _indexToken, uint256 _redemptionNonce) public nonReentrant whenNotPaused {
         require(
-            stockStorage.checkRedemptionOrdersStatus(_indexToken, _redemptionNonce),
+            dinariStorage.checkRedemptionOrdersStatus(_indexToken, _redemptionNonce),
             "Redemption orders are not completed"
         );
-        require(!stockStorage.redemptionIsCompleted(_indexToken, _redemptionNonce), "Redemption is completed");
-        address requester = stockStorage.redemptionRequesterByNonce(_indexToken, _redemptionNonce);
-        IOrderProcessor issuer = stockStorage.issuer();
+        require(!dinariStorage.redemptionIsCompleted(_indexToken, _redemptionNonce), "Redemption is completed");
+        address requester = dinariStorage.redemptionRequesterByNonce(_indexToken, _redemptionNonce);
+        IOrderProcessor issuer = dinariStorage.issuer();
         uint256 totalBalance;
 
         (, address[] memory underlyingAssets,) = functionsOracle.getCurrentProviderIndexData(
-            _indexToken, functionsOracle.currentFilledCount(_indexToken), stockStorage.providerIndex()
+            _indexToken, functionsOracle.currentFilledCount(_indexToken), dinariStorage.providerIndex()
         );
 
-        StockOrderManager stockOrderManager = stockStorage.stockOrderManager();
+        DinariOrderManager dinariOrderManager = dinariStorage.dinariOrderManager();
         for (uint256 i; i < underlyingAssets.length; i++) {
             address tokenAddress = underlyingAssets[i];
-            uint256 tokenRequestId = stockStorage.redemptionRequestId(_indexToken, _redemptionNonce, tokenAddress);
+            uint256 tokenRequestId = dinariStorage.redemptionRequestId(_indexToken, _redemptionNonce, tokenAddress);
             uint256 balance = issuer.getReceivedAmount(tokenRequestId);
             uint256 feeTaken = issuer.getFeesTaken(tokenRequestId);
-            stockOrderManager.withdrawFunds(stockStorage.usdc(), requester, totalBalance);
+            dinariOrderManager.withdrawFunds(dinariStorage.usdc(), requester, totalBalance);
             orderManager.completeRedemption(_redemptionNonce, _indexToken, tokenAddress, balance - feeTaken);
             totalBalance += balance - feeTaken;
         }
-        stockStorage.setRedemptionIsCompleted(_indexToken, _redemptionNonce, true);
+        dinariStorage.setRedemptionIsCompleted(_indexToken, _redemptionNonce, true);
         emit Redemption(
             _indexToken,
             _redemptionNonce,
             requester,
-            stockStorage.usdc(),
-            stockStorage.redemptionInputAmount(_indexToken, _redemptionNonce),
+            dinariStorage.usdc(),
+            dinariStorage.redemptionInputAmount(_indexToken, _redemptionNonce),
             totalBalance,
             block.timestamp
         );
     }
 
     function checkMultical(address _indexToken, uint256 _reqeustId) public view returns (bool) {
-        StockStorage.ActionInfo memory actionInfo = stockStorage.getActionInfoById(_indexToken, _reqeustId);
+        DinariStorage.ActionInfo memory actionInfo = dinariStorage.getActionInfoById(_indexToken, _reqeustId);
         if (actionInfo.actionType == 1) {
-            return stockStorage.checkIssuanceOrdersStatus(_indexToken, actionInfo.nonce);
+            return dinariStorage.checkIssuanceOrdersStatus(_indexToken, actionInfo.nonce);
         } else if (actionInfo.actionType == 2) {
-            return stockStorage.checkRedemptionOrdersStatus(_indexToken, actionInfo.nonce);
+            return dinariStorage.checkRedemptionOrdersStatus(_indexToken, actionInfo.nonce);
         }
         return false;
     }
 
     function multical(address _indexToken, uint256 _requestId) public {
-        StockStorage.ActionInfo memory actionInfo = stockStorage.getActionInfoById(_indexToken, _requestId);
+        DinariStorage.ActionInfo memory actionInfo = dinariStorage.getActionInfoById(_indexToken, _requestId);
         if (actionInfo.actionType == 1) {
             completeIssuance(_indexToken, actionInfo.nonce);
         } else if (actionInfo.actionType == 2) {

@@ -12,14 +12,14 @@ import "./dinari/interfaces/IOrderProcessor.sol";
 import "./dinari/WrappedDShare.sol";
 import "../vault/Vault.sol";
 import "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
-import "./StockOrderManager.sol";
+import "./DinariOrderManager.sol";
 import "../oracle/FunctionsOracle.sol";
 import "../libraries/Commen.sol" as PrbMath;
 import {IndexFactoryStorage} from "../factory/IndexFactoryStorage.sol";
 
-/// @title Stock Storage
+/// @title Dinari Storage
 /// @notice Stores data and provides functions for managing index token issuance and redemption
-contract StockStorage is Initializable, OwnableUpgradeable {
+contract DinariStorage is Initializable, OwnableUpgradeable {
     using FunctionsRequest for FunctionsRequest.Request;
 
     struct ActionInfo {
@@ -41,7 +41,7 @@ contract StockStorage is Initializable, OwnableUpgradeable {
     mapping(address => address) public priceFeedByTokenAddress;
 
     // NexVault public vault;
-    StockOrderManager public stockOrderManager;
+    DinariOrderManager public dinariOrderManager;
     IOrderProcessor public issuer;
     FunctionsOracle public functionsOracle;
     IndexFactoryStorage public globalFactory;
@@ -188,7 +188,7 @@ contract StockStorage is Initializable, OwnableUpgradeable {
     /// @return bool indicating success
     function setOrderManager(address _orderManager) external onlyOwner returns (bool) {
         require(_orderManager != address(0), "invalid order manager address");
-        stockOrderManager = StockOrderManager(_orderManager);
+        dinariOrderManager = DinariOrderManager(_orderManager);
         return true;
     }
 

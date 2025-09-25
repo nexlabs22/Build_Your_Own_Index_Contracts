@@ -18,9 +18,9 @@ import "../vault/Vault.sol";
 import "./dinari/WrappedDShare.sol";
 // import "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
 // import "../libraries/Commen.sol" as PrbMath;
-import "./StockStorage.sol";
-import "./StockFactory.sol";
-import "./StockOrderManager.sol";
+import "./DinariStorage.sol";
+import "./DinariFactory.sol";
+import "./DinariOrderManager.sol";
 import "../oracle/FunctionsOracle.sol";
 import "../libraries/Commen.sol" as PrbMath2;
 import "../factory/IndexFactoryStorage.sol";
@@ -38,7 +38,7 @@ contract IndexFactoryBalancer is Initializable, OwnableUpgradeable, PausableUpgr
 
     uint256 public rebalanceNonce;
 
-    StockStorage public stockFactoryStorage;
+    DinariStorage public dinariStorage;
     FunctionsOracle public functionsOracle;
     IndexFactoryStorage public globalStorage;
 
@@ -75,7 +75,7 @@ contract IndexFactoryBalancer is Initializable, OwnableUpgradeable, PausableUpgr
         require(_factoryStorage != address(0), "invalid _factoryStorage address");
         require(_functionsOracle != address(0), "invalid _functionsOracle address");
         require(_globalStorage != address(0), "invalid _globalStorage address");
-        stockFactoryStorage = StockStorage(_factoryStorage);
+        dinariStorage = DinariStorage(_factoryStorage);
         functionsOracle = FunctionsOracle(_functionsOracle);
         globalStorage = IndexFactoryStorage(_globalStorage);
         __Ownable_init(msg.sender);
@@ -94,7 +94,7 @@ contract IndexFactoryBalancer is Initializable, OwnableUpgradeable, PausableUpgr
     }
 
     function setIndexFactoryStorage(address _indexFactoryStorage) public onlyOwner returns (bool) {
-        stockFactoryStorage = StockStorage(_indexFactoryStorage);
+        dinariStorage = DinariStorage(_indexFactoryStorage);
         return true;
     }
 
@@ -113,14 +113,14 @@ contract IndexFactoryBalancer is Initializable, OwnableUpgradeable, PausableUpgr
         internal
         returns (uint256)
     {
-        IOrderProcessor.Order memory order = stockFactoryStorage.getPrimaryOrder(_indexToken, false);
+        IOrderProcessor.Order memory order = dinariStorage.getPrimaryOrder(_indexToken, false);
         order.recipient = _receiver;
         order.assetToken = address(_token);
         order.paymentTokenQuantity = _orderAmount;
 
-        StockOrderManager stockOrderManager = stockFactoryStorage.stockOrderManager();
-        uint256 id = stockOrderManager.requestBuyOrderFromCurrentBalance(_indexToken, _token, _orderAmount, _receiver);
-        stockFactoryStorage.setOrderInstanceById(_indexToken, id, order);
+        DinariOrderManager dinariOrderManager = dinariStorage.dinariOrderManager();
+        uint256 id = dinariOrderManager.requestBuyOrderFromCurrentBalance(_indexToken, _token, _orderAmount, _receiver);
+        dinariStorage.setOrderInstanceById(_indexToken, id, order);
         return id;
     }
 
@@ -128,12 +128,12 @@ contract IndexFactoryBalancer is Initializable, OwnableUpgradeable, PausableUpgr
         internal
         returns (uint256, uint256)
     {
-        address wrappedDshare = stockFactoryStorage.wrappedDshareAddress(_token);
-        // Vault(stockFactoryStorage.vault()).withdrawFunds(wrappedDshare, address(this), _amount);
+        address wrappedDshare = dinariStorage.wrappedDshareAddress(_token);
+        // Vault(dinariStorage.vault()).withdrawFunds(wrappedDshare, address(this), _amount);
         uint256 orderAmount0 = WrappedDShare(wrappedDshare).redeem(_amount, address(this), address(this));
 
         //rounding order
-        IOrderProcessor issuer = stockFactoryStorage.issuer();
+        IOrderProcessor issuer = dinariStorage.issuer();
         uint8 decimalReduction = issuer.orderDecimalReduction(_token);
 
         uint256 orderAmount;
@@ -146,25 +146,25 @@ contract IndexFactoryBalancer is Initializable, OwnableUpgradeable, PausableUpgr
 
         if (extraAmount > 0) {
             IERC20(_token).approve(wrappedDshare, extraAmount);
-            // WrappedDShare(wrappedDshare).deposit(extraAmount, address(stockFactoryStorage.vault()));
+            // WrappedDShare(wrappedDshare).deposit(extraAmount, address(dinariStorage.vault()));
         }
 
-        IOrderProcessor.Order memory order = stockFactoryStorage.getPrimaryOrder(_indexToken, true);
+        IOrderProcessor.Order memory order = dinariStorage.getPrimaryOrder(_indexToken, true);
         order.assetToken = _token;
         order.assetTokenQuantity = orderAmount;
         order.recipient = _receiver;
 
-        IERC20(_token).safeTransfer(address(stockFactoryStorage.stockOrderManager()), orderAmount);
-        StockOrderManager stockOrderManager = stockFactoryStorage.stockOrderManager();
-        uint256 id = stockOrderManager.requestSellOrderFromCurrentBalance(_token, orderAmount, _receiver);
-        // stockFactoryStorage.setOrderInstanceById(_indexToken, id, order);
-        // stockFactoryStorage.increaseTokenPendingRebalanceAmount(_indexToken, _token, rebalanceNonce, orderAmount);
+        IERC20(_token).safeTransfer(address(dinariStorage.dinariOrderManager()), orderAmount);
+        DinariOrderManager dinariOrderManager = dinariStorage.dinariOrderManager();
+        uint256 id = dinariOrderManager.requestSellOrderFromCurrentBalance(_token, orderAmount, _receiver);
+        // dinariStorage.setOrderInstanceById(_indexToken, id, order);
+        // dinariStorage.increaseTokenPendingRebalanceAmount(_indexToken, _token, rebalanceNonce, orderAmount);
         return (id, orderAmount);
     }
 
     function _sellOverweightedAssets(address _indexToken, uint256 _rebalanceNonce, uint256 _portfolioValue) internal {
         (, address[] memory underlyingAssets,) = functionsOracle.getCurrentProviderIndexData(
-            _indexToken, functionsOracle.currentFilledCount(_indexToken), stockFactoryStorage.providerIndex()
+            _indexToken, functionsOracle.currentFilledCount(_indexToken), dinariStorage.providerIndex()
         );
 
         address vault = globalStorage.indexTokenToVault(_indexToken);
@@ -173,7 +173,7 @@ contract IndexFactoryBalancer is Initializable, OwnableUpgradeable, PausableUpgr
             // address tokenAddress = functionsOracle.currentList(i);
             address tokenAddress = underlyingAssets[i];
             uint256 tokenValue = tokenValueByNonce[_rebalanceNonce][tokenAddress];
-            address wrappedDshare = stockFactoryStorage.wrappedDshareAddress(tokenAddress);
+            address wrappedDshare = dinariStorage.wrappedDshareAddress(tokenAddress);
 
             uint256 tokenBalance = IERC20(wrappedDshare).balanceOf(vault);
             uint256 tokenValuePercent = (tokenValue * 100e18) / _portfolioValue;
@@ -184,9 +184,8 @@ contract IndexFactoryBalancer is Initializable, OwnableUpgradeable, PausableUpgr
                             / tokenValuePercent
                     );
                 if (tokenValue * amount / tokenBalance > minimumOrderAmount) {
-                    (uint256 requestId, uint256 assetAmount) = requestSellOrder(
-                        _indexToken, tokenAddress, amount, address(stockFactoryStorage.stockOrderManager())
-                    );
+                    (uint256 requestId, uint256 assetAmount) =
+                        requestSellOrder(_indexToken, tokenAddress, amount, address(dinariStorage.dinariOrderManager()));
                     actionInfoById[requestId] = ActionInfo(5, _rebalanceNonce);
                     rebalanceRequestId[_rebalanceNonce][tokenAddress] = requestId;
                     rebalanceSellAssetAmountById[requestId] = amount;
@@ -207,12 +206,12 @@ contract IndexFactoryBalancer is Initializable, OwnableUpgradeable, PausableUpgr
         rebalanceNonce += 1;
         uint256 portfolioValue;
         (, address[] memory underlyingAssets,) = functionsOracle.getCurrentProviderIndexData(
-            _indexToken, functionsOracle.currentFilledCount(_indexToken), stockFactoryStorage.providerIndex()
+            _indexToken, functionsOracle.currentFilledCount(_indexToken), dinariStorage.providerIndex()
         );
         for (uint256 i; i < underlyingAssets.length; i++) {
             // address tokenAddress = functionsOracle.currentList(i);
             address tokenAddress = underlyingAssets[i];
-            uint256 tokenValue = stockFactoryStorage.getVaultDshareValue(_indexToken, tokenAddress);
+            uint256 tokenValue = dinariStorage.getVaultDshareValue(_indexToken, tokenAddress);
             tokenValueByNonce[rebalanceNonce][tokenAddress] = tokenValue;
             portfolioValue += tokenValue;
         }
@@ -228,9 +227,9 @@ contract IndexFactoryBalancer is Initializable, OwnableUpgradeable, PausableUpgr
         uint256 _totalShortagePercent,
         uint256 _usdcBalance
     ) internal {
-        IOrderProcessor issuer = stockFactoryStorage.issuer();
+        IOrderProcessor issuer = dinariStorage.issuer();
         (, address[] memory underlyingAssets,) = functionsOracle.getCurrentProviderIndexData(
-            _indexToken, functionsOracle.currentFilledCount(_indexToken), stockFactoryStorage.providerIndex()
+            _indexToken, functionsOracle.currentFilledCount(_indexToken), dinariStorage.providerIndex()
         );
         for (uint256 i; i < underlyingAssets.length; i++) {
             // address tokenAddress = functionsOracle.currentList(i);
@@ -239,7 +238,7 @@ contract IndexFactoryBalancer is Initializable, OwnableUpgradeable, PausableUpgr
             if (tokenShortagePercent > 0) {
                 uint256 paymentAmount = (tokenShortagePercent * _usdcBalance) / _totalShortagePercent;
                 (uint256 flatFee, uint24 percentageFeeRate) =
-                    issuer.getStandardFees(false, address(stockFactoryStorage.usdc()));
+                    issuer.getStandardFees(false, address(dinariStorage.usdc()));
 
                 uint256 amountAfterFee = getAmountAfterFee(percentageFeeRate, paymentAmount) > flatFee
                     ? getAmountAfterFee(percentageFeeRate, paymentAmount) - flatFee
@@ -247,11 +246,9 @@ contract IndexFactoryBalancer is Initializable, OwnableUpgradeable, PausableUpgr
 
                 if (amountAfterFee > 0) {
                     uint256 esFee = flatFee + FeeLib.applyPercentageFee(percentageFeeRate, amountAfterFee);
-                    IERC20(stockFactoryStorage.usdc()).approve(
-                        address(stockFactoryStorage.stockOrderManager()), paymentAmount
-                    );
+                    IERC20(dinariStorage.usdc()).approve(address(dinariStorage.dinariOrderManager()), paymentAmount);
                     uint256 requestId = requestBuyOrder(
-                        _indexToken, tokenAddress, amountAfterFee, address(stockFactoryStorage.stockOrderManager())
+                        _indexToken, tokenAddress, amountAfterFee, address(dinariStorage.dinariOrderManager())
                     );
                     actionInfoById[requestId] = ActionInfo(6, _rebalanceNonce);
                     // rebalanceRequestId[_rebalanceNonce][tokenAddress] = requestId;
@@ -269,17 +266,17 @@ contract IndexFactoryBalancer is Initializable, OwnableUpgradeable, PausableUpgr
         require(checkFirstRebalanceOrdersStatus(_indexToken, rebalanceNonce), "Rebalance orders are not completed");
         uint256 portfolioValue = portfolioValueByNonce[_rebalanceNonce];
         uint256 totalShortagePercent = totalShortagePercentByNonce[_rebalanceNonce];
-        IOrderProcessor issuer = stockFactoryStorage.issuer();
+        IOrderProcessor issuer = dinariStorage.issuer();
         uint256 usdcBalance;
         (, address[] memory underlyingAssets,) = functionsOracle.getCurrentProviderIndexData(
-            _indexToken, functionsOracle.currentFilledCount(_indexToken), stockFactoryStorage.providerIndex()
+            _indexToken, functionsOracle.currentFilledCount(_indexToken), dinariStorage.providerIndex()
         );
         for (uint256 i; i < underlyingAssets.length; i++) {
             // address tokenAddress = functionsOracle.currentList(i);
             address tokenAddress = underlyingAssets[i];
             uint256 requestId = rebalanceRequestId[_rebalanceNonce][tokenAddress];
             if (requestId > 0) {
-                IOrderProcessor.Order memory order = stockFactoryStorage.getOrderInstanceById(_indexToken, requestId);
+                IOrderProcessor.Order memory order = dinariStorage.getOrderInstanceById(_indexToken, requestId);
                 uint256 assetAmount = order.assetTokenQuantity;
                 if (order.sell) {
                     uint256 balance = issuer.getReceivedAmount(requestId);
@@ -293,25 +290,25 @@ contract IndexFactoryBalancer is Initializable, OwnableUpgradeable, PausableUpgr
     }
 
     function estimateAmountAfterFee(uint256 _amount) public view returns (uint256) {
-        IOrderProcessor issuer = stockFactoryStorage.issuer();
-        (uint256 flatFee, uint24 percentageFeeRate) = issuer.getStandardFees(false, address(stockFactoryStorage.usdc()));
+        IOrderProcessor issuer = dinariStorage.issuer();
+        (uint256 flatFee, uint24 percentageFeeRate) = issuer.getStandardFees(false, address(dinariStorage.usdc()));
         uint256 amountAfterFee = getAmountAfterFee(percentageFeeRate, _amount) - flatFee;
         return amountAfterFee;
     }
 
     function updatePendingTokenSellAmounts(address _indexToken, uint256 _rebalanceNonce) internal {
         (, address[] memory underlyingAssets,) = functionsOracle.getCurrentProviderIndexData(
-            _indexToken, functionsOracle.currentFilledCount(_indexToken), stockFactoryStorage.providerIndex()
+            _indexToken, functionsOracle.currentFilledCount(_indexToken), dinariStorage.providerIndex()
         );
         for (uint256 i; i < underlyingAssets.length; i++) {
             // address tokenAddress = functionsOracle.currentList(i);
             address tokenAddress = underlyingAssets[i];
             uint256 requestId = rebalanceRequestId[_rebalanceNonce][tokenAddress];
             if (requestId > 0) {
-                IOrderProcessor.Order memory order = stockFactoryStorage.getOrderInstanceById(_indexToken, requestId);
+                IOrderProcessor.Order memory order = dinariStorage.getOrderInstanceById(_indexToken, requestId);
                 if (order.sell) {
                     uint256 assetAmount = order.assetTokenQuantity;
-                    stockFactoryStorage.decreaseTokenPendingRebalanceAmount(
+                    dinariStorage.decreaseTokenPendingRebalanceAmount(
                         _indexToken, tokenAddress, _rebalanceNonce, assetAmount
                     );
                 }
@@ -325,9 +322,9 @@ contract IndexFactoryBalancer is Initializable, OwnableUpgradeable, PausableUpgr
         onlyOwnerOrOperator
     {
         require(checkSecondRebalanceOrdersStatus(_indexToken, _rebalanceNonce), "Rebalance orders are not completed");
-        IOrderProcessor issuer = stockFactoryStorage.issuer();
+        IOrderProcessor issuer = dinariStorage.issuer();
         (, address[] memory underlyingAssets,) = functionsOracle.getCurrentProviderIndexData(
-            _indexToken, functionsOracle.currentFilledCount(_indexToken), stockFactoryStorage.providerIndex()
+            _indexToken, functionsOracle.currentFilledCount(_indexToken), dinariStorage.providerIndex()
         );
         address vault = globalStorage.indexTokenToVault(_indexToken);
         for (uint256 i; i < underlyingAssets.length; i++) {
@@ -335,19 +332,15 @@ contract IndexFactoryBalancer is Initializable, OwnableUpgradeable, PausableUpgr
             address tokenAddress = underlyingAssets[i];
             uint256 requestId = rebalanceRequestId[_rebalanceNonce][tokenAddress];
             if (requestId > 0) {
-                IOrderProcessor.Order memory order = stockFactoryStorage.getOrderInstanceById(_indexToken, requestId);
+                IOrderProcessor.Order memory order = dinariStorage.getOrderInstanceById(_indexToken, requestId);
                 if (!order.sell) {
                     uint256 tokenBalance = issuer.getReceivedAmount(requestId);
                     if (tokenBalance > 0) {
-                        StockOrderManager(stockFactoryStorage.stockOrderManager()).withdrawFunds(
+                        DinariOrderManager(dinariStorage.dinariOrderManager()).withdrawFunds(
                             tokenAddress, address(this), tokenBalance
                         );
-                        IERC20(tokenAddress).approve(
-                            stockFactoryStorage.wrappedDshareAddress(tokenAddress), tokenBalance
-                        );
-                        WrappedDShare(stockFactoryStorage.wrappedDshareAddress(tokenAddress)).deposit(
-                            tokenBalance, vault
-                        );
+                        IERC20(tokenAddress).approve(dinariStorage.wrappedDshareAddress(tokenAddress), tokenBalance);
+                        WrappedDShare(dinariStorage.wrappedDshareAddress(tokenAddress)).deposit(tokenBalance, vault);
                     }
                 }
             }
@@ -362,9 +355,9 @@ contract IndexFactoryBalancer is Initializable, OwnableUpgradeable, PausableUpgr
         require(_rebalanceNonce <= rebalanceNonce, "Wrong rebalance nonce!");
         uint256 completedOrdersCount;
         (, address[] memory underlyingAssets,) = functionsOracle.getCurrentProviderIndexData(
-            _indexToken, functionsOracle.currentFilledCount(_indexToken), stockFactoryStorage.providerIndex()
+            _indexToken, functionsOracle.currentFilledCount(_indexToken), dinariStorage.providerIndex()
         );
-        IOrderProcessor issuer = stockFactoryStorage.issuer();
+        IOrderProcessor issuer = dinariStorage.issuer();
         for (uint256 i; i < underlyingAssets.length; i++) {
             // address tokenAddress = functionsOracle.currentList(i);
             address tokenAddress = underlyingAssets[i];
@@ -387,9 +380,9 @@ contract IndexFactoryBalancer is Initializable, OwnableUpgradeable, PausableUpgr
     {
         require(_rebalanceNonce <= rebalanceNonce, "Wrong rebalance nonce!");
         uint256 completedOrdersCount;
-        IOrderProcessor issuer = stockFactoryStorage.issuer();
+        IOrderProcessor issuer = dinariStorage.issuer();
         (, address[] memory underlyingAssets,) = functionsOracle.getCurrentProviderIndexData(
-            _indexToken, functionsOracle.currentFilledCount(_indexToken), stockFactoryStorage.providerIndex()
+            _indexToken, functionsOracle.currentFilledCount(_indexToken), dinariStorage.providerIndex()
         );
         for (uint256 i; i < underlyingAssets.length; i++) {
             // address tokenAddress = functionsOracle.currentList(i);
@@ -436,8 +429,8 @@ contract IndexFactoryBalancer is Initializable, OwnableUpgradeable, PausableUpgr
 
     // pause index factory when rebalance happens
     function pauseIndexFactory() internal {
-        address indexFactoryAddress = stockFactoryStorage.factoryAddress();
-        StockFactory indexFactory = StockFactory(payable(indexFactoryAddress));
+        address indexFactoryAddress = dinariStorage.factoryAddress();
+        DinariFactory indexFactory = DinariFactory(payable(indexFactoryAddress));
         if (!indexFactory.paused()) {
             indexFactory.pause();
         }
@@ -445,8 +438,8 @@ contract IndexFactoryBalancer is Initializable, OwnableUpgradeable, PausableUpgr
 
     // unpause index factory when rebalance is done
     function unpauseIndexFactory() internal {
-        address indexFactoryAddress = stockFactoryStorage.factoryAddress();
-        StockFactory indexFactory = StockFactory(payable(indexFactoryAddress));
+        address indexFactoryAddress = dinariStorage.factoryAddress();
+        DinariFactory indexFactory = DinariFactory(payable(indexFactoryAddress));
         if (indexFactory.paused()) {
             indexFactory.unpause();
         }

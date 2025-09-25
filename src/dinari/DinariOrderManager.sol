@@ -14,7 +14,7 @@ import {FeeLib} from "./dinari/common/FeeLib.sol";
 /// @title Order Manager
 /// @author NEX Labs Protocol
 /// @notice Allows User to initiate burn/mint requests and allows issuers to approve or deny them
-contract StockOrderManager is Initializable, OwnableUpgradeable, PausableUpgradeable, ReentrancyGuardUpgradeable {
+contract DinariOrderManager is Initializable, OwnableUpgradeable, PausableUpgradeable, ReentrancyGuardUpgradeable {
     enum RequestStatus {
         NULL,
         PENDING,

@@ -2,7 +2,7 @@
 pragma solidity ^0.8.22;
 
 // import "../../src/orders/OrderProcessor.sol";
-import "../../src/stock/dinari/orders/OrderProcessor.sol";
+import "../../src/dinari/dinari/orders/OrderProcessor.sol";
 
 contract OrderSigUtils {
     OrderProcessor private immutable orderProcessor;
