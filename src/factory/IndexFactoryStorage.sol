@@ -13,7 +13,7 @@ import "../utils/proposable/ProposableOwnableUpgradeable.sol";
 contract IndexFactoryStorage is Initializable, ProposableOwnableUpgradeable  {
 
     address public indexFactory;
-    address public indexFactoryBalancer;
+    address public mainChainBalancer;
     address public orderManager;
     address public feeReceiver;
 
@@ -50,9 +50,9 @@ contract IndexFactoryStorage is Initializable, ProposableOwnableUpgradeable  {
         indexFactory = _indexFactory;
     }
 
-    function setIndexFactoryBalancer(address _indexFactoryBalancer) external {
-        // if (_indexFactoryBalancer == address(0)) revert ZeroAddress();
-        indexFactoryBalancer = _indexFactoryBalancer;
+    function setMainChainBalancer(address _mainChainBalancer) external {
+        // if (_mainChainBalancer == address(0)) revert ZeroAddress();
+        mainChainBalancer = _mainChainBalancer;
     }
 
     function setOrderManager(address _orderManager) external {

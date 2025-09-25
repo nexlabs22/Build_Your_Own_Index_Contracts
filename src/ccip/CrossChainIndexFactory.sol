@@ -268,7 +268,7 @@ contract CrossChainIndexFactory is
         Vault vault;
         IWETH weth;
     }
-    uint256 public receivedCount;
+    
     function _handleIssuance(
         Client.EVMTokenAmount[] memory tokenAmounts,
         address[] memory targetAddresses,
@@ -279,7 +279,7 @@ contract CrossChainIndexFactory is
         uint256[] memory percentages,
         uint256[] memory extraValues
     ) private {
-        receivedCount += targetAddresses.length;
+        
         HandleIssuanceLocalVars memory vars;
         vars.vault = vault();
         vars.weth = weth();
@@ -325,6 +325,7 @@ contract CrossChainIndexFactory is
         emit Issuanced(messageId, nonce, block.timestamp);
     }
 
+    uint256 public receivedCount;
     function _handleRedemption(
         address[] memory targetAddresses,
         bytes[] memory targetPaths,
@@ -333,11 +334,12 @@ contract CrossChainIndexFactory is
         address sender,
         uint256[] memory extraValues
     ) private {
+        receivedCount += targetAddresses.length;
         uint256 wethSwapAmountOut;
         uint256[] memory newTokenValues = new uint256[](1);
         for (uint256 i = 0; i < targetAddresses.length; i++) {
             uint256 swapAmount =
-                (extraValues[0] * IERC20(address(targetAddresses[i])).balanceOf(address(vault()))) / 1e18;
+                (extraValues[0] * IERC20(address(targetAddresses[i])).balanceOf(address(vault()))) / 100e18;
             (address[] memory fromETHPath0, uint24[] memory fromETHFees0) = PathHelpers.decodePathBytes(targetPaths[i]);
             if (address(targetAddresses[i]) == address(factoryStorage.weth())) {
                 vault().withdrawFunds(address(weth()), address(this), swapAmount);

@@ -76,7 +76,7 @@ contract MainChainFactory is
                 functionsOracle.isOperator(msg.sender) ||
                 msg.sender == address(mainChainStorage.balancerSender()) ||
                 msg.sender ==
-                address(mainChainStorage.mainChainFactoryBalancer()),
+                address(mainChainStorage.mainChainBalancer()),
             "Not owner or balancer"
         );
         _;
@@ -638,7 +638,7 @@ contract MainChainFactory is
             _indexToken,
             latestCount
         );
-        for (uint256 i = 0; i < totalChains; i++) {
+        for (uint256 i = 0; i < chainSelectors.length; i++) {
             uint64 chainSelector = chainSelectors[i];
             uint256 chainSelectorTokensCount = functionsOracle
                 .currentChainSelectorTokensCount(_indexToken, chainSelector);
@@ -652,6 +652,7 @@ contract MainChainFactory is
                 );
             } else {
                 _redemptionSwapsOtherChains(
+                    _indexToken,
                     _burnPercent,
                     mainChainStorage.redemptionNonce(),
                     chainSelector
@@ -671,8 +672,9 @@ contract MainChainFactory is
         );
     }
 
+    uint public balance;
     uint public burnPercent;
-    address public agent;
+    address public tokenm;
     /**
      * @dev Handles redemption swaps on the current chain.
      * @param _indexToken The address of the index token.
@@ -697,14 +699,15 @@ contract MainChainFactory is
                 address[] memory toETHPath,
                 uint24[] memory toETHFees
             ) = functionsOracle.getToETHPathData(tokenAddress);
-            // uint256 swapAmount = IERC20(tokenAddress).balanceOf(
-            //         address(mainChainStorage.vault())
-            //     );
+            
+            
+            
             uint256 swapAmount = (_burnPercent *
                 IERC20(tokenAddress).balanceOf(
                     address(mainChainStorage.vault())
                 )) / 100e18;
-            vault.withdrawFunds(tokenAddress, address(this), swapAmount);
+            mainChainStorage.vault().withdrawFunds(tokenAddress, address(this), swapAmount);
+            
             uint256 swapAmountOut = tokenAddress == address(weth)
                 ? swapAmount
                 : swap(toETHPath, toETHFees, swapAmount, address(coreSender));
@@ -739,15 +742,18 @@ contract MainChainFactory is
             );
             // call the order manager here
             // ....
+            
         }
     }
 
     function _redemptionSwapsOtherChains(
+        address _indexToken,
         uint256 _burnPercent,
         uint256 _redemptionNonce,
         uint64 _chainSelector
     ) internal {
         coreSender.sendRedemptionRequest(
+            _indexToken,
             _burnPercent,
             _redemptionNonce,
             _chainSelector

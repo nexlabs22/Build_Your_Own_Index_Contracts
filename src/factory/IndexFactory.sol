@@ -114,6 +114,7 @@ contract IndexFactory is
         );
         uint64[] memory currentProviderIndexes = functionsOracle
             .getCurrentProviderIndexes(indexToken, currentFilledCount);
+        bool _ccipCalled = false;
         for (uint256 i = 0; i < currentProviderIndexes.length; i++) {
             (
                 uint256 totalShares,
@@ -125,14 +126,30 @@ contract IndexFactory is
                     currentProviderIndexes[i]
                 );
             uint256 share = (amount * totalShares) / SHARE_DENOMINATOR;
-            orderNonce = _createBuyOrder(
-                issuanceNonce,
-                indexToken,
-                usdc,
-                address(0),
-                currentProviderIndexes[i],
-                share
-            );
+            if (
+                currentProviderIndexes[i] == 1 || currentProviderIndexes[i] == 2
+            ) {
+                if (!_ccipCalled) {
+                    orderNonce = _createBuyOrder(
+                        issuanceNonce,
+                        indexToken,
+                        usdc,
+                        address(0),
+                        currentProviderIndexes[i],
+                        share
+                    );
+                    _ccipCalled = true;
+                }
+            } else {
+                orderNonce = _createBuyOrder(
+                    issuanceNonce,
+                    indexToken,
+                    usdc,
+                    address(0),
+                    currentProviderIndexes[i],
+                    share
+                );
+            }
             // emit Issuanced(issuanceNonce, msg.sender, indexToken, usdc, underlyings[i], parts[i]);
         }
 
@@ -165,6 +182,7 @@ contract IndexFactory is
         );
         uint64[] memory currentProviderIndexes = functionsOracle
             .getCurrentProviderIndexes(indexToken, currentFilledCount);
+        bool _ccipCalled = false;
         for (uint256 i = 0; i < currentProviderIndexes.length; i++) {
             // (
             //     uint256 totalShares,
@@ -185,6 +203,20 @@ contract IndexFactory is
             //     share
             // );
             address usdc = orderManager.usdcAddress();
+            if (currentProviderIndexes[i] == 1 || currentProviderIndexes[i] == 2) {
+                if (!_ccipCalled) {
+                    orderNonce = _createSellOrder(
+                        redemptionNonce,
+                        indexToken,
+                        address(0), // input token
+                        usdc, // output token
+                        currentProviderIndexes[i],
+                        0,
+                        burnPercent
+                    );
+                    _ccipCalled = true;
+                }
+            } else {
             orderNonce = _createSellOrder(
                 redemptionNonce,
                 indexToken,
@@ -194,7 +226,8 @@ contract IndexFactory is
                 0,
                 burnPercent
             );
-        /**
+            }
+            /**
         uint256 totalCurrentList = _requireUnderlyings(indexToken);
         address vaultAddr = _getVault(indexToken);
         address usdc = orderManager.usdcAddress();

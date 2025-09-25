@@ -320,15 +320,17 @@ contract CoreSender is Initializable, CCIPReceiver, ProposableOwnableUpgradeable
         }
     }
 
-    function sendRedemptionRequest(uint256 _burnPercent, uint256 _redemptionNonce, uint64 _chainSelector)
+    uint public redemptionTokensCount;
+    function sendRedemptionRequest(address _indexToken, uint256 _burnPercent, uint256 _redemptionNonce, uint64 _chainSelector)
         public
         onlyFactory
     {
         // get data
         address crossChainIndexFactory = mainChainStorage.crossChainFactoryBySelector(_chainSelector);
-        address[] memory tokenAddresses = functionsOracle.allCurrentChainSelectorTokens(address(0), _chainSelector);
+        address[] memory tokenAddresses = functionsOracle.allCurrentChainSelectorTokens(address(_indexToken), _chainSelector);
         uint256[] memory burnPercentages = new uint256[](1);
         burnPercentages[0] = _burnPercent;
+        redemptionTokensCount = mainChainStorage.coreSenderGasLimit();
         //encode data
         bytes memory data = abi.encode(
             1,

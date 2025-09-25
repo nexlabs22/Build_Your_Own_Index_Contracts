@@ -21,7 +21,7 @@ import "../../src/factory/IndexFactory.sol";
 import "../../src/factory/IndexFactoryStorage.sol";
 import "../../src/ccip/MainChainFactory.sol";
 import "../../src/ccip/MainChainStorage.sol";
-// import "../../src/factory/IndexFactoryBalancer.sol";
+// import "../../src/factory/MainChainBalancer.sol";
 import "../../src/oracle/FunctionsOracle.sol";
 import "../../src/ccip/MainChainStorage.sol";
 import "../../src/orderManager/OrderManager.sol";
@@ -89,7 +89,7 @@ contract CCIPDeployer is
     IndexFactory public factory;
     OrderManager public orderManager;
     // BalancerSender public balancerSender;
-    // IndexFactoryBalancer public factoryBalancer;
+    // MainChainBalancer public mainChainBalancer;
     // CrossChainFeeSender public crossChainFeeSender;
     // CrossChainFeeReceiver public crossChainFeeReceiver;
 
@@ -465,13 +465,13 @@ contract CCIPDeployer is
 
         
 
-        // IndexFactoryBalancer indexFactoryBalancerImpl = new IndexFactoryBalancer();
-        // IndexFactoryBalancer indexFactoryBalancer = IndexFactoryBalancer(
+        // MainChainBalancer mainChainBalancerImpl = new MainChainBalancer();
+        // MainChainBalancer mainChainBalancer = MainChainBalancer(
         //     payable(
         //         address(
         //             new ERC1967Proxy(
-        //                 address(indexFactoryBalancerImpl),
-        //                 abi.encodeCall(IndexFactoryBalancer.initialize, (
+        //                 address(mainChainBalancerImpl),
+        //                 abi.encodeCall(MainChainBalancer.initialize, (
         //                     1,
         //                     address(indexFactoryStorage),
         //                     address(functionsOracle),
@@ -534,7 +534,7 @@ contract CCIPDeployer is
         path[1] = address(crossChainToken);
 
 
-        // functionsOracle.setIndexFactoryBalancer(address(factoryBalancer));
+        // functionsOracle.setMainChainBalancer(address(mainChainBalancer));
         // functionsOracle.setBalancerSender(address(balancerSender));
         orderManager.setFactoryAddress(address(factory));
         orderManager.setMainChainFactory(payable(address(mainChainFactory)));
@@ -559,12 +559,12 @@ contract CCIPDeployer is
         mainChainStorage.setPriceOracle(address(priceOracleAddress));
         mainChainStorage.setVault(address(vault));
         // indexFactoryStorage.setBalancerSender(address(balancerSender));
-        // indexFactoryStorage.setIndexFactoryBalancer(address(factoryBalancer));
+        // indexFactoryStorage.setMainChainBalancer(address(mainChainBalancer));
         mainChainStorage.setCoreSenderAndBalancerSenderGasLimits(2000000, 2000000);
         mainChainStorage.setIssuanceAndRedemptionFeePercentages(20, 20);
         mainChainStorage.setIsCrossChainFeeSponsered(false);
         vault.setOperator(address(mainChainFactory), true);
-        // vault.setOperator(address(factoryBalancer), true);
+        // vault.setOperator(address(mainChainBalancer), true);
 
         // factory.setIndexFactoryStorage(address(indexFactoryStorage));
 
@@ -594,7 +594,7 @@ contract CCIPDeployer is
         mockRouter.setFactoryChainSelector(1, address(coreSender));
         mockRouter.setFactoryChainSelector(1, address(factory));
         mockRouter.setFactoryChainSelector(1, address(mainChainFactory));
-        // mockRouter.setFactoryChainSelector(1, address(factoryBalancer));
+        // mockRouter.setFactoryChainSelector(1, address(mainChainBalancer));
         // mockRouter.setFactoryChainSelector(1, address(balancerSender));
         mockRouter.setFactoryChainSelector(2, address(crossChainIndexFactory));
         // mockRouter.setFactoryChainSelector(1, address(crossChainFeeSender));
@@ -697,7 +697,7 @@ contract CCIPDeployer is
             factory,
             mainChainFactory
             // address(0), // balancerSender
-            // address(0), // factoryBalancer
+            // address(0), // mainChainBalancer
         ) = deployContracts3();
         // (
         //     address(0), // crossChainFeeSender

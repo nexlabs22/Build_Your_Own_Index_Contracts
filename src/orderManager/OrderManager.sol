@@ -147,6 +147,7 @@ contract OrderManager is Initializable, OwnableUpgradeable {
     }
 
     function createOrder(CreateOrderConfig memory _config) external onlyOperator returns (uint256 orderNonce) {
+        bool _ccipCalled = false;
         // increasing order nonce
         _increaseOrderNonce(_config.isBuyOrder);
         // transfer USDC from caller to order manager contract
@@ -165,9 +166,9 @@ contract OrderManager is Initializable, OwnableUpgradeable {
                 );
                 providerNonceToOrderNonce[_config.indexTokenAddress][_config.providerIndex][ccipNonce] = orderNonceInfo.orderNonce;
             }
-        } else {
-            if(_config.providerIndex == 1 || _config.providerIndex == 2) {
-                redemptionWithCCIPFactory(_config.indexTokenAddress, _config.burnPercent, _config.outputTokenAddress);
+        } else{
+            if((_config.providerIndex == 1 || _config.providerIndex == 2)) {
+                    redemptionWithCCIPFactory(_config.indexTokenAddress, _config.burnPercent, _config.outputTokenAddress);
             }
         }
         // emit the event
