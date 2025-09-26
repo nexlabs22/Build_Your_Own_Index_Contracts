@@ -16,7 +16,7 @@ contract VaultTest is Test {
     function setUp() public {
         Vault vaultImlp = new Vault();
         vault = Vault(address(new ERC1967Proxy(address(vaultImlp), abi.encodeCall(Vault.initialize, (operator)))));
-        token = new MockERC20("Test", "TST");
+        token = new MockERC20("Test", "TST", 18);
         token.mint(address(this), 10000e18);
     }
 
