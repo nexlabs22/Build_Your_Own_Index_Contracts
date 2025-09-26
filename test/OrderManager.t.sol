@@ -170,6 +170,7 @@ contract OrderManagerTest is OlympixUnitTest("OrderManager") {
 
         // vm.expectEmit(true, true, true, true);
         // emit OrderCreated(idxToken, 1, operator_, false, address(underlying), amt, address(usdc), 0);
+        // emit OrderCreated(idxToken, 1, operator_, false, address(underlying), amt, address(usdc), 0);
 
         // vm.prank(operator_);
         // uint256 orderNonce = orderManager.createOrder(cfg);
