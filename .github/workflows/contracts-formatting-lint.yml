@@ -1,0 +1,48 @@
+name: Contracts Formatting & Lint
+
+on:
+  pull_request:
+    paths-ignore:
+      - '**/*.md'
+      - 'docs/**'
+
+concurrency:
+  group: contracts-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: write
+
+env:
+  FOUNDRY_PROFILE: ci
+
+jobs:
+  formatting-lint:
+    name: Formatting & Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Cache Foundry
+        uses: actions/cache@v4
+        with:
+          path: ~/.foundry
+          key: foundry-${{ runner.os }}-${{ hashFiles('foundry.toml') }}
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: latest
+
+      - name: Check Forge formatting
+        run: forge fmt --check
+
+      - name: Install solhint
+        run: npm install -g solhint
+
+      - name: Run solhint
+        run: solhint 'src/**/*.sol' --max-warnings 0 || (echo "Solhint failed" && exit 1)

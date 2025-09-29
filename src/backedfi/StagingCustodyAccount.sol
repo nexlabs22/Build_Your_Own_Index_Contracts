@@ -8,11 +8,8 @@ import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Ini
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
 import {IndexFactory} from "../factory/IndexFactory.sol";
-import {IndexToken} from "../token/IndexToken.sol";
 import {IndexFactoryStorage} from "./IndexFactoryStorage.sol";
 import {FunctionsOracle} from "../oracle/FunctionsOracle.sol";
-import {FeeCalculation} from "../libraries/FeeCalculation.sol";
-import {Vault} from "../vault/Vault.sol";
 import {OrderManager} from "../orderManager/OrderManager.sol";
 
 error ZeroAmount();

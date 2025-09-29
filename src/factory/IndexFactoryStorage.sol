@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.25;
 
-import {OrderManager} from "../orderManager/OrderManager.sol";
-import {FunctionsOracle} from "../oracle/FunctionsOracle.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "../utils/proposable/ProposableOwnableUpgradeable.sol";
 

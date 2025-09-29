@@ -1,0 +1,52 @@
+name: Contracts Unit Tests
+
+on:
+  pull_request:
+    paths-ignore:
+      - '**/*.md'
+      - 'docs/**'
+
+concurrency:
+  group: contracts-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: write
+
+env:
+  FOUNDRY_PROFILE: ci
+
+jobs:
+  unit-tests:
+    name: Unit Tests
+    if: ${{ github.event_name == 'pull_request' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref || github.ref }}
+          submodules: recursive
+
+      - name: Cache Foundry
+        uses: actions/cache@v4
+        with:
+          path: ~/.foundry
+          key: foundry-${{ runner.os }}-${{ hashFiles('foundry.toml') }}
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+
+      - name: Run unit tests
+        run: forge test -vv --fail-fast
+
+      - name: Gas snapshot (JSON)
+        run: forge snapshot --json > gas-snapshot.json || echo '{}' > gas-snapshot.json
+
+      - name: Upload gas snapshot
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gas-snapshot
+          path: gas-snapshot.json

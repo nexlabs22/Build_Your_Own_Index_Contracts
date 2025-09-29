@@ -11,7 +11,6 @@ import {FunctionsOracle} from "../oracle/FunctionsOracle.sol";
 import {IndexToken} from "../token/IndexToken.sol";
 import {Vault} from "../vault/Vault.sol";
 import {StagingCustodyAccount} from "./StagingCustodyAccount.sol";
-import {IRiskAssetFactory} from "./interfaces/IRiskAssetFactory.sol";
 
 error InvalidAddress();
 error ZeroAmount();
