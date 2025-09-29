@@ -24,7 +24,12 @@ import "../orderManager/OrderManager.sol";
 /// @notice The main token contract for Index Token (NEX Labs Protocol)
 /// @dev This contract uses an upgradeable pattern
 
-contract MainChainFactory is Initializable, ProposableOwnableUpgradeable, ReentrancyGuardUpgradeable, PausableUpgradeable {
+contract MainChainFactory is
+    Initializable,
+    ProposableOwnableUpgradeable,
+    ReentrancyGuardUpgradeable,
+    PausableUpgradeable
+{
     // using MessageSender for *;
 
     struct IssuanceSendLocalVars {
@@ -290,7 +295,9 @@ contract MainChainFactory is Initializable, ProposableOwnableUpgradeable, Reentr
         uint256 feeAmount;
 
         mainChainStorage.increaseIssuanceNonce();
-        mainChainStorage.setIssuanceData(mainChainStorage.issuanceNonce(), msg.sender, _tokenIn, _inputAmount, bytes32(0));
+        mainChainStorage.setIssuanceData(
+            mainChainStorage.issuanceNonce(), msg.sender, _tokenIn, _inputAmount, bytes32(0)
+        );
 
         require(
             IERC20(_tokenIn).transferFrom(msg.sender, address(this), _inputAmount + feeAmount), "Token transfer failed"
@@ -426,9 +433,9 @@ contract MainChainFactory is Initializable, ProposableOwnableUpgradeable, Reentr
             mainChainStorage.issuanceIncreaseCompletedTokensCount(_issuanceNonce);
             // call the order manager here
             // orderManager.completeIssuance(
-            //     _issuanceNonce, 
-            //     _indexToken, 
-            //     tokenAddress, 
+            //     _issuanceNonce,
+            //     _indexToken,
+            //     tokenAddress,
             //     mainChainStorage.getIssuanceOldTokenValue(_issuanceNonce, tokenAddress),
             //     mainChainStorage.getIssuanceNewTokenValue(_issuanceNonce, tokenAddress)
             // );
@@ -530,7 +537,8 @@ contract MainChainFactory is Initializable, ProposableOwnableUpgradeable, Reentr
         for (uint256 i = 0; i < _chainSelectorTokensCount; i++) {
             address tokenAddress = tokens[i];
             (address[] memory toETHPath, uint24[] memory toETHFees) = functionsOracle.getToETHPathData(tokenAddress);
-            uint256 swapAmount = (_burnPercent * IERC20(tokenAddress).balanceOf(address(mainChainStorage.vault()))) / 1e18;
+            uint256 swapAmount =
+                (_burnPercent * IERC20(tokenAddress).balanceOf(address(mainChainStorage.vault()))) / 1e18;
             vault.withdrawFunds(tokenAddress, address(this), swapAmount);
             uint256 swapAmountOut =
                 tokenAddress == address(weth) ? swapAmount : swap(toETHPath, toETHFees, swapAmount, address(coreSender));
