@@ -34,8 +34,11 @@ jobs:
       - name: Install Foundry
         run: |
           curl -L https://foundry.paradigm.xyz | bash
-          source ~/.bashrc
+          # Add foundryup to PATH for the current runner session
+          export PATH="$HOME/.foundry/bin:$PATH"
           foundryup
+          forge --version  # verify installation
+
 
       - name: Check Forge formatting
         run: forge fmt --check
