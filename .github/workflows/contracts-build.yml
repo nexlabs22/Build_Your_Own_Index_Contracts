@@ -1,10 +1,8 @@
 name: Contracts Build
 
 on:
+  push:
   pull_request:
-    paths-ignore:
-      - '**/*.md'
-      - 'docs/**'
 
 concurrency:
   group: contracts-${{ github.head_ref || github.ref }}
@@ -39,6 +37,6 @@ jobs:
       - name: Install Foundry
         uses: foundry-rs/foundry-toolchain@v1
 
-      - name: Forge build (sizes)
-        run: forge build --sizes
+      - name: Forge build
+        run: forge build
 

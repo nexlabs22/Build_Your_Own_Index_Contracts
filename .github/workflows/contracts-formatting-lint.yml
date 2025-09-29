@@ -1,13 +1,11 @@
 name: Contracts Formatting & Lint
 
 on:
+  push:
   pull_request:
-    paths-ignore:
-      - '**/*.md'
-      - 'docs/**'
 
 concurrency:
-  group: contracts-${{ github.ref }}
+  group: contracts-${{ github.head_ref || github.ref }}
   cancel-in-progress: true
 
 permissions:
