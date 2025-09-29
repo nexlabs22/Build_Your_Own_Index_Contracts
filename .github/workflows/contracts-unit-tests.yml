@@ -33,13 +33,7 @@ jobs:
           key: foundry-${{ runner.os }}-${{ hashFiles('foundry.toml') }}
 
       - name: Install Foundry
-        run: |
-          curl -L https://foundry.paradigm.xyz | bash
-          # Add foundryup to PATH for the current runner session
-          export PATH="$HOME/.foundry/bin:$PATH"
-          foundryup
-          forge --version  # verify installation
-
+        uses: foundry-rs/foundry-toolchain@v1
 
       - name: Run unit tests
         run: forge test -vv --fail-fast
