@@ -34,7 +34,10 @@ jobs:
           key: foundry-${{ runner.os }}-${{ hashFiles('foundry.toml') }}
 
       - name: Install Foundry
-        uses: foundry-rs/foundry-toolchain@v1
+        run: |
+          curl -L https://foundry.paradigm.xyz | bash
+          source ~/.bashrc
+          foundryup
 
       - name: Run unit tests
         run: forge test -vv --fail-fast
