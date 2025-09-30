@@ -34,11 +34,16 @@ jobs:
       - name: Check Forge formatting
         run: forge fmt --check
 
-      - name: Install solhint
-        run: npm install -g solhint
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      - name: Install dependencies
+        run: npm ci
 
       - name: Run solhint
-        run: solhint 'src/**/*.sol' --max-warnings 0 || (echo "Solhint failed" && exit 1)
+        run: npm run lint:solidity
 
   build:
     name: Build

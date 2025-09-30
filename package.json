@@ -1,0 +1,12 @@
+{
+  "name": "build-your-own-index-contracts",
+  "version": "1.0.0",
+  "private": true,
+  "devDependencies": {
+    "solhint": "^6.0.1"
+  },
+  "scripts": {
+    "lint:solidity": "find src test -type f -name '*.sol' -exec npx solhint --max-warnings 0 {} +",
+    "lint:solidity:fix": "find src test -type f -name '*.sol' -exec npx solhint --max-warnings 0 --fix {} +"
+  }
+}
