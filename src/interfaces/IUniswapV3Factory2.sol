@@ -2,7 +2,6 @@
 // pragma solidity >=0.5.0;
 pragma solidity ^0.8.25;
 
-
 /// @title The interface for the Uniswap V3 Factory
 /// @notice The Uniswap V3 Factory facilitates creation of Uniswap V3 pools and control over the protocol fees
 interface IUniswapV3Factory2 {
