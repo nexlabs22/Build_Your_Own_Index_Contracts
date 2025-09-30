@@ -312,11 +312,7 @@ contract CoreSender is Initializable, CCIPReceiver, ProposableOwnableUpgradeable
             mainChainStorage.issuanceIncreaseCompletedTokensCount(requestIssuanceNonce);
             // call the order manager here
             orderManager.completeIssuance(
-                requestIssuanceNonce, 
-                address(indexToken), 
-                tokenAddresses[i], 
-                oldTokenValue,
-                newTokenValue
+                requestIssuanceNonce, address(indexToken), tokenAddresses[i], oldTokenValue, newTokenValue
             );
             // ....
         }
