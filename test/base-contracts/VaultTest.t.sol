@@ -23,9 +23,7 @@ contract VaultTest is OlympixUnitTest("Vault") {
     /// @notice Deploys the Vault proxy and mints mock liquidity for scenarios
     function setUp() public {
         Vault vaultImpl = new Vault();
-        vault = Vault(
-            address(new ERC1967Proxy(address(vaultImpl), abi.encodeCall(Vault.initialize, (operator))))
-        );
+        vault = Vault(address(new ERC1967Proxy(address(vaultImpl), abi.encodeCall(Vault.initialize, (operator)))));
         token = new MockERC20("Test", "TST");
         token.mint(address(this), 10000e18);
     }

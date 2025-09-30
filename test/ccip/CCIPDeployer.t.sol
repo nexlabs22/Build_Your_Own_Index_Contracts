@@ -153,11 +153,7 @@ contract ContractDeployer is
     /// @param reserve1 Reserve amount for token1
     /// @param reserve0 Reserve amount for token0
     /// @return sqrtPriceX96 Encoded square root price in Q64.96 format
-    function encodePriceSqrt(uint256 reserve1, uint256 reserve0)
-        public
-        pure
-        returns (uint160 sqrtPriceX96)
-    {
+    function encodePriceSqrt(uint256 reserve1, uint256 reserve0) public pure returns (uint160 sqrtPriceX96) {
         uint256 rawPrice = (reserve1 * 2 ** 192) / reserve0;
         sqrtPriceX96 = uint160(sqrt(rawPrice));
     }
@@ -205,7 +201,12 @@ contract ContractDeployer is
     /// @return deployedIndexFactoryStorage Storage contract supporting the factory
     function deployContracts()
         public
-        returns (IndexToken deployedIndexToken, Vault deployedVault, FunctionsOracle deployedFunctionsOracle, IndexFactoryStorage deployedIndexFactoryStorage)
+        returns (
+            IndexToken deployedIndexToken,
+            Vault deployedVault,
+            FunctionsOracle deployedFunctionsOracle,
+            IndexFactoryStorage deployedIndexFactoryStorage
+        )
     {
         IndexToken indexTokenImpl = new IndexToken();
         indexToken = IndexToken(
@@ -220,14 +221,17 @@ contract ContractDeployer is
         );
 
         Vault vaultImpl = new Vault();
-        vault = Vault(payable(address(new ERC1967Proxy(address(vaultImpl), abi.encodeCall(Vault.initialize, (address(this)))))));
+        vault = Vault(
+            payable(address(new ERC1967Proxy(address(vaultImpl), abi.encodeCall(Vault.initialize, (address(this))))))
+        );
 
         FunctionsOracle functionsOracleImpl = new FunctionsOracle();
         functionsOracle = FunctionsOracle(
             payable(
                 address(
                     new ERC1967Proxy(
-                        address(functionsOracleImpl), abi.encodeCall(FunctionsOracle.initialize, (address(oracle), JOB_ID))
+                        address(functionsOracleImpl),
+                        abi.encodeCall(FunctionsOracle.initialize, (address(oracle), JOB_ID))
                     )
                 )
             )
@@ -257,7 +261,12 @@ contract ContractDeployer is
     /// @return deployedCrossChainIndexFactoryStorage Storage backing the cross-chain factory
     function deployContracts2()
         public
-        returns (Vault deployedCrossChainVault, MainChainStorage deployedMainChainStorage, CrossChainIndexFactory deployedCrossChainIndexFactory, CrossChainIndexFactoryStorage deployedCrossChainIndexFactoryStorage)
+        returns (
+            Vault deployedCrossChainVault,
+            MainChainStorage deployedMainChainStorage,
+            CrossChainIndexFactory deployedCrossChainIndexFactory,
+            CrossChainIndexFactoryStorage deployedCrossChainIndexFactoryStorage
+        )
     {
         Vault crossChainVaultImpl = new Vault();
         crossChainVault = Vault(
@@ -346,7 +355,12 @@ contract ContractDeployer is
     /// @return deployedMainChainFactory Main chain factory coordinating deployments
     function deployContracts3()
         public
-        returns (OrderManager deployedOrderManager, CoreSender deployedCoreSender, IndexFactory deployedIndexFactory, MainChainFactory deployedMainChainFactory)
+        returns (
+            OrderManager deployedOrderManager,
+            CoreSender deployedCoreSender,
+            IndexFactory deployedIndexFactory,
+            MainChainFactory deployedMainChainFactory
+        )
     {
         OrderManager orderManagerImpl = new OrderManager();
         orderManager = OrderManager(
@@ -397,8 +411,8 @@ contract ContractDeployer is
             )
         );
 
-    MainChainFactory mainChainFactoryImpl = new MainChainFactory();
-    MainChainFactory mainChainFactoryProxy = MainChainFactory(
+        MainChainFactory mainChainFactoryImpl = new MainChainFactory();
+        MainChainFactory mainChainFactoryProxy = MainChainFactory(
             payable(
                 address(
                     new ERC1967Proxy(
@@ -423,7 +437,7 @@ contract ContractDeployer is
         deployedOrderManager = orderManager;
         deployedCoreSender = coreSender;
         deployedIndexFactory = indexFactory;
-    deployedMainChainFactory = mainChainFactoryProxy;
+        deployedMainChainFactory = mainChainFactoryProxy;
 
         // BalancerSender balancerSenderImpl = new BalancerSender();
         // balancerSender = BalancerSender(
@@ -564,7 +578,7 @@ contract ContractDeployer is
     /// @param initialSupply Balance minted to each token on creation
     /// @return tokens Array containing the deployed token instances
     function deployTokens(uint256 initialSupply) public returns (Token[12] memory tokens) {
-    for (uint256 i = 0; i < 12; ++i) {
+        for (uint256 i = 0; i < 12; ++i) {
             tokens[i] = new Token(initialSupply);
         }
     }
@@ -577,15 +591,20 @@ contract ContractDeployer is
     /// @return positionManagerAddress Address of the deployed position manager
     function deployUniswap()
         public
-        returns (address priceOracleAddr, address factoryV3Addr, address wethAddr, address routerAddress, address positionManagerAddress)
+        returns (
+            address priceOracleAddr,
+            address factoryV3Addr,
+            address wethAddr,
+            address routerAddress,
+            address positionManagerAddress
+        )
     {
         priceOracleAddr = deployByteCode(priceOracleByteCode);
         factoryV3Addr = deployByteCode(factoryByteCode);
         wethAddr = deployByteCode(WETHByteCode);
         routerAddress = deployByteCodeWithInputs(routerByteCode, abi.encode(factoryV3Addr, wethAddr));
         positionManagerAddress = deployByteCodeWithInputs(
-            positionManagerByteCode,
-            abi.encode(factoryV3Addr, wethAddr, 0x5FC8d32690cc91D4c39d9d3abcBD16989F875707)
+            positionManagerByteCode, abi.encode(factoryV3Addr, wethAddr, 0x5FC8d32690cc91D4c39d9d3abcBD16989F875707)
         );
     }
 

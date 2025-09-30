@@ -164,18 +164,17 @@ contract OrderManagerTest is OlympixUnitTest("OrderManager") {
 
     /// @notice Ensures non-operators cannot create orders
     function testOnlyOperator_CreateOrder_RevertsForNonOperator() public {
-        OrderManager.CreateOrderConfig memory cfg = OrderManager
-            .CreateOrderConfig({
-                requestNonce: 1,
-                indexTokenAddress: idxToken,
-                inputTokenAddress: address(usdc),
-                outputTokenAddress: outToken,
-                providerIndex: 1,
-                inputTokenAmount: 100e18,
-                outputTokenAmount: 0,
-                isBuyOrder: true,
-                burnPercent: 0
-            });
+        OrderManager.CreateOrderConfig memory cfg = OrderManager.CreateOrderConfig({
+            requestNonce: 1,
+            indexTokenAddress: idxToken,
+            inputTokenAddress: address(usdc),
+            outputTokenAddress: outToken,
+            providerIndex: 1,
+            inputTokenAmount: 100e18,
+            outputTokenAmount: 0,
+            isBuyOrder: true,
+            burnPercent: 0
+        });
 
         vm.expectRevert(bytes("NexVault: caller is not an operator"));
         vm.prank(user);
@@ -185,18 +184,17 @@ contract OrderManagerTest is OlympixUnitTest("OrderManager") {
     /// @notice Ensures non-operators cannot complete orders
     function testOnlyOperator_CompleteOrder_RevertsForNonOperator() public {
         // Prepare an order first from operator
-        OrderManager.CreateOrderConfig memory cfg = OrderManager
-            .CreateOrderConfig({
-                requestNonce: 42,
-                indexTokenAddress: idxToken,
-                inputTokenAddress: address(usdc),
-                outputTokenAddress: outToken,
-                providerIndex: 1,
-                inputTokenAmount: 10e18,
-                outputTokenAmount: 0,
-                isBuyOrder: true,
-                burnPercent: 0
-            });
+        OrderManager.CreateOrderConfig memory cfg = OrderManager.CreateOrderConfig({
+            requestNonce: 42,
+            indexTokenAddress: idxToken,
+            inputTokenAddress: address(usdc),
+            outputTokenAddress: outToken,
+            providerIndex: 1,
+            inputTokenAmount: 10e18,
+            outputTokenAmount: 0,
+            isBuyOrder: true,
+            burnPercent: 0
+        });
 
         vm.prank(operator_);
         uint256 nonce = orderManager.createOrder(cfg);
@@ -210,18 +208,17 @@ contract OrderManagerTest is OlympixUnitTest("OrderManager") {
     function testCreateOrder_Buy_SetsState_PullsFunds_Emits() public {
         uint256 amt = 123e18;
 
-        OrderManager.CreateOrderConfig memory cfg = OrderManager
-            .CreateOrderConfig({
-                requestNonce: 7,
-                indexTokenAddress: idxToken,
-                inputTokenAddress: address(usdc), // buy -> paying in USDC
-                outputTokenAddress: outToken, // want OUT token
-                providerIndex: 1,
-                inputTokenAmount: amt,
-                outputTokenAmount: 0,
-                isBuyOrder: true,
-                burnPercent: 0
-            });
+        OrderManager.CreateOrderConfig memory cfg = OrderManager.CreateOrderConfig({
+            requestNonce: 7,
+            indexTokenAddress: idxToken,
+            inputTokenAddress: address(usdc), // buy -> paying in USDC
+            outputTokenAddress: outToken, // want OUT token
+            providerIndex: 1,
+            inputTokenAmount: amt,
+            outputTokenAmount: 0,
+            isBuyOrder: true,
+            burnPercent: 0
+        });
 
         // Expect event
         vm.expectEmit(true, true, true, true);
@@ -242,16 +239,8 @@ contract OrderManagerTest is OlympixUnitTest("OrderManager") {
         uint256 orderNonce = orderManager.createOrder(cfg);
 
         assertEq(orderNonce, 1, "order nonce mismatch");
-        assertEq(
-            usdc.balanceOf(operator_),
-            balBefore - amt,
-            "operator usdc debited"
-        );
-        assertEq(
-            usdc.balanceOf(address(orderManager)),
-            amt,
-            "OM credited usdc"
-        );
+        assertEq(usdc.balanceOf(operator_), balBefore - amt, "operator usdc debited");
+        assertEq(usdc.balanceOf(address(orderManager)), amt, "OM credited usdc");
 
         address indexTokenAddress;
         address targetTokenAddress;
@@ -280,8 +269,7 @@ contract OrderManagerTest is OlympixUnitTest("OrderManager") {
         assertEq(isExecuted, false, "stored isExecuted");
 
         // Read struct-as-tuple
-        (uint256 buyN, uint256 sellN, uint256 ordN) = orderManager
-            .orderNonceInfo();
+        (uint256 buyN, uint256 sellN, uint256 ordN) = orderManager.orderNonceInfo();
         assertEq(buyN, 1, "buy nonce");
         assertEq(sellN, 0, "sell nonce");
         assertEq(ordN, 1, "total nonce");
@@ -291,47 +279,29 @@ contract OrderManagerTest is OlympixUnitTest("OrderManager") {
     function testCreateOrder_Sell_SetsState_PullsFunds_Emits() public {
         uint256 amt = 77e18;
 
-        OrderManager.CreateOrderConfig memory cfg = OrderManager
-            .CreateOrderConfig({
-                requestNonce: 8,
-                indexTokenAddress: idxToken,
-                inputTokenAddress: address(underlying), // sell -> sending underlying in
-                outputTokenAddress: address(usdc), // want USDC back (hint)
-                providerIndex: 1,
-                inputTokenAmount: amt,
-                outputTokenAmount: 0,
-                isBuyOrder: false,
-                burnPercent: 0
-            });
+        OrderManager.CreateOrderConfig memory cfg = OrderManager.CreateOrderConfig({
+            requestNonce: 8,
+            indexTokenAddress: idxToken,
+            inputTokenAddress: address(underlying), // sell -> sending underlying in
+            outputTokenAddress: address(usdc), // want USDC back (hint)
+            providerIndex: 1,
+            inputTokenAmount: amt,
+            outputTokenAmount: 0,
+            isBuyOrder: false,
+            burnPercent: 0
+        });
 
         uint256 balBefore = underlying.balanceOf(operator_);
 
         vm.expectEmit(true, true, true, true);
-        emit OrderCreated(
-            idxToken,
-            1,
-            operator_,
-            false,
-            address(underlying),
-            amt,
-            address(usdc),
-            0
-        );
+        emit OrderCreated(idxToken, 1, operator_, false, address(underlying), amt, address(usdc), 0);
 
         vm.prank(operator_);
         uint256 orderNonce = orderManager.createOrder(cfg);
 
         assertEq(orderNonce, 1, "order nonce mismatch");
-        assertEq(
-            underlying.balanceOf(operator_),
-            balBefore - amt,
-            "operator underlying debited"
-        );
-        assertEq(
-            underlying.balanceOf(address(orderManager)),
-            amt,
-            "OM credited underlying"
-        );
+        assertEq(underlying.balanceOf(operator_), balBefore - amt, "operator underlying debited");
+        assertEq(underlying.balanceOf(address(orderManager)), amt, "OM credited underlying");
 
         address indexTokenAddress;
         address targetTokenAddress;
@@ -353,11 +323,7 @@ contract OrderManagerTest is OlympixUnitTest("OrderManager") {
             burnPercent
         ) = orderManager.orderInfo(orderNonce);
 
-        assertEq(
-            usdcAmount,
-            0,
-            "sell sets usdcAmount to 0 (uses targetTokenAmount)"
-        );
+        assertEq(usdcAmount, 0, "sell sets usdcAmount to 0 (uses targetTokenAmount)");
         assertEq(targetTokenAmount, amt, "stored targetTokenAmount");
         assertEq(isBuy, false, "stored isBuy");
         assertEq(isExecuted, false, "stored isExecuted");
@@ -371,18 +337,17 @@ contract OrderManagerTest is OlympixUnitTest("OrderManager") {
 
     /// @notice Confirms createOrder reverts with a zero input token address
     function testCreateOrder_Revert_ZeroInputToken() public {
-        OrderManager.CreateOrderConfig memory cfg = OrderManager
-            .CreateOrderConfig({
-                requestNonce: 1,
-                indexTokenAddress: idxToken,
-                inputTokenAddress: address(0),
-                outputTokenAddress: outToken,
-                providerIndex: 1,
-                inputTokenAmount: 1e18,
-                outputTokenAmount: 0,
-                isBuyOrder: true,
-                burnPercent: 0
-            });
+        OrderManager.CreateOrderConfig memory cfg = OrderManager.CreateOrderConfig({
+            requestNonce: 1,
+            indexTokenAddress: idxToken,
+            inputTokenAddress: address(0),
+            outputTokenAddress: outToken,
+            providerIndex: 1,
+            inputTokenAmount: 1e18,
+            outputTokenAmount: 0,
+            isBuyOrder: true,
+            burnPercent: 0
+        });
 
         vm.expectRevert(bytes("OrderManger: invalid token address"));
         vm.prank(operator_);
@@ -391,18 +356,17 @@ contract OrderManagerTest is OlympixUnitTest("OrderManager") {
 
     /// @notice Confirms createOrder reverts when the input amount is zero
     function testCreateOrder_Revert_ZeroAmount() public {
-        OrderManager.CreateOrderConfig memory cfg = OrderManager
-            .CreateOrderConfig({
-                requestNonce: 1,
-                indexTokenAddress: idxToken,
-                inputTokenAddress: address(usdc),
-                outputTokenAddress: outToken,
-                providerIndex: 1,
-                inputTokenAmount: 0,
-                outputTokenAmount: 0,
-                isBuyOrder: true,
-                burnPercent: 0
-            });
+        OrderManager.CreateOrderConfig memory cfg = OrderManager.CreateOrderConfig({
+            requestNonce: 1,
+            indexTokenAddress: idxToken,
+            inputTokenAddress: address(usdc),
+            outputTokenAddress: outToken,
+            providerIndex: 1,
+            inputTokenAmount: 0,
+            outputTokenAmount: 0,
+            isBuyOrder: true,
+            burnPercent: 0
+        });
 
         vm.expectRevert(bytes("OrderManger: amount must be greater than 0"));
         vm.prank(operator_);
@@ -411,18 +375,17 @@ contract OrderManagerTest is OlympixUnitTest("OrderManager") {
 
     /// @notice Validates completion flow and ensures double completion reverts
     function testCompleteOrder_SetsExecuted_AndRevertsOnSecondCall() public {
-        OrderManager.CreateOrderConfig memory cfg = OrderManager
-            .CreateOrderConfig({
-                requestNonce: 99,
-                indexTokenAddress: idxToken,
-                inputTokenAddress: address(usdc),
-                outputTokenAddress: outToken,
-                providerIndex: 1,
-                inputTokenAmount: 5e18,
-                outputTokenAmount: 0,
-                isBuyOrder: true,
-                burnPercent: 0
-            });
+        OrderManager.CreateOrderConfig memory cfg = OrderManager.CreateOrderConfig({
+            requestNonce: 99,
+            indexTokenAddress: idxToken,
+            inputTokenAddress: address(usdc),
+            outputTokenAddress: outToken,
+            providerIndex: 1,
+            inputTokenAmount: 5e18,
+            outputTokenAmount: 0,
+            isBuyOrder: true,
+            burnPercent: 0
+        });
 
         vm.prank(operator_);
         uint256 orderNonce = orderManager.createOrder(cfg);
@@ -473,11 +436,7 @@ contract OrderManagerTest is OlympixUnitTest("OrderManager") {
         // Note:
         // We'll set backedFiFactory via storage slot. For now, assume it's initialized to 0.
         bytes32 slot = bytes32(uint256(6)); // backedFiFactory is the 6th storage slot (after 5 simple types), per inheritance order
-        vm.store(
-            address(orderManager),
-            slot,
-            bytes32(uint256(uint160(mockBackedFi)))
-        );
+        vm.store(address(orderManager), slot, bytes32(uint256(uint160(mockBackedFi))));
 
         // _inputAmount == 0 should revert with "Invalid amount!"
         vm.expectRevert(bytes("Invalid amount!"));
@@ -493,11 +452,7 @@ contract OrderManagerTest is OlympixUnitTest("OrderManager") {
 
         // Patch backedFiFactory address via low-level store
         bytes32 slot = bytes32(uint256(6));
-        vm.store(
-            address(orderManager),
-            slot,
-            bytes32(uint256(uint160(mockBackedFi)))
-        );
+        vm.store(address(orderManager), slot, bytes32(uint256(uint160(mockBackedFi))));
 
         // Should revert if indexToken is address(0)
         vm.expectRevert(bytes("Invalid address!"));
@@ -517,8 +472,8 @@ contract OrderManagerTest is OlympixUnitTest("OrderManager") {
         address mockBackedFi;
         {
             // Deploy a contract which emits log on call to issuanceIndexTokens
-            bytes
-                memory code = hex"608060405234801561001057600080fd5b50610149806100206000396000f3fe6080604052600436106100235760003560e01c80636a9027e514610028575b600080fd5b610038600480360381019061003391906100da565b61003a565b005b8373ffffffffffffffffffffffffffffffffffffffff166323b872dd6040518163ffffffff1660e01b815260040160206040518083038186803b15801561007657600080fd5b505af415801561008a573d6000803e3d6000fd5b5050505056fea2646970667358221220aeed5be69bd77cbb5dc8a798e4fdd9636c3f7e6e51397bf7a10d1671b4d8b65b64736f6c63430008190033"; // minimal stub: just returns, no storage
+            bytes memory code =
+                hex"608060405234801561001057600080fd5b50610149806100206000396000f3fe6080604052600436106100235760003560e01c80636a9027e514610028575b600080fd5b610038600480360381019061003391906100da565b61003a565b005b8373ffffffffffffffffffffffffffffffffffffffff166323b872dd6040518163ffffffff1660e01b815260040160206040518083038186803b15801561007657600080fd5b505af415801561008a573d6000803e3d6000fd5b5050505056fea2646970667358221220aeed5be69bd77cbb5dc8a798e4fdd9636c3f7e6e51397bf7a10d1671b4d8b65b64736f6c63430008190033"; // minimal stub: just returns, no storage
             // solhint-disable-next-line no-inline-assembly
             assembly {
                 mockBackedFi := create(0, add(code, 0x20), mload(code))
@@ -528,11 +483,7 @@ contract OrderManagerTest is OlympixUnitTest("OrderManager") {
         orderManager.setFactoryAddress(address(0xDEAD));
         // Patch backedFiFactory via storage slot
         bytes32 slot = bytes32(uint256(6));
-        vm.store(
-            address(orderManager),
-            slot,
-            bytes32(uint256(uint160(mockBackedFi)))
-        );
+        vm.store(address(orderManager), slot, bytes32(uint256(uint160(mockBackedFi))));
 
         // Call happy path: nonzero input, valid address
         orderManager.issuanceWithBackedFiFactory(idxToken, 100);
@@ -546,8 +497,8 @@ contract OrderManagerTest is OlympixUnitTest("OrderManager") {
         address mockBackedFi;
         {
             // Deploy a contract which has a fallback for .redemption(), just returns (for the revert test, not called)
-            bytes
-                memory code = hex"6080604052348015600f57600080fd5b5060c08061001d6000396000f3fe60806040526004361060295760003560e01c8063b3fecbc514602e575b600080fd5b603c60383660046045565b603e565b005b7fffffffff00000000000000000000000000000000000000000000000000000000000000006020526000908152604090205460ff168156fea264697066735822122044b492ec3765e5486de6d7c33433851ae4b8c5e8ddbed5df10dc9b6ec4eaae6064736f6c63430008190033";
+            bytes memory code =
+                hex"6080604052348015600f57600080fd5b5060c08061001d6000396000f3fe60806040526004361060295760003560e01c8063b3fecbc514602e575b600080fd5b603c60383660046045565b603e565b005b7fffffffff00000000000000000000000000000000000000000000000000000000000000006020526000908152604090205460ff168156fea264697066735822122044b492ec3765e5486de6d7c33433851ae4b8c5e8ddbed5df10dc9b6ec4eaae6064736f6c63430008190033";
             // solhint-disable-next-line no-inline-assembly
             assembly {
                 mockBackedFi := create(0, add(code, 0x20), mload(code))
@@ -557,26 +508,20 @@ contract OrderManagerTest is OlympixUnitTest("OrderManager") {
         vm.prank(owner_);
         orderManager.setFactoryAddress(address(0xDEAD));
         bytes32 slot = bytes32(uint256(6));
-        vm.store(
-            address(orderManager),
-            slot,
-            bytes32(uint256(uint160(mockBackedFi)))
-        );
+        vm.store(address(orderManager), slot, bytes32(uint256(uint160(mockBackedFi))));
         // test: amount == 0 triggers revert (opix-target-branch-218-True)
         vm.expectRevert(bytes("Invalid amount!"));
         orderManager.redemptionWithBackedFiFactory(idxToken, 0, 123);
     }
 
     /// @notice Ensures redemption with BackedFiFactory reverts for zero index token addresses
-    function test_redemptionWithBackedFiFactory_zeroIndexTokenAddress_reverts()
-        public
-    {
+    function test_redemptionWithBackedFiFactory_zeroIndexTokenAddress_reverts() public {
         // Arrange: Set up a minimal mock BackedFiFactory that just returns
         address mockBackedFi;
         {
             // Deploy a contract that has a fallback for .redemption(), does nothing
-            bytes
-                memory code = hex"6080604052348015600f57600080fd5b5060c08061001d6000396000f3fe60806040526004361060295760003560e01c8063b3fecbc514602e575b600080fd5b603c60383660046045565b603e565b005b7fffffffff00000000000000000000000000000000000000000000000000000000000000006020526000908152604090205460ff168156fea264697066735822122044b492ec3765e5486de6d7c33433851ae4b8c5e8ddbed5df10dc9b6ec4eaae6064736f6c63430008190033";
+            bytes memory code =
+                hex"6080604052348015600f57600080fd5b5060c08061001d6000396000f3fe60806040526004361060295760003560e01c8063b3fecbc514602e575b600080fd5b603c60383660046045565b603e565b005b7fffffffff00000000000000000000000000000000000000000000000000000000000000006020526000908152604090205460ff168156fea264697066735822122044b492ec3765e5486de6d7c33433851ae4b8c5e8ddbed5df10dc9b6ec4eaae6064736f6c63430008190033";
             // solhint-disable-next-line no-inline-assembly
             assembly {
                 mockBackedFi := create(0, add(code, 0x20), mload(code))
@@ -586,11 +531,7 @@ contract OrderManagerTest is OlympixUnitTest("OrderManager") {
         vm.prank(owner_);
         orderManager.setFactoryAddress(address(0xDEAD));
         bytes32 slot = bytes32(uint256(6));
-        vm.store(
-            address(orderManager),
-            slot,
-            bytes32(uint256(uint160(mockBackedFi)))
-        );
+        vm.store(address(orderManager), slot, bytes32(uint256(uint160(mockBackedFi))));
         // test: indexToken == address(0) triggers revert (opix-target-branch-219-True)
         vm.expectRevert(bytes("Invalid address!"));
         orderManager.redemptionWithBackedFiFactory(address(0), 123, 456);
