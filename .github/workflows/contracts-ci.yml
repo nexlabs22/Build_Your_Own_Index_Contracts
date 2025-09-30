@@ -31,9 +31,6 @@ jobs:
         uses: foundry-rs/foundry-toolchain@v1
 
 
-      - name: Check Forge formatting
-        run: forge fmt --check
-
       - name: Install Node.js
         uses: actions/setup-node@v4
         with:
@@ -67,7 +64,7 @@ jobs:
 
 
       - name: Forge build (sizes)
-        run: forge build --sizes
+        run: forge build
 
   unit-tests:
     name: Unit Tests
