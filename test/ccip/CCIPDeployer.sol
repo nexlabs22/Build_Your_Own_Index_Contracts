@@ -21,7 +21,7 @@ import "../../src/factory/IndexFactory.sol";
 import "../../src/factory/IndexFactoryStorage.sol";
 import "../../src/ccip/MainChainFactory.sol";
 import "../../src/ccip/MainChainStorage.sol";
-// import "../../src/factory/MainChainBalancer.sol";
+import "../../src/ccip/MainChainBalancer.sol";
 import "../../src/oracle/FunctionsOracle.sol";
 import "../../src/ccip/MainChainStorage.sol";
 import "../../src/orderManager/OrderManager.sol";
@@ -88,8 +88,8 @@ contract CCIPDeployer is
     MainChainFactory public mainChainFactory;
     IndexFactory public factory;
     OrderManager public orderManager;
-    // BalancerSender public balancerSender;
-    // MainChainBalancer public mainChainBalancer;
+    BalancerSender public balancerSender;
+    MainChainBalancer public mainChainBalancer;
     // CrossChainFeeSender public crossChainFeeSender;
     // CrossChainFeeReceiver public crossChainFeeReceiver;
 
@@ -369,7 +369,7 @@ contract CCIPDeployer is
 
     function deployContracts3()
         public
-        returns (OrderManager, CoreSender, IndexFactory, MainChainFactory)
+        returns (OrderManager, CoreSender, IndexFactory, MainChainFactory, BalancerSender, MainChainBalancer)
     {
         
         OrderManager orderManagerImpl = new OrderManager();
@@ -444,46 +444,46 @@ contract CCIPDeployer is
             )
         );
 
-        // BalancerSender balancerSenderImpl = new BalancerSender();
-        // balancerSender = BalancerSender(
-        //     payable(
-        //         address(
-        //             new ERC1967Proxy(
-        //                 address(balancerSenderImpl),
-        //                 abi.encodeCall(BalancerSender.initialize, (
-        //                     1,
-        //                     address(indexFactoryStorage),
-        //                     address(functionsOracle),
-        //                     address(link),
-        //                     address(mockRouter), // ccip router
-        //                     wethAddress
-        //                 ))
-        //             )
-        //         )
-        //     )
-        // );
+        BalancerSender balancerSenderImpl = new BalancerSender();
+        balancerSender = BalancerSender(
+            payable(
+                address(
+                    new ERC1967Proxy(
+                        address(balancerSenderImpl),
+                        abi.encodeCall(BalancerSender.initialize, (
+                            1,
+                            address(mainChainStorage),
+                            address(functionsOracle),
+                            address(link),
+                            address(mockRouter), // ccip router
+                            wethAddress
+                        ))
+                    )
+                )
+            )
+        );
 
         
 
-        // MainChainBalancer mainChainBalancerImpl = new MainChainBalancer();
-        // MainChainBalancer mainChainBalancer = MainChainBalancer(
-        //     payable(
-        //         address(
-        //             new ERC1967Proxy(
-        //                 address(mainChainBalancerImpl),
-        //                 abi.encodeCall(MainChainBalancer.initialize, (
-        //                     1,
-        //                     address(indexFactoryStorage),
-        //                     address(functionsOracle),
-        //                     payable(address(balancerSender)),
-        //                     wethAddress
-        //                 ))
-        //             )
-        //         )
-        //     )
-        // );
+        MainChainBalancer mainChainBalancerImpl = new MainChainBalancer();
+        MainChainBalancer mainChainBalancer = MainChainBalancer(
+            payable(
+                address(
+                    new ERC1967Proxy(
+                        address(mainChainBalancerImpl),
+                        abi.encodeCall(MainChainBalancer.initialize, (
+                            1,
+                            address(mainChainStorage),
+                            address(functionsOracle),
+                            payable(address(balancerSender)),
+                            wethAddress
+                        ))
+                    )
+                )
+            )
+        );
 
-        return (orderManager, coreSender, indexFactory, mainChainFactory);
+        return (orderManager, coreSender, indexFactory, mainChainFactory, balancerSender, mainChainBalancer);
     }
 
     // function deployContracts3() public returns (CrossChainFeeSender, CrossChainFeeReceiver) {
@@ -534,7 +534,7 @@ contract CCIPDeployer is
         path[1] = address(crossChainToken);
 
 
-        // functionsOracle.setMainChainBalancer(address(mainChainBalancer));
+        functionsOracle.setFactoryBalancer(address(mainChainBalancer));
         // functionsOracle.setBalancerSender(address(balancerSender));
         orderManager.setFactoryAddress(address(factory));
         orderManager.setMainChainFactory(payable(address(mainChainFactory)));
@@ -560,11 +560,13 @@ contract CCIPDeployer is
         mainChainStorage.setVault(address(vault));
         // indexFactoryStorage.setBalancerSender(address(balancerSender));
         // indexFactoryStorage.setMainChainBalancer(address(mainChainBalancer));
+        mainChainStorage.setBalancerSender(address(balancerSender));
+        mainChainStorage.setMainChainBalancer(address(mainChainBalancer));
         mainChainStorage.setCoreSenderAndBalancerSenderGasLimits(2000000, 2000000);
         mainChainStorage.setIssuanceAndRedemptionFeePercentages(20, 20);
         mainChainStorage.setIsCrossChainFeeSponsered(false);
         vault.setOperator(address(mainChainFactory), true);
-        // vault.setOperator(address(mainChainBalancer), true);
+        vault.setOperator(address(mainChainBalancer), true);
 
         // factory.setIndexFactoryStorage(address(indexFactoryStorage));
 
@@ -583,19 +585,19 @@ contract CCIPDeployer is
             1,
             true
         );
-        // crossChainIndexFactoryStorage.setVerifiedFactory(
-        //     address(balancerSender),
-        //     1,
-        //     true
-        // );
+        crossChainIndexFactoryStorage.setVerifiedFactory(
+            address(balancerSender),
+            1,
+            true
+        );
 
         crossChainVault.setOperator(address(crossChainIndexFactory), true);
 
         mockRouter.setFactoryChainSelector(1, address(coreSender));
         mockRouter.setFactoryChainSelector(1, address(factory));
         mockRouter.setFactoryChainSelector(1, address(mainChainFactory));
-        // mockRouter.setFactoryChainSelector(1, address(mainChainBalancer));
-        // mockRouter.setFactoryChainSelector(1, address(balancerSender));
+        mockRouter.setFactoryChainSelector(1, address(mainChainBalancer));
+        mockRouter.setFactoryChainSelector(1, address(balancerSender));
         mockRouter.setFactoryChainSelector(2, address(crossChainIndexFactory));
         // mockRouter.setFactoryChainSelector(1, address(crossChainFeeSender));
         // mockRouter.setFactoryChainSelector(2, address(crossChainFeeReceiver));
@@ -695,9 +697,9 @@ contract CCIPDeployer is
             orderManager,
             coreSender,
             factory,
-            mainChainFactory
-            // address(0), // balancerSender
-            // address(0), // mainChainBalancer
+            mainChainFactory,
+            balancerSender, // balancerSender
+            mainChainBalancer // mainChainBalancer
         ) = deployContracts3();
         // (
         //     address(0), // crossChainFeeSender

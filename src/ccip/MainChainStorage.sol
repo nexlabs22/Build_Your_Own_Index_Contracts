@@ -300,6 +300,10 @@ contract MainChainStorage is Initializable, ProposableOwnableUpgradeable {
         balancerSender = _balancerSender;
     }
 
+    function setMainChainBalancer(address _mainChainBalancer) public onlyOwner {
+        mainChainBalancer = _mainChainBalancer;
+    }
+
     /**
      * @dev Sets the vault address.
      * @param _vaultAddress The address of the vault.
