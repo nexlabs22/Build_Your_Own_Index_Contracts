@@ -1,0 +1,7 @@
+Compiling 124 files with Solc 0.8.28
+Compiling 13 files with Solc 0.8.24
+Compiling 12 files with Solc 0.7.6
+Solc 0.7.6 finished in 169.53ms
+Solc 0.8.24 finished in 566.23ms
+Solc 0.8.28 finished in 9.53s
+Compiler run successful!

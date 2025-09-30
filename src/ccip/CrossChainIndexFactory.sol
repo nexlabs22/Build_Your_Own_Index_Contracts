@@ -290,7 +290,8 @@ contract CrossChainIndexFactory is
         vars.newTokenValues = new uint256[](targetAddresses.length);
         for (uint256 i = 0; i < targetAddresses.length; i++) {
             uint256 wethToSwap = (vars.wethAmount * percentages[i]) / extraValues[0];
-            (address[] memory fromETHPath, uint24[] memory fromETHFees) = PathHelpers.decodePathBytes(targetPaths[i]);
+            (address[] memory decodedFromPath, uint24[] memory decodedFromFees) =
+                PathHelpers.decodePathBytes(targetPaths[i]);
             uint256 oldTokenValue;
             uint256 newTokenValue;
             if (targetAddresses[i] == address(vars.weth)) {
@@ -298,9 +299,11 @@ contract CrossChainIndexFactory is
                 vars.weth.transfer(address(vars.vault), wethToSwap);
                 newTokenValue = IERC20(targetAddresses[i]).balanceOf(address(vars.vault));
             } else {
-                oldTokenValue = factoryStorage.getTokenCurrentValue(targetAddresses[i], fromETHPath, fromETHFees);
-                swap(fromETHPath, fromETHFees, wethToSwap, address(vars.vault));
-                newTokenValue = factoryStorage.getTokenCurrentValue(targetAddresses[i], fromETHPath, fromETHFees);
+                oldTokenValue =
+                    factoryStorage.getTokenCurrentValue(targetAddresses[i], decodedFromPath, decodedFromFees);
+                swap(decodedFromPath, decodedFromFees, wethToSwap, address(vars.vault));
+                newTokenValue =
+                    factoryStorage.getTokenCurrentValue(targetAddresses[i], decodedFromPath, decodedFromFees);
             }
 
             // uint256 newTokenValue = factoryStorage.getTokenCurrentValue(targetAddresses[i], fromETHPath, fromETHFees);
@@ -387,14 +390,15 @@ contract CrossChainIndexFactory is
         uint256[] memory zeroArr = new uint256[](0);
         uint256[] memory tokenValueArr = new uint256[](targetAddresses.length);
         for (uint256 i = 0; i < targetAddresses.length; i++) {
-            (address[] memory fromETHPath, uint24[] memory fromETHFees) = PathHelpers.decodePathBytes(targetPaths[i]);
+            (address[] memory decodedFromPath, uint24[] memory decodedFromFees) =
+                PathHelpers.decodePathBytes(targetPaths[i]);
             if (targetAddresses[i] == address(weth())) {
                 tokenValueArr[i] =
                     factoryStorage.convertEthToUsd(IERC20(targetAddresses[i]).balanceOf(address(vault())));
             } else {
                 uint256 tokenValue = factoryStorage.getAmountOut(
-                    PathHelpers.reverseAddressArray(fromETHPath), // toETHPath
-                    PathHelpers.reverseUint24Array(fromETHFees), // toETHFees
+                    PathHelpers.reverseAddressArray(decodedFromPath), // toETHPath
+                    PathHelpers.reverseUint24Array(decodedFromFees), // toETHFees
                     IERC20(targetAddresses[i]).balanceOf(address(vault()))
                 );
                 tokenValueArr[i] = factoryStorage.convertEthToUsd(tokenValue);
@@ -433,9 +437,7 @@ contract CrossChainIndexFactory is
             inputData.oracleTokens,
             inputData.currentTargetPaths,
             inputData.oracleTargetPaths,
-            inputData.oracleTokenShares,
-            inputData.sender,
-            inputData.nonce
+            inputData.oracleTokenShares
         );
 
         uint256 crossChainTokenAmount = swap(
@@ -484,19 +486,19 @@ contract CrossChainIndexFactory is
         uint256 initialWethBalance,
         address[] memory currentTokens,
         bytes[] memory currentTargetPaths,
-        Vault vault,
-        IWETH weth
+        Vault targetVault,
+        IWETH wethToken
     ) internal returns (uint256 swapWethAmount) {
         for (uint256 i = 0; i < currentTokens.length; i++) {
             (address[] memory currentFromETHPath, uint24[] memory currentFromETHFees) =
                 PathHelpers.decodePathBytes(currentTargetPaths[i]);
             uint256 wethAmount;
-            if (currentTokens[i] == address(weth)) {
-                vault.withdrawFunds(address(weth), address(this), initialWethBalance);
+            if (currentTokens[i] == address(wethToken)) {
+                targetVault.withdrawFunds(address(wethToken), address(this), initialWethBalance);
                 wethAmount = initialWethBalance;
             } else {
-                uint256 tokenBalance = IERC20(currentTokens[i]).balanceOf(address(vault));
-                vault.withdrawFunds(currentTokens[i], address(this), tokenBalance);
+                uint256 tokenBalance = IERC20(currentTokens[i]).balanceOf(address(targetVault));
+                targetVault.withdrawFunds(currentTokens[i], address(this), tokenBalance);
                 wethAmount = swap(
                     PathHelpers.reverseAddressArray(currentFromETHPath), // toETHPath
                     PathHelpers.reverseUint24Array(currentFromETHFees), // toETHFees
@@ -514,20 +516,22 @@ contract CrossChainIndexFactory is
         bytes[] memory oracleTargetPaths,
         uint256[] memory oracleTokenShares,
         uint256 chainSelectorTotalShares,
-        Vault vault,
-        IWETH weth
+        Vault targetVault,
+        IWETH wethToken
     ) internal {
         for (uint256 i = 0; i < oracleTokens.length; i++) {
             (address[] memory oracleFromETHPath, uint24[] memory oracleFromETHFees) =
                 PathHelpers.decodePathBytes(oracleTargetPaths[i]);
-            if (oracleTokens[i] == address(weth)) {
-                weth.transfer(address(vault), (wethAmountToSwap * oracleTokenShares[i]) / chainSelectorTotalShares);
+            if (oracleTokens[i] == address(wethToken)) {
+                wethToken.transfer(
+                    address(targetVault), (wethAmountToSwap * oracleTokenShares[i]) / chainSelectorTotalShares
+                );
             } else {
-                uint256 wethAmount = swap(
+                swap(
                     oracleFromETHPath,
                     oracleFromETHFees,
                     (wethAmountToSwap * oracleTokenShares[i]) / chainSelectorTotalShares,
-                    address(vault)
+                    address(targetVault)
                 );
             }
         }
@@ -539,16 +543,13 @@ contract CrossChainIndexFactory is
         address[] memory oracleTokens,
         bytes[] memory currentTargetPaths,
         bytes[] memory oracleTargetPaths,
-        uint256[] memory oracleTokenShares,
-        address sender,
-        uint256 nonce
+        uint256[] memory oracleTokenShares
     ) internal returns (uint256) {
         SwapFirstReweightActionVars memory vars;
-        // swapData.chainSelectorCurrentTokensCount = data.chainSelectorCurrentTokensCount;
-        vars.initialWethBalance = weth().balanceOf(address(data.vault));
+        vars.initialWethBalance = data.weth.balanceOf(address(data.vault));
 
         vars.swapWethAmount = _swapToETHFirstReweightAction(
-            vars.initialWethBalance, currentTokens, currentTargetPaths, data.vault, weth()
+            vars.initialWethBalance, currentTokens, currentTargetPaths, data.vault, data.weth
         );
         // vars.chainSelectorOracleTokensCount = oracleTokens.length;
 
@@ -562,8 +563,8 @@ contract CrossChainIndexFactory is
             oracleTargetPaths,
             oracleTokenShares,
             data.chainSelectorTotalShares,
-            vault(),
-            weth()
+            data.vault,
+            data.weth
         );
 
         return vars.extraWethAmount;
@@ -628,25 +629,25 @@ contract CrossChainIndexFactory is
         uint256[] memory oracleTokenShares,
         uint256 crossChainWethAmount,
         uint256[] memory extraData,
-        IWETH weth,
-        Vault vault
+        IWETH wethToken,
+        Vault targetVault
     ) internal {
         SwapSecondReweightActionVars memory vars;
         vars.chainSelectorTotalShares = extraData[1];
         vars.chainSelectorCurrentTokensCount = currentTokens.length;
-        vars.initialWethBalance = weth.balanceOf(address(vault));
+        vars.initialWethBalance = wethToken.balanceOf(address(targetVault));
         vars.swapWethAmount = 0; // Initialize swapWethAmount to 0
         for (uint256 i = 0; i < currentTokens.length; i++) {
             address tokenAddress = currentTokens[i];
             (address[] memory currentFromETHPath, uint24[] memory currentFromETHFees) =
                 PathHelpers.decodePathBytes(currentTargetPaths[i]);
             uint256 wethAmount;
-            if (tokenAddress == address(weth)) {
-                vault.withdrawFunds(address(weth), address(this), vars.initialWethBalance);
+            if (tokenAddress == address(wethToken)) {
+                targetVault.withdrawFunds(address(wethToken), address(this), vars.initialWethBalance);
                 wethAmount = vars.initialWethBalance;
             } else {
-                uint256 tokenAmount = IERC20(tokenAddress).balanceOf(address(vault));
-                vault.withdrawFunds(tokenAddress, address(this), tokenAmount);
+                uint256 tokenAmount = IERC20(tokenAddress).balanceOf(address(targetVault));
+                targetVault.withdrawFunds(tokenAddress, address(this), tokenAmount);
                 wethAmount = swap(
                     PathHelpers.reverseAddressArray(currentFromETHPath), // toETHPath
                     PathHelpers.reverseUint24Array(currentFromETHFees), // toETHFees
@@ -663,16 +664,16 @@ contract CrossChainIndexFactory is
             uint256 newTokenMarketShare = oracleTokenShares[i];
             (address[] memory oracleFromETHPath, uint24[] memory oracleFromETHFees) =
                 PathHelpers.decodePathBytes(oracleTargetPaths[i]);
-            if (newTokenAddress == address(weth)) {
-                weth.transfer(
-                    address(vault), (vars.wethAmountToSwap * newTokenMarketShare) / vars.chainSelectorTotalShares
+            if (newTokenAddress == address(wethToken)) {
+                wethToken.transfer(
+                    address(targetVault), (vars.wethAmountToSwap * newTokenMarketShare) / vars.chainSelectorTotalShares
                 );
             } else {
-                uint256 wethAmount = swap(
+                swap(
                     oracleFromETHPath,
                     oracleFromETHFees,
                     (vars.wethAmountToSwap * newTokenMarketShare) / vars.chainSelectorTotalShares,
-                    address(vault)
+                    address(targetVault)
                 );
             }
         }

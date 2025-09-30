@@ -101,6 +101,7 @@ contract FunctionsOracle is Initializable, FunctionsClient, ConfirmedOwner {
      * Either response or error parameter will be set, but never both
      */
     function fulfillRequest(bytes32 requestId, bytes memory response, bytes memory err) internal override {
+        require(err.length == 0, "FunctionsOracle: fulfill failed");
         (uint8[] memory assetType, address[] memory _tokens, uint256[] memory _marketShares) =
             abi.decode(response, (uint8[], address[], uint256[]));
         require(requestId.length > 0, "invalid request id");

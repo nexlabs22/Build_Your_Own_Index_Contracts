@@ -208,7 +208,7 @@ contract MainChainFactory is
     }
 
     function getIssuanceFee(
-        address _indexToken,
+        address, /* _indexToken */
         address _tokenIn,
         address[] memory _tokenInPath,
         uint24[] memory _tokenInFees,
@@ -223,10 +223,6 @@ contract MainChainFactory is
         }
 
         // get fee for other chains
-        uint256 totalChains = functionsOracle.currentChainSelectorsCount(_indexToken);
-        uint256 latestCount = functionsOracle.currentFilledCount(_indexToken);
-        (,, uint64[] memory chainSelectors) = functionsOracle.getCurrentData(_indexToken, latestCount);
-
         uint256 totalCrossChainFee;
         /**
          * for (uint256 i = 0; i < totalChains; i++) {
@@ -244,8 +240,7 @@ contract MainChainFactory is
         return (totalCrossChainFee * (100 + 20)) / 100;
     }
 
-    function getRedemptionFee(address _indexToken, uint256 amountIn) public view returns (uint256) {
-        uint256 burnPercent = (amountIn * 1e18) / indexToken.totalSupply();
+    function getRedemptionFee(address _indexToken, uint256 /* amountIn */ ) public view returns (uint256) {
         uint256 totalChains = functionsOracle.currentChainSelectorsCount(_indexToken);
         uint256 latestCount = functionsOracle.currentFilledCount(_indexToken);
         (,, uint64[] memory chainSelectors) = functionsOracle.getCurrentData(_indexToken, latestCount);
@@ -288,9 +283,6 @@ contract MainChainFactory is
             (bool success,) = mainChainStorage.coreSender().call{value: msg.value}("");
             require(success, "Cross chain fee transfer failed");
         }
-        IWETH weth = mainChainStorage.weth();
-        Vault vault = mainChainStorage.vault();
-
         // uint256 feeAmount = FeeCalculation.calculateFee(_inputAmount, mainChainStorage.feeRate());
         uint256 feeAmount;
 
@@ -368,12 +360,7 @@ contract MainChainFactory is
                 functionsOracle.currentChainSelectorTokensCount(_indexToken, chainSelector);
             if (chainSelector == currentChainSelector) {
                 _issuanceSwapsCurrentChain(
-                    _indexToken,
-                    wethAmount,
-                    mainChainStorage.issuanceNonce(),
-                    chainSelectorTokensCount,
-                    chainSelector,
-                    latestCount
+                    _indexToken, wethAmount, mainChainStorage.issuanceNonce(), chainSelectorTokensCount, chainSelector
                 );
             } else {
                 _issuanceSwapsOtherChains(
@@ -399,15 +386,13 @@ contract MainChainFactory is
      * @param _issuanceNonce The issuance nonce.
      * @param _chainSelectorTokensCount The number of tokens in the chain selector.
      * @param _chainSelector The chain selector.
-     * @param _latestCount The latest count.
      */
     function _issuanceSwapsCurrentChain(
         address _indexToken,
         uint256 _wethAmount,
         uint256 _issuanceNonce,
         uint256 _chainSelectorTokensCount,
-        uint64 _chainSelector,
-        uint256 _latestCount
+        uint64 _chainSelector
     ) internal {
         address[] memory tokens = functionsOracle.allCurrentChainSelectorTokens(_indexToken, _chainSelector);
         for (uint256 i = 0; i < _chainSelectorTokensCount; i++) {
@@ -468,7 +453,7 @@ contract MainChainFactory is
         uint256 _burnPercent,
         address _tokenOut,
         address[] memory _tokenOutPath,
-        uint24[] memory _tokenOutFees
+        uint24[] memory /* _tokenOutFees */
     ) public payable whenNotPaused {
         // Validate input parameters
         // require(amountIn > 0, "Amount must be greater than zero");

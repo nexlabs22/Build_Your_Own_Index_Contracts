@@ -15,12 +15,14 @@ contract MockApiOracle {
     uint256 public counter2;
     bytes32 public preRequestId;
 
+    error FulfillRequestFailed();
+
     function sendRequest(
-        uint64 subscriptionId,
-        bytes calldata data,
-        uint16 dataVersion,
-        uint32 callbackGasLimit,
-        bytes32 donId
+        uint64, /* subscriptionId */
+        bytes calldata, /* data */
+        uint16, /* dataVersion */
+        uint32, /* callbackGasLimit */
+        bytes32 /* donId */
     ) external returns (bytes32) {
         // return getRandomBytes32();
         counter++;
@@ -33,23 +35,25 @@ contract MockApiOracle {
             counter2++;
         }
         bytes memory err;
-        (bool success,) = _requester.call(
-            // abi.encodeWithSelector(req.callbackFunctionId, _requestId, _data1, _data2, _data3, _data4, _data5)
-            // abi.encodeWithSelector(req.callbackFunctionId, _requestId, convertUintToBytes32(price), convertIntToBytes32Array(fundingRate), convertStringToBytes32Array(strings))
-            abi.encodeWithSelector(this.handleOracleFulfillment.selector, _requestId, _data, err)
-        ); // solhint-disable-line avoid-low-level-calls
-        require(success, "MockOracle: fulfilling request faild");
+        // solhint-disable-next-line avoid-low-level-calls
+        (bool success,) =
+            _requester.call(abi.encodeWithSelector(this.handleOracleFulfillment.selector, _requestId, _data, err));
+        if (!success) revert FulfillRequestFailed();
         return success;
     }
 
-    function handleOracleFulfillment(bytes32 requestId, bytes memory response, bytes memory err) external {}
+    function handleOracleFulfillment(bytes32 requestId, bytes memory response, bytes memory err) external pure {
+        requestId;
+        response;
+        err;
+    }
 
     function getRandomBytes32() public view returns (bytes32) {
         // Use block properties and msg.sender as entropy
         return keccak256(
             abi.encodePacked(
                 block.timestamp, // Current block timestamp
-                block.difficulty, // Current block difficulty
+                block.prevrandao, // Randomness beacon (previously difficulty)
                 msg.sender // Address of the caller
             )
         );

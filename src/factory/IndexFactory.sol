@@ -90,14 +90,14 @@ contract IndexFactory is Initializable, OwnableUpgradeable, PausableUpgradeable,
         _collectUsdcAndFee(usdc, amount, usdcFee);
         factoryStorage.setIssuanceRequester(indexToken, issuanceNonce, msg.sender);
 
-        uint256 totalCurrentList = _requireUnderlyings(indexToken);
+        _requireUnderlyings(indexToken);
         _approveForOrderManager(usdc, amount);
 
         uint256 currentFilledCount = functionsOracle.currentFilledCount(indexToken);
         uint64[] memory currentProviderIndexes =
             functionsOracle.getCurrentProviderIndexes(indexToken, currentFilledCount);
         for (uint256 i = 0; i <= currentProviderIndexes.length; i++) {
-            (uint256 totalShares, address[] memory tokens, uint256[] memory marketShares) =
+            (uint256 totalShares,,) =
                 functionsOracle.getCurrentProviderIndexData(indexToken, currentFilledCount, currentProviderIndexes[i]);
             uint256 share = (amount * totalShares) / SHARE_DENOMINATOR;
             orderNonce = _createBuyOrder(issuanceNonce, indexToken, usdc, address(0), currentProviderIndexes[i], share);
