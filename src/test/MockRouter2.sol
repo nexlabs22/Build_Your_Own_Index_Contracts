@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.4;
+pragma solidity ^0.8.25;
 
 import {IAny2EVMMessageReceiver} from "contracts-ccip/contracts/interfaces/IAny2EVMMessageReceiver.sol";
 import {IRouter} from "contracts-ccip/contracts/interfaces/IRouter.sol";

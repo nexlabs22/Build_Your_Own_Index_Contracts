@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.25;
 // pragma experimental ABIEncoderV2;
 // import "chainlink/contracts/src/v0.8/libs/LinkTokenReceiver.sol";
 // import "chainlink/contracts/src/v0.8/libs/SafeMathChainlink.sol";

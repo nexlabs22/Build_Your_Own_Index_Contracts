@@ -1,7 +1,7 @@
 // import {INonfungiblePositionManager} from '@uniswap/v3-periphery/contracts/interfaces/INonfungiblePositionManager.sol';
 
 // SPDX-License-Identifier: GPL-2.0-or-later
-pragma solidity ^0.8.7;
+pragma solidity ^0.8.25;
 pragma abicoder v2;
 
 /// @title Creates and initializes V3 Pools

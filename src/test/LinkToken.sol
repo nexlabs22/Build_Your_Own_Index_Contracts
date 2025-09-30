@@ -5,7 +5,7 @@
 // SPDX-License-Identifier: MIT
 // OpenZeppelin Contracts (last updated v4.6.0) (token/ERC20/IERC20.sol)
 
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.25;
 
 /**
  * @dev Interface of the ERC20 standard as defined in the EIP.
@@ -87,7 +87,7 @@ pragma solidity ^0.8.0;
 
 // File @chainlink/token/contracts/v0.6/token/ERC677.sol@v1.1.0
 
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.25;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
@@ -99,7 +99,7 @@ abstract contract ERC677 is IERC20 {
 
 // File @chainlink/token/contracts/v0.6/token/ERC677Receiver.sol@v1.1.0
 
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.25;
 
 abstract contract ERC677Receiver {
     function onTokenTransfer(address _sender, uint256 _value, bytes memory _data) public virtual;
@@ -109,7 +109,7 @@ abstract contract ERC677Receiver {
 
 // OpenZeppelin Contracts v4.4.1 (token/ERC20/extensions/IERC20Metadata.sol)
 
-// pragma solidity ^0.8.0;
+// pragma solidity ^0.8.25;
 
 /**
  * @dev Interface for the optional metadata functions from the ERC20 standard.
@@ -137,7 +137,7 @@ abstract contract ERC677Receiver {
 
 // OpenZeppelin Contracts v4.4.1 (utils/Context.sol)
 
-// pragma solidity ^0.8.0;
+// pragma solidity ^0.8.25;
 
 /**
  * @dev Provides information about the current execution context, including the
@@ -163,7 +163,7 @@ abstract contract ERC677Receiver {
 
 // OpenZeppelin Contracts (last updated v4.8.0) (token/ERC20/ERC20.sol)
 
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.25;
 
 /**
  * @dev Implementation of the {IERC20} interface.
@@ -548,7 +548,7 @@ pragma solidity ^0.8.0;
 
 // File @chainlink/token/contracts/v0.6/ERC677Token.sol@v1.1.0
 
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.25;
 
 // import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
@@ -591,7 +591,7 @@ abstract contract ERC677Token is ERC20V8, ERC677 {
 
 // File @chainlink/token/contracts/v0.6/token/LinkERC20.sol@v1.1.0
 
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.25;
 
 // import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {ERC20V8} from "./ERC20_V8.sol";
@@ -634,7 +634,7 @@ abstract contract LinkERC20 is ERC20V8 {
 
 // File @chainlink/token/contracts/v0.6/LinkToken.sol@v1.1.0
 
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.25;
 
 contract LinkToken is LinkERC20, ERC677Token {
     uint256 private constant TOTAL_SUPPLY = 10 ** 27;
@@ -706,4 +706,4 @@ contract LinkToken is LinkERC20, ERC677Token {
 
 // File contracts/test/LinkToken.sol
 
-pragma solidity ^0.8.6;
+pragma solidity ^0.8.25;
