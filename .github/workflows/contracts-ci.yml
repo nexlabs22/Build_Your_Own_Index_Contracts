@@ -2,7 +2,9 @@ name: Contracts CI
 
 on:
   push:
+    branches: [main, CI/CD]
   pull_request:
+    branches: [main]
     
 permissions:
   contents: read
