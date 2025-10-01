@@ -29,11 +29,14 @@ contract IndexFactoryBalancer is
     FunctionsOracle public functionsOracle;
     IndexFactoryStorage public factoryStorage;
     MainChainBalancer public mainChainBalancer;
-    
+
+    uint256 public updatePortfolioNonce;
 
     uint256 private constant SHARE_DENOMINATOR = 100e18;
 
     mapping(uint256 => uint256) public portfolioTotalValueByNonce; // mapping of updatePortfolioNonce to total value
+    mapping(uint256 => mapping(uint64 => uint256)) public providerTotalValueByNonce; // mapping of updatePortfolioNonce to total value
+    mapping(uint64 => mapping(uint256 => uint256)) public providerNonceToGlobalNonce; // mapping of providerNonce to globalNonce
 
     function initialize(
         address _functionsOracle,
@@ -60,7 +63,6 @@ contract IndexFactoryBalancer is
 
     function increasePortfolioTotalValueByNonce(uint256 _updatePortfolioNonce, uint256 _totalValue)
         public
-        onlyMainChainBalancer
     {
         portfolioTotalValueByNonce[_updatePortfolioNonce] += _totalValue;
     }
@@ -68,11 +70,42 @@ contract IndexFactoryBalancer is
     // =========================
     // === External Functions ==
     // =========================
-
+    function askValues(address _indexToken) external whenNotPaused nonReentrant {
+        uint256 currentFilledCount = functionsOracle.currentFilledCount(
+            _indexToken
+        );
+        uint64[] memory currentProviderIndexes = functionsOracle
+            .getCurrentProviderIndexes(_indexToken, currentFilledCount);
+        updatePortfolioNonce++;
+        for (uint256 i = 0; i < currentProviderIndexes.length; i++) {
+        
+            if (currentProviderIndexes[i] == 1) {
+                askValueCCIP(_indexToken);
+            }
+        }
+    }
     
     function askValueCCIP(
         address _indexToken
-    ) external whenNotPaused nonReentrant returns (uint256 orderNonce) {
-        mainChainBalancer.askValues(_indexToken);
+    ) internal whenNotPaused nonReentrant returns (uint256 orderNonce) {
+        uint256 providerUpdateNonce = mainChainBalancer.askValues(_indexToken);
+        providerNonceToGlobalNonce[1][providerUpdateNonce] = updatePortfolioNonce;
+        return providerUpdateNonce;
+    }
+
+    function completeAskValueCCIP(
+        address _indexToken,
+        uint256 _updateProviderNonce,
+        uint256 _value
+    ) external whenNotPaused nonReentrant {
+        require(_indexToken != address(0), "Zero address");
+        require(_value > 0, "Zero total value");
+
+        uint256 _updatePortfolioNonce = providerNonceToGlobalNonce[1][_updateProviderNonce];
+        if (_updatePortfolioNonce == 0) {
+            revert("Invalid provider nonce");
+        }
+        portfolioTotalValueByNonce[_updatePortfolioNonce] += _value;
+        providerTotalValueByNonce[_updatePortfolioNonce][1] += _value;
     }
 }

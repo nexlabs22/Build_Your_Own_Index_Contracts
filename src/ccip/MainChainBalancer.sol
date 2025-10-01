@@ -206,7 +206,7 @@ contract MainChainBalancer is Initializable, ProposableOwnableUpgradeable, Pausa
     /**
      * @dev Requests values for the portfolio.
      */
-    function askValues(address _indexToken) public whenNotPaused onlyOwnerOrOperator {
+    function askValues(address _indexToken) public whenNotPaused onlyOwnerOrOperator returns(uint256) {
         pauseMainChainFactory();
         mainChainStorage.increaseUpdatePortfolioNonce();
 
@@ -225,6 +225,8 @@ contract MainChainBalancer is Initializable, ProposableOwnableUpgradeable, Pausa
         }
 
         emit RequestedAskValues(block.timestamp);
+
+        return mainChainStorage.updatePortfolioNonce();
     }
 
     function _firstReweightSwaps(
