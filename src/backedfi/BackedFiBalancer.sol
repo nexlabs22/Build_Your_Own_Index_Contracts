@@ -116,17 +116,20 @@ contract BackedFiBalancer is Initializable, OwnableUpgradeable, PausableUpgradea
         }
     }
 
-    function firstRebalanceAction(
-        address _indexToken,
-        uint64 _providerIndex,
-        uint256 currentFilledCount,
-        uint256[] calldata prices
-    ) external payable nonReentrant whenNotPaused onlyOwnerOrOperator returns (uint256 nonce) {
+    function firstRebalanceAction(address _indexToken, uint64 _providerIndex, uint256[] calldata prices)
+        external
+        payable
+        nonReentrant
+        whenNotPaused
+        onlyOwnerOrOperator
+        returns (uint256 nonce)
+    {
         address vaultAddr = globalStorage.indexTokenToVault(_indexToken);
         require(vaultAddr != address(0), "rebalance: vault not set");
 
-        (, address[] memory tokens,) =
-            functionsOracle.getCurrentProviderIndexData(_indexToken, currentFilledCount, _providerIndex);
+        (, address[] memory tokens,) = functionsOracle.getCurrentProviderIndexData(
+            _indexToken, functionsOracle.currentFilledCount(_indexToken), _providerIndex
+        );
 
         uint256 totalTokens = tokens.length;
         // require(totalTokens == targetShares1e18.length, "rebalance: bad oracle data");
@@ -143,18 +146,10 @@ contract BackedFiBalancer is Initializable, OwnableUpgradeable, PausableUpgradea
         uint256 soldLength;
 
         for (uint256 i = 0; i < totalTokens; ++i) {
-            address token = tokens[i];
-
-            uint256 currentShare = functionsOracle.tokenCurrentMarketShare(_indexToken, token);
-            uint256 targetShare = functionsOracle.tokenOracleMarketShare(_indexToken, token);
-
-            uint256 sellPct = _sellPercent(currentShare, targetShare);
-            if (sellPct == 0) continue;
-
-            uint256 qtySold = _sellBond(nonce, token, sellPct, prices[i], ctx);
+            uint256 qtySold = _processAndSell(_indexToken, tokens[i], prices[i], nonce, ctx);
             if (qtySold == 0) continue;
 
-            soldToken[soldLength] = token;
+            soldToken[soldLength] = tokens[i];
             soldQty[soldLength] = qtySold;
             ++soldLength;
         }
@@ -167,6 +162,19 @@ contract BackedFiBalancer is Initializable, OwnableUpgradeable, PausableUpgradea
         }
 
         emit FirstRebalanceAction(nonce, soldToken, soldQty, batch.totalUsdcObtained, block.timestamp);
+    }
+
+    function _processAndSell(address indexToken, address token, uint256 price, uint256 nonce, Ctx memory ctx)
+        internal
+        returns (uint256 qtySold)
+    {
+        uint256 current = functionsOracle.tokenCurrentMarketShare(indexToken, token);
+        uint256 target = functionsOracle.tokenOracleMarketShare(indexToken, token);
+
+        uint256 sellPct = _sellPercent(current, target);
+        if (sellPct == 0) return 0;
+
+        return _sellBond(nonce, token, sellPct, price, ctx);
     }
 
     function secondRebalanceAction(address _indexToken, uint256 batchId)
