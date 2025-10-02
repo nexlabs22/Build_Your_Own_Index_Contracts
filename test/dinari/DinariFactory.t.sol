@@ -137,6 +137,7 @@ contract DinariFactory_MainTest is OlympixUnitTest("DinariFactory") {
         dinariStorage.initialize(
             address(issuer),
             address(gFactory),
+            address(0x11111),
             address(usdc),
             6, // USDC decimals
             address(oracle),

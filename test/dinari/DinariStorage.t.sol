@@ -117,6 +117,7 @@ contract DinariStorage_MainTest is OlympixUnitTest("DinariStorage") {
         dinariStorage.initialize(
             address(issuer),
             address(gFactory),
+            address(0x11111),
             address(usdc),
             6, // usdcDecimals
             address(oracle),
@@ -134,22 +135,26 @@ contract DinariStorage_MainTest is OlympixUnitTest("DinariStorage") {
         DinariStorage fresh = DinariStorage(address(new ERC1967Proxy(address(impl), "")));
 
         vm.expectRevert(bytes("invalid _issuer address"));
-        fresh.initialize(address(0), address(gFactory), address(usdc), 6, address(oracle), false, 1);
+        fresh.initialize(address(0), address(gFactory), address(0x11111), address(usdc), 6, address(oracle), false, 1);
 
         vm.expectRevert(bytes("invalid _indexFactoryStorage address"));
-        fresh.initialize(address(issuer), address(0), address(usdc), 6, address(oracle), false, 1);
+        fresh.initialize(address(issuer), address(0), address(0x11111), address(usdc), 6, address(oracle), false, 1);
 
         vm.expectRevert(bytes("invalid _usdc address"));
-        fresh.initialize(address(issuer), address(gFactory), address(0), 6, address(oracle), false, 1);
+        fresh.initialize(address(issuer), address(gFactory), address(0x11111), address(0), 6, address(oracle), false, 1);
 
         vm.expectRevert(bytes("invalid _usdcDecimals"));
-        fresh.initialize(address(issuer), address(gFactory), address(usdc), 0, address(oracle), false, 1);
+        fresh.initialize(
+            address(issuer), address(gFactory), address(0x11111), address(usdc), 0, address(oracle), false, 1
+        );
 
         vm.expectRevert(bytes("invalid _functionsOracle address"));
-        fresh.initialize(address(issuer), address(gFactory), address(usdc), 6, address(0), false, 1);
+        fresh.initialize(address(issuer), address(gFactory), address(0x11111), address(usdc), 6, address(0), false, 1);
 
         vm.expectRevert(bytes("invalid _providerIndex"));
-        fresh.initialize(address(issuer), address(gFactory), address(usdc), 6, address(oracle), false, 0);
+        fresh.initialize(
+            address(issuer), address(gFactory), address(0x11111), address(usdc), 6, address(oracle), false, 0
+        );
     }
 
     /* ---------- owner-only setters ---------- */
