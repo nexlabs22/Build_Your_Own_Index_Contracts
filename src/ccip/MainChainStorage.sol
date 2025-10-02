@@ -59,7 +59,7 @@ contract MainChainStorage is Initializable, ProposableOwnableUpgradeable {
     uint256 public updatePortfolioNonce;
 
     address public mainChainFactory;
-    address public mainChainFactoryBalancer;
+    address public mainChainBalancer;
     address public coreSender;
     address public balancerSender;
     FunctionsOracle public functionsOracle;
@@ -122,9 +122,9 @@ contract MainChainStorage is Initializable, ProposableOwnableUpgradeable {
         _;
     }
 
-    modifier onlyIndexFactoryBalancer() {
+    modifier onlyMainChainBalancer() {
         require(
-            msg.sender == mainChainFactoryBalancer || msg.sender == balancerSender,
+            msg.sender == mainChainBalancer || msg.sender == balancerSender,
             "Caller is not index factory balancer contract."
         );
         _;
@@ -300,6 +300,10 @@ contract MainChainStorage is Initializable, ProposableOwnableUpgradeable {
         balancerSender = _balancerSender;
     }
 
+    function setMainChainBalancer(address _mainChainBalancer) public onlyOwner {
+        mainChainBalancer = _mainChainBalancer;
+    }
+
     /**
      * @dev Sets the vault address.
      * @param _vaultAddress The address of the vault.
@@ -458,38 +462,38 @@ contract MainChainStorage is Initializable, ProposableOwnableUpgradeable {
         return redemptionData[_redemptionNonce].completedTokensCount;
     }
 
-    function increaseUpdatePortfolioNonce() public onlyIndexFactoryBalancer {
+    function increaseUpdatePortfolioNonce() public onlyMainChainBalancer {
         updatePortfolioNonce++;
     }
 
     function increasePortfolioTotalValueByNonce(uint256 _updatePortfolioNonce, uint256 _totalValue)
         public
-        onlyIndexFactoryBalancer
+        onlyMainChainBalancer
     {
         portfolioTotalValueByNonce[_updatePortfolioNonce] += _totalValue;
     }
 
     function increaseExtraWethByNonce(uint256 _updatePortfolioNonce, uint256 _extraWeth)
         public
-        onlyIndexFactoryBalancer
+        onlyMainChainBalancer
     {
         extraWethByNonce[_updatePortfolioNonce] += _extraWeth;
     }
 
-    function increaseUpdatedTokensValueCount(uint256 _updatePortfolioNonce) public onlyIndexFactoryBalancer {
+    function increaseUpdatedTokensValueCount(uint256 _updatePortfolioNonce) public onlyMainChainBalancer {
         updatedTokensValueCount[_updatePortfolioNonce]++;
     }
 
     function increaseTokenValueByNonce(uint256 _updatePortfolioNonce, address _token, uint256 _value)
         public
-        onlyIndexFactoryBalancer
+        onlyMainChainBalancer
     {
         tokenValueByNonce[_updatePortfolioNonce][_token] += _value;
     }
 
     function increaseChainValueByNonce(uint256 _updatePortfolioNonce, uint64 _chainSelector, uint256 _value)
         public
-        onlyIndexFactoryBalancer
+        onlyMainChainBalancer
     {
         chainValueByNonce[_updatePortfolioNonce][_chainSelector] += _value;
     }
@@ -537,20 +541,20 @@ contract MainChainStorage is Initializable, ProposableOwnableUpgradeable {
 
     function increasePendingExtraWethByNonce(uint256 _updatePortfolioNonce, uint256 _amount)
         public
-        onlyIndexFactoryBalancer
+        onlyMainChainBalancer
     {
         pendingExtraWethByNonce[_updatePortfolioNonce] += _amount;
         totalPendingExtraWeth += _amount;
     }
 
-    function decreasePendingExtraWethByNonce(uint256 _updatePortfolioNonce) public onlyIndexFactoryBalancer {
+    function decreasePendingExtraWethByNonce(uint256 _updatePortfolioNonce) public onlyMainChainBalancer {
         totalPendingExtraWeth -= pendingExtraWethByNonce[_updatePortfolioNonce];
         pendingExtraWethByNonce[_updatePortfolioNonce] = 0;
     }
 
     function increaseReweightExtraPercentage(uint256 _reweightNonce, uint256 _extraPercentage)
         public
-        onlyIndexFactoryBalancer
+        onlyMainChainBalancer
     {
         reweightExtraPercentage[_reweightNonce] += _extraPercentage;
     }

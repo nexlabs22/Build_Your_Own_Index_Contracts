@@ -4,12 +4,9 @@ pragma solidity 0.8.25;
 import "../token/IndexToken.sol";
 import "../utils/proposable/ProposableOwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
-
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-
 import "contracts-ccip/contracts/libraries/Client.sol";
 import "contracts-ccip/contracts/interfaces/IRouterClient.sol";
-// import "contracts-ccip/contracts/applications/CCIPReceiver.sol";
 import "./CCIPReceiver.sol";
 import "./MainChainStorage.sol";
 import "../oracle/FunctionsOracle.sol";
@@ -188,6 +185,7 @@ contract CoreSender is Initializable, CCIPReceiver, ProposableOwnableUpgradeable
     }
 
     function sendIssuanceRequest(
+        address _indexToken,
         uint256 _wethAmount,
         uint256 _issuanceNonce,
         uint64 _chainSelector,
@@ -206,13 +204,14 @@ contract CoreSender is Initializable, CCIPReceiver, ProposableOwnableUpgradeable
         );
 
         uint256[] memory totalSharesArr = new uint256[](1);
-        totalSharesArr[0] = functionsOracle.getCurrentChainSelectorTotalShares(address(0), _latestCount, _chainSelector);
+        totalSharesArr[0] =
+            functionsOracle.getCurrentChainSelectorTotalShares(_indexToken, _latestCount, _chainSelector);
         address crossChainIndexFactory = mainChainStorage.crossChainFactoryBySelector(_chainSelector);
         //encode data
         bytes memory data = _encodeIssuanceData(
             _issuanceNonce,
-            functionsOracle.allCurrentChainSelectorTokens(address(0), _chainSelector),
-            functionsOracle.allCurrentChainSelectorTokenShares(address(0), _chainSelector),
+            functionsOracle.allCurrentChainSelectorTokens(_indexToken, _chainSelector),
+            functionsOracle.allCurrentChainSelectorTokenShares(_indexToken, _chainSelector),
             totalSharesArr
         );
         // send issuance request
@@ -227,7 +226,11 @@ contract CoreSender is Initializable, CCIPReceiver, ProposableOwnableUpgradeable
         mainChainStorage.setIssuanceMessageId(_issuanceNonce, messageId);
     }
 
-    function calculateIssuanceFee(uint64 _chainSelector, uint256 _wethAmount) public view returns (uint256 totalFee) {
+    function calculateIssuanceFee(address _indexToken, uint64 _chainSelector, uint256 _wethAmount)
+        public
+        view
+        returns (uint256 totalFee)
+    {
         // get cross chain token amount
         (address[] memory fromETHPath, uint24[] memory fromETHFees) =
             mainChainStorage.getFromETHPathData(mainChainStorage.crossChainToken(_chainSelector));
@@ -236,7 +239,7 @@ contract CoreSender is Initializable, CCIPReceiver, ProposableOwnableUpgradeable
         address crossChainFactory = mainChainStorage.crossChainFactoryBySelector(_chainSelector);
         uint256[] memory totalSharesArr = new uint256[](1);
         totalSharesArr[0] = functionsOracle.getCurrentChainSelectorTotalShares(
-            address(0), functionsOracle.currentFilledCount(address(0)), _chainSelector
+            address(_indexToken), functionsOracle.currentFilledCount(address(_indexToken)), _chainSelector
         );
         address crossChainIndexFactory = mainChainStorage.crossChainFactoryBySelector(_chainSelector);
 
@@ -312,27 +315,31 @@ contract CoreSender is Initializable, CCIPReceiver, ProposableOwnableUpgradeable
             mainChainStorage.issuanceIncreaseCompletedTokensCount(requestIssuanceNonce);
             // call the order manager here
             orderManager.completeIssuance(
-                requestIssuanceNonce, address(indexToken), tokenAddresses[i], oldTokenValue, newTokenValue
+                2, // provider index
+                requestIssuanceNonce,
+                address(indexToken),
+                tokenAddresses[i],
+                oldTokenValue,
+                newTokenValue
             );
-            // ....
         }
-        // if (
-        //     // totalCurrentList
-        //     mainChainStorage.getIssuanceCompletedTokensCount(requestIssuanceNonce) == totalCurrentList
-        // ) {
-        //     completeIssuanceRequest(requestIssuanceNonce, messageId);
-        // }
     }
 
-    function sendRedemptionRequest(uint256 _burnPercent, uint256 _redemptionNonce, uint64 _chainSelector)
-        public
-        onlyFactory
-    {
+    uint256 public redemptionTokensCount;
+
+    function sendRedemptionRequest(
+        address _indexToken,
+        uint256 _burnPercent,
+        uint256 _redemptionNonce,
+        uint64 _chainSelector
+    ) public onlyFactory {
         // get data
         address crossChainIndexFactory = mainChainStorage.crossChainFactoryBySelector(_chainSelector);
-        address[] memory tokenAddresses = functionsOracle.allCurrentChainSelectorTokens(address(0), _chainSelector);
+        address[] memory tokenAddresses =
+            functionsOracle.allCurrentChainSelectorTokens(address(_indexToken), _chainSelector);
         uint256[] memory burnPercentages = new uint256[](1);
         burnPercentages[0] = _burnPercent;
+        redemptionTokensCount = mainChainStorage.coreSenderGasLimit();
         //encode data
         bytes memory data = abi.encode(
             1,
@@ -470,6 +477,7 @@ contract CoreSender is Initializable, CCIPReceiver, ProposableOwnableUpgradeable
         Client.EVMTokenAmount[] memory tokensToSendDetails,
         MessageSender.PayFeesIn payFeesIn
     ) internal nonReentrant returns (bytes32) {
+        sentCount += 1;
         mainChainStorage.increaseTotalSentAmount(tokensToSendDetails[0].token, tokensToSendDetails[0].amount);
         bytes32 messageId = MessageSender.sendToken(
             getRouter(),
@@ -486,6 +494,7 @@ contract CoreSender is Initializable, CCIPReceiver, ProposableOwnableUpgradeable
         return messageId;
     }
 
+    uint256 public sentCount;
     /**
      * @dev Sends a message to another chain.
      * @param destinationChainSelector The destination chain selector.
@@ -494,6 +503,7 @@ contract CoreSender is Initializable, CCIPReceiver, ProposableOwnableUpgradeable
      * @param payFeesIn The fee payment method.
      * @return The message ID.
      */
+
     function sendMessage(
         uint64 destinationChainSelector,
         address receiver,

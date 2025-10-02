@@ -21,7 +21,7 @@ import "../../src/factory/IndexFactory.sol";
 import "../../src/factory/IndexFactoryStorage.sol";
 import "../../src/ccip/MainChainFactory.sol";
 import "../../src/ccip/MainChainStorage.sol";
-// import "../../src/factory/IndexFactoryBalancer.sol";
+import "../../src/ccip/MainChainBalancer.sol";
 import "../../src/oracle/FunctionsOracle.sol";
 import "../../src/ccip/MainChainStorage.sol";
 import "../../src/orderManager/OrderManager.sol";
@@ -42,7 +42,7 @@ import "../../src/interfaces/IUniswapV3Factory2.sol";
 import "../../src/interfaces/IWETH.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
-contract ContractDeployer is
+contract CCIPDeployer is
     Test,
     UniswapFactoryByteCode,
     UniswapWETHByteCode,
@@ -88,8 +88,8 @@ contract ContractDeployer is
     MainChainFactory public mainChainFactory;
     IndexFactory public factory;
     OrderManager public orderManager;
-    // BalancerSender public balancerSender;
-    // IndexFactoryBalancer public factoryBalancer;
+    BalancerSender public balancerSender;
+    MainChainBalancer public mainChainBalancer;
     // CrossChainFeeSender public crossChainFeeSender;
     // CrossChainFeeReceiver public crossChainFeeReceiver;
 
@@ -242,7 +242,7 @@ contract ContractDeployer is
                                 address(mockRouter),
                                 wethAddress,
                                 router,
-                                mainChainFactoryAddress,
+                                factoryV3Address,
                                 router,
                                 address(ethPriceOracle)
                             )
@@ -282,9 +282,9 @@ contract ContractDeployer is
                                 address(link),
                                 wethAddress,
                                 router,
-                                mainChainFactoryAddress,
+                                factoryV3Address,
                                 router,
-                                mainChainFactoryAddress
+                                factoryV3Address
                             )
                         )
                     )
@@ -295,7 +295,10 @@ contract ContractDeployer is
         return (crossChainVault, mainChainStorage, crossChainIndexFactory, crossChainIndexFactoryStorage);
     }
 
-    function deployContracts3() public returns (OrderManager, CoreSender, IndexFactory, MainChainFactory) {
+    function deployContracts3()
+        public
+        returns (OrderManager, CoreSender, IndexFactory, MainChainFactory, BalancerSender, MainChainBalancer)
+    {
         OrderManager orderManagerImpl = new OrderManager();
         orderManager = OrderManager(
             payable(
@@ -317,8 +320,8 @@ contract ContractDeployer is
                             CoreSender.initialize,
                             (
                                 payable(address(indexToken)),
-                                address(0), // order manager
-                                address(indexFactoryStorage),
+                                address(mainChainStorage),
+                                address(orderManager), // order manager
                                 address(functionsOracle),
                                 address(link),
                                 address(mockRouter), // ccip router
@@ -356,8 +359,8 @@ contract ContractDeployer is
                             (
                                 1,
                                 payable(address(indexToken)),
-                                address(0), // order manager
-                                address(indexFactoryStorage),
+                                address(orderManager), // order manager
+                                address(mainChainStorage),
                                 address(functionsOracle),
                                 payable(address(coreSender)),
                                 wethAddress
@@ -368,44 +371,50 @@ contract ContractDeployer is
             )
         );
 
-        // BalancerSender balancerSenderImpl = new BalancerSender();
-        // balancerSender = BalancerSender(
-        //     payable(
-        //         address(
-        //             new ERC1967Proxy(
-        //                 address(balancerSenderImpl),
-        //                 abi.encodeCall(BalancerSender.initialize, (
-        //                     1,
-        //                     address(indexFactoryStorage),
-        //                     address(functionsOracle),
-        //                     address(link),
-        //                     address(mockRouter), // ccip router
-        //                     wethAddress
-        //                 ))
-        //             )
-        //         )
-        //     )
-        // );
+        BalancerSender balancerSenderImpl = new BalancerSender();
+        balancerSender = BalancerSender(
+            payable(
+                address(
+                    new ERC1967Proxy(
+                        address(balancerSenderImpl),
+                        abi.encodeCall(
+                            BalancerSender.initialize,
+                            (
+                                1,
+                                address(mainChainStorage),
+                                address(functionsOracle),
+                                address(link),
+                                address(mockRouter), // ccip router
+                                wethAddress
+                            )
+                        )
+                    )
+                )
+            )
+        );
 
-        // IndexFactoryBalancer indexFactoryBalancerImpl = new IndexFactoryBalancer();
-        // IndexFactoryBalancer indexFactoryBalancer = IndexFactoryBalancer(
-        //     payable(
-        //         address(
-        //             new ERC1967Proxy(
-        //                 address(indexFactoryBalancerImpl),
-        //                 abi.encodeCall(IndexFactoryBalancer.initialize, (
-        //                     1,
-        //                     address(indexFactoryStorage),
-        //                     address(functionsOracle),
-        //                     payable(address(balancerSender)),
-        //                     wethAddress
-        //                 ))
-        //             )
-        //         )
-        //     )
-        // );
+        MainChainBalancer mainChainBalancerImpl = new MainChainBalancer();
+        MainChainBalancer mainChainBalancer = MainChainBalancer(
+            payable(
+                address(
+                    new ERC1967Proxy(
+                        address(mainChainBalancerImpl),
+                        abi.encodeCall(
+                            MainChainBalancer.initialize,
+                            (
+                                1,
+                                address(mainChainStorage),
+                                address(functionsOracle),
+                                payable(address(balancerSender)),
+                                wethAddress
+                            )
+                        )
+                    )
+                )
+            )
+        );
 
-        return (orderManager, coreSender, indexFactory, mainChainFactory);
+        return (orderManager, coreSender, indexFactory, mainChainFactory, balancerSender, mainChainBalancer);
     }
 
     // function deployContracts3() public returns (CrossChainFeeSender, CrossChainFeeReceiver) {
@@ -455,23 +464,31 @@ contract ContractDeployer is
         path[0] = address(weth);
         path[1] = address(crossChainToken);
 
-        // functionsOracle.setIndexFactoryBalancer(address(factoryBalancer));
+        functionsOracle.setFactoryBalancer(address(mainChainBalancer));
         // functionsOracle.setBalancerSender(address(balancerSender));
         orderManager.setFactoryAddress(address(factory));
+        orderManager.setMainChainFactory(payable(address(mainChainFactory)));
+        orderManager.setOperator(address(factory), true);
+        orderManager.setOperator(address(coreSender), true);
+        orderManager.setOperator(address(mainChainFactory), true);
+        indexFactoryStorage.setOrderManager(address(orderManager));
+        indexFactoryStorage.setIndexFactory(address(factory));
         mainChainStorage.setCrossChainToken(2, address(crossChainToken), path, feesData);
         // indexFactoryStorage.setCrossChainToken(1, address(crossChainToken), path, feesData);
         mainChainStorage.setCrossChainFactory(address(crossChainIndexFactory), 2);
-        mainChainStorage.setIndexFactory(address(factory));
+        mainChainStorage.setIndexFactory(address(mainChainFactory));
         mainChainStorage.setCoreSender(address(coreSender));
         mainChainStorage.setPriceOracle(address(priceOracleAddress));
         mainChainStorage.setVault(address(vault));
         // indexFactoryStorage.setBalancerSender(address(balancerSender));
-        // indexFactoryStorage.setIndexFactoryBalancer(address(factoryBalancer));
+        // indexFactoryStorage.setMainChainBalancer(address(mainChainBalancer));
+        mainChainStorage.setBalancerSender(address(balancerSender));
+        mainChainStorage.setMainChainBalancer(address(mainChainBalancer));
         mainChainStorage.setCoreSenderAndBalancerSenderGasLimits(2000000, 2000000);
         mainChainStorage.setIssuanceAndRedemptionFeePercentages(20, 20);
-
-        vault.setOperator(address(factory), true);
-        // vault.setOperator(address(factoryBalancer), true);
+        mainChainStorage.setIsCrossChainFeeSponsered(false);
+        vault.setOperator(address(mainChainFactory), true);
+        vault.setOperator(address(mainChainBalancer), true);
 
         // factory.setIndexFactoryStorage(address(indexFactoryStorage));
 
@@ -479,18 +496,15 @@ contract ContractDeployer is
         crossChainIndexFactoryStorage.setPriceOracle(priceOracleAddress);
         crossChainIndexFactoryStorage.setCrossChainFactory(address(crossChainIndexFactory));
         crossChainIndexFactoryStorage.setVerifiedFactory(address(coreSender), 1, true);
-        // crossChainIndexFactoryStorage.setVerifiedFactory(
-        //     address(balancerSender),
-        //     1,
-        //     true
-        // );
+        crossChainIndexFactoryStorage.setVerifiedFactory(address(balancerSender), 1, true);
 
         crossChainVault.setOperator(address(crossChainIndexFactory), true);
 
         mockRouter.setFactoryChainSelector(1, address(coreSender));
         mockRouter.setFactoryChainSelector(1, address(factory));
-        // mockRouter.setFactoryChainSelector(1, address(factoryBalancer));
-        // mockRouter.setFactoryChainSelector(1, address(balancerSender));
+        mockRouter.setFactoryChainSelector(1, address(mainChainFactory));
+        mockRouter.setFactoryChainSelector(1, address(mainChainBalancer));
+        mockRouter.setFactoryChainSelector(1, address(balancerSender));
         mockRouter.setFactoryChainSelector(2, address(crossChainIndexFactory));
         // mockRouter.setFactoryChainSelector(1, address(crossChainFeeSender));
         // mockRouter.setFactoryChainSelector(2, address(crossChainFeeReceiver));
@@ -550,10 +564,14 @@ contract ContractDeployer is
 
         (indexToken, vault, functionsOracle, indexFactoryStorage) = deployContracts();
         (crossChainVault, mainChainStorage, crossChainIndexFactory, crossChainIndexFactoryStorage) = deployContracts2();
-        (orderManager, coreSender, factory, mainChainFactory) =
-        // address(0), // balancerSender
-        // address(0), // factoryBalancer
-         deployContracts3();
+        (
+            orderManager,
+            coreSender,
+            factory,
+            mainChainFactory,
+            balancerSender, // balancerSender
+            mainChainBalancer // mainChainBalancer
+        ) = deployContracts3();
         // (
         //     address(0), // crossChainFeeSender
         //     crossChainFeeReceiver

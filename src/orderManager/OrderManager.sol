@@ -6,6 +6,7 @@ import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "../factory/IndexFactory.sol";
 import {BackedFiFactory} from "../backedfi/BackedFiFactory.sol";
+import {MainChainFactory} from "../ccip/MainChainFactory.sol";
 
 contract OrderManager is Initializable, OwnableUpgradeable {
     using SafeERC20 for IERC20;
@@ -44,9 +45,14 @@ contract OrderManager is Initializable, OwnableUpgradeable {
     address public usdcAddress;
     IndexFactory public factory;
     BackedFiFactory public backedFiFactory;
+    MainChainFactory public mainChainFactory;
+
+    
 
     mapping(address => bool) public isOperator;
     mapping(uint256 => OrderInfo) public orderInfo; // mapping of orderNonce to OrderInfo
+    mapping(address => mapping(uint64 => mapping(uint256 => bool))) public providerToNonceCount; // is cross chain 
+    mapping(address => mapping(uint64 => mapping(uint256 => uint256))) public providerNonceToOrderNonce; // mapping of providerNonce to orderNonce
 
     event FundsWithdrawn(address token, address to, uint256 amount);
     event OrderCreated(
@@ -90,6 +96,10 @@ contract OrderManager is Initializable, OwnableUpgradeable {
 
     function setBackedFiIndexFactory(address _backedfiFactoryAddress) external onlyOwner {
         backedFiFactory = BackedFiFactory(_backedfiFactoryAddress);
+    }
+
+    function setMainChainFactory(address payable _mainChainFactoryAddress) external onlyOwner {
+        mainChainFactory = MainChainFactory(_mainChainFactoryAddress);
     }
 
     function _increaseOrderNonce(bool isBuyOrder) internal {
@@ -137,14 +147,30 @@ contract OrderManager is Initializable, OwnableUpgradeable {
     }
 
     function createOrder(CreateOrderConfig memory _config) external onlyOperator returns (uint256 orderNonce) {
+        bool _ccipCalled = false;
         // increasing order nonce
         _increaseOrderNonce(_config.isBuyOrder);
         // transfer USDC from caller to order manager contract
+        if(_config.isBuyOrder){
         _transferInputTokenFromCaller(_config.inputTokenAddress, _config.inputTokenAmount);
+        }
         // initialize the order based on buy or sell
         _initializeOrder(_config);
         //call the provider function
-
+        if(_config.isBuyOrder) {
+            if(_config.providerIndex == 1 || _config.providerIndex == 2) {
+                uint256 ccipNonce = issuanceWithCCIPFactory(
+                    _config.indexTokenAddress, 
+                    _config.inputTokenAddress,
+                    _config.inputTokenAmount
+                );
+                providerNonceToOrderNonce[_config.indexTokenAddress][_config.providerIndex][ccipNonce] = orderNonceInfo.orderNonce;
+            }
+        } else{
+            if((_config.providerIndex == 1 || _config.providerIndex == 2)) {
+                    redemptionWithCCIPFactory(_config.indexTokenAddress, _config.burnPercent, _config.outputTokenAddress);
+            }
+        }
         // emit the event
         emit OrderCreated(
             _config.indexTokenAddress,
@@ -168,14 +194,16 @@ contract OrderManager is Initializable, OwnableUpgradeable {
     }
 
     function completeIssuance(
-        uint256 _issuanceNonce,
+        uint64 _providerIndex,
+        uint256 _providerIssuanceNonce,
         address _indexToken,
         address _underlyingTokenAddress,
         uint256 _oldTokenValue,
         uint256 _newTokenValue
     ) external onlyOperator {
+        uint256 issuanceNonce = providerNonceToOrderNonce[_indexToken][_providerIndex][_providerIssuanceNonce];
         factory.handleCompleteIssuance(
-            _issuanceNonce, _indexToken, _underlyingTokenAddress, _oldTokenValue, _newTokenValue
+            issuanceNonce, _indexToken, _underlyingTokenAddress, _oldTokenValue, _newTokenValue
         );
     }
 
@@ -188,6 +216,17 @@ contract OrderManager is Initializable, OwnableUpgradeable {
         factory.handleCompleteRedemption(_redemptionNonce, _indexToken, _underlyingTokenAddress, _outputValue);
     }
 
+    function issuanceWithCCIPFactory(address _indexToken, address _tokenIn, uint256 _inputAmount) internal returns (uint256) {
+        require(_inputAmount > 0, "Invalid amount!");
+        require(_indexToken != address(0), "Invalid address!");
+        IERC20(_tokenIn).approve(address(mainChainFactory), _inputAmount);
+        return mainChainFactory.issuanceIndexTokens(
+            _indexToken,
+            _tokenIn,
+            _inputAmount
+        );
+    }
+
     function issuanceWithBackedFiFactory(address _indexToken, uint256 _inputAmount) public {
         require(_inputAmount > 0, "Invalid amount!");
         require(_indexToken != address(0), "Invalid address!");
@@ -198,5 +237,12 @@ contract OrderManager is Initializable, OwnableUpgradeable {
         require(_inputAmount > 0, "Invalid amount!");
         require(_indexToken != address(0), "Invalid address!");
         backedFiFactory.redemption(_indexToken, _inputAmount, _burnPercent);
+    }
+
+    function redemptionWithCCIPFactory(address _indexToken,uint256 _burnPercent, address _tokenOut) internal {
+        require(_indexToken != address(0), "Invalid address!");
+        require(_burnPercent > 0, "Invalid burn percent!");
+        require(_tokenOut != address(0), "Invalid address!");
+        mainChainFactory.redemption(_indexToken, _burnPercent, _tokenOut);
     }
 }
