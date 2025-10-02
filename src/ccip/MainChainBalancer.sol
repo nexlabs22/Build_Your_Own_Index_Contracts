@@ -11,6 +11,7 @@ import "../libraries/SwapHelpers.sol";
 import "../interfaces/IWETH.sol";
 import "./BalancerSender.sol";
 import "./MainChainFactory.sol";
+import "../factory/IndexFactoryBalancer.sol";
 
 /// @title Index Token
 /// @author NEX Labs Protocol
@@ -20,7 +21,7 @@ contract MainChainBalancer is Initializable, ProposableOwnableUpgradeable, Pausa
     MainChainStorage public mainChainStorage;
     FunctionsOracle public functionsOracle;
     BalancerSender public balancerSender;
-
+    IndexFactoryBalancer public indexFactoryBalancer;
     uint64 public currentChainSelector;
 
     IWETH public weth;
@@ -104,6 +105,10 @@ contract MainChainBalancer is Initializable, ProposableOwnableUpgradeable, Pausa
      */
     function setMainChainStorage(address _mainChainStorage) public onlyOwner {
         mainChainStorage = MainChainStorage(_mainChainStorage);
+    }
+
+    function setIndexFactoryBalancer(address _indexFactoryBalancer) public onlyOwner {
+        indexFactoryBalancer = IndexFactoryBalancer(_indexFactoryBalancer);
     }
 
     /**
@@ -195,6 +200,11 @@ contract MainChainBalancer is Initializable, ProposableOwnableUpgradeable, Pausa
             mainChainStorage.increaseUpdatedTokensValueCount(mainChainStorage.updatePortfolioNonce());
             mainChainStorage.increaseChainValueByNonce(
                 mainChainStorage.updatePortfolioNonce(), currentChainSelector, mainChainStorage.convertEthToUsd(value)
+            );
+            // inform factory about the value
+            indexFactoryBalancer.completeAskValueCCIP(
+                mainChainStorage.updatePortfolioNonce(),
+                mainChainStorage.convertEthToUsd(value)
             );
         }
     }

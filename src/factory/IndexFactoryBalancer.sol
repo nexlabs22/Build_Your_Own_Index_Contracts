@@ -14,9 +14,7 @@ import {IndexFactoryStorage} from "./IndexFactoryStorage.sol";
 import {Vault} from "../vault/Vault.sol";
 import {FeeCalculation} from "../libraries/FeeCalculation.sol";
 
-error ZeroAmount();
-error ZeroAddress();
-error WrongETHAmount();
+
 
 contract IndexFactoryBalancer is
     Initializable,
@@ -74,13 +72,63 @@ contract IndexFactoryBalancer is
         uint256 currentFilledCount = functionsOracle.currentFilledCount(
             _indexToken
         );
+        
         uint64[] memory currentProviderIndexes = functionsOracle
             .getCurrentProviderIndexes(_indexToken, currentFilledCount);
         updatePortfolioNonce++;
         for (uint256 i = 0; i < currentProviderIndexes.length; i++) {
-        
+            
             if (currentProviderIndexes[i] == 1) {
                 askValueCCIP(_indexToken);
+            }
+        }
+    }
+
+    function firstReweightAction(address _indexToken, uint256 _updatePortfolioNonce) external whenNotPaused nonReentrant {
+        uint256 currentFilledCount = functionsOracle.currentFilledCount(
+            _indexToken
+        );
+        uint256 oracleFilledCount = functionsOracle.oracleFilledCount(
+            _indexToken
+        );
+        uint64[] memory currentProviderIndexes = functionsOracle
+            .getCurrentProviderIndexes(_indexToken, currentFilledCount);
+        for (uint256 i = 0; i < currentProviderIndexes.length; i++) {
+            uint256 realProviderMarketShare = (providerTotalValueByNonce[_updatePortfolioNonce][currentProviderIndexes[i]] * 100e18) / portfolioTotalValueByNonce[_updatePortfolioNonce];
+            uint256 targetProviderMarketShare = functionsOracle.getOracleProviderIndexTotalShares(
+                _indexToken,
+                oracleFilledCount,
+                currentProviderIndexes[i]
+            );
+            if (realProviderMarketShare > targetProviderMarketShare) {
+                if(currentProviderIndexes[i] == 1) {
+                    reweightCCIP(_indexToken);
+                }
+            }
+        }
+    }
+
+
+    function secondReweightAction(address _indexToken, uint256 _updatePortfolioNonce) external whenNotPaused nonReentrant {
+        uint256 currentFilledCount = functionsOracle.currentFilledCount(
+            _indexToken
+        );
+        uint256 oracleFilledCount = functionsOracle.oracleFilledCount(
+            _indexToken
+        );
+        uint64[] memory currentProviderIndexes = functionsOracle
+            .getCurrentProviderIndexes(_indexToken, currentFilledCount);
+        for (uint256 i = 0; i < currentProviderIndexes.length; i++) {
+            uint256 realProviderMarketShare = (providerTotalValueByNonce[_updatePortfolioNonce][currentProviderIndexes[i]] * 100e18) / portfolioTotalValueByNonce[_updatePortfolioNonce];
+            uint256 targetProviderMarketShare = functionsOracle.getOracleProviderIndexTotalShares(
+                _indexToken,
+                oracleFilledCount,
+                currentProviderIndexes[i]
+            );
+            if (realProviderMarketShare < targetProviderMarketShare) {
+                if(currentProviderIndexes[i] == 1) {
+                    reweightCCIP(_indexToken);
+                }
             }
         }
     }
@@ -94,11 +142,9 @@ contract IndexFactoryBalancer is
     }
 
     function completeAskValueCCIP(
-        address _indexToken,
         uint256 _updateProviderNonce,
         uint256 _value
     ) external whenNotPaused nonReentrant {
-        require(_indexToken != address(0), "Zero address");
         require(_value > 0, "Zero total value");
 
         uint256 _updatePortfolioNonce = providerNonceToGlobalNonce[1][_updateProviderNonce];
@@ -107,5 +153,11 @@ contract IndexFactoryBalancer is
         }
         portfolioTotalValueByNonce[_updatePortfolioNonce] += _value;
         providerTotalValueByNonce[_updatePortfolioNonce][1] += _value;
+    }
+
+    function reweightCCIP(
+        address _indexToken
+    ) internal whenNotPaused nonReentrant returns (uint256 orderNonce) {
+        // to be implemented
     }
 }

@@ -14,6 +14,7 @@ import "../libraries/SwapHelpers.sol";
 import "../interfaces/IWETH.sol";
 import "../libraries/MessageSender.sol";
 import "./MainChainFactory.sol";
+import "../factory/IndexFactoryBalancer.sol";
 
 /// @title Index Token
 /// @author NEX Labs Protocol
@@ -24,6 +25,7 @@ contract BalancerSender is Initializable, CCIPReceiver, ProposableOwnableUpgrade
 
     MainChainStorage public mainChainStorage;
     FunctionsOracle public functionsOracle;
+    IndexFactoryBalancer public indexFactoryBalancer;   
 
     uint64 public currentChainSelector;
 
@@ -97,6 +99,14 @@ contract BalancerSender is Initializable, CCIPReceiver, ProposableOwnableUpgrade
      */
     function setFunctionsOracle(address _functionsOracle) public onlyOwner {
         functionsOracle = FunctionsOracle(_functionsOracle);
+    }
+
+    /**
+     * @dev Sets the IndexFactoryBalancer contract address.
+     * @param _indexFactoryBalancer The address of the IndexFactoryBalancer contract.
+     */
+    function setIndexFactoryBalancer(address _indexFactoryBalancer) public onlyOwner {
+        indexFactoryBalancer = IndexFactoryBalancer(_indexFactoryBalancer);
     }
 
     function withdrawLink() external onlyOwner {
@@ -359,6 +369,10 @@ contract BalancerSender is Initializable, CCIPReceiver, ProposableOwnableUpgrade
                 mainChainStorage.increaseTokenValueByNonce(nonce, tokenAddresses[i], value1[i]);
                 mainChainStorage.increaseChainValueByNonce(nonce, sourceChainSelector, value1[i]);
                 mainChainStorage.increaseUpdatedTokensValueCount(nonce);
+                indexFactoryBalancer.completeAskValueCCIP(
+                    nonce,
+                    value1[i]
+                );
                 emit AskValuesCompleted(block.timestamp);
             }
         } else if (actionType == 3) {

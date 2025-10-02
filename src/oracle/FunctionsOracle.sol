@@ -720,6 +720,16 @@ contract FunctionsOracle is Initializable, FunctionsClient, ConfirmedOwner {
                 .currentProviderIndexTotalShares[providerIndex];
     }
 
+    function getOracleProviderIndexTotalShares(
+        address indexToken,
+        uint256 oracleFilledCount,
+        uint64 providerIndex
+    ) public view returns (uint256) {
+        return
+            oracleData[indexToken][oracleFilledCount]
+                .oracleProviderIndexTotalShares[providerIndex];
+    }
+
     function getCurrentProviderIndexData(
         address indexToken,
         uint256 currentFilledCount,
