@@ -40,7 +40,7 @@ contract IndexTokenTest is Test {
         indexToken.setMinter(minter, true);
     }
 
-    function testInitialized() public {
+    function testInitialized() public view {
         // counter.increment();
         assertEq(indexToken.owner(), address(this));
         assertEq(indexToken.feeRatePerDayScaled(), 1e18);

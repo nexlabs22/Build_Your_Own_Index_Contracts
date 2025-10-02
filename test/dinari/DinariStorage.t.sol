@@ -678,11 +678,11 @@ contract DinariStorage_MainTest is OlympixUnitTest("DinariStorage") {
         // Now populate DinariStorage.tokenPendingRebalanceAmount for this indexToken/token
         dinariStorage.tokenPendingRebalanceAmount(indexToken, singleToken); // optional: just to ensure field is present
         // Set a nonzero value using hevm.store (cheat for test)
-        bytes32 slot = keccak256(
-            abi.encodePacked(
-                keccak256(abi.encodePacked(singleToken, uint256(keccak256(abi.encodePacked(indexToken, uint256(711)))))) // mapping layout approximation
-            )
-        );
+        // bytes32 slot = keccak256(
+        //     abi.encodePacked(
+        //         keccak256(abi.encodePacked(singleToken, uint256(keccak256(abi.encodePacked(indexToken, uint256(711)))))) // mapping layout approximation
+        //     )
+        // );
         // Not required unless you want to check value before/after
 
         // Action: owner calls resetAllTokenPendingRebalanceAmount to hit opix-target-branch-284-False (require passes, else block)
@@ -712,7 +712,7 @@ contract DinariStorage_MainTest is OlympixUnitTest("DinariStorage") {
         dinariStorage.setFactoryBalancer(fakeBalancer);
 
         // Branch: Only any of these callers should pass, all others must revert.
-        address notAllowed = address(0x12345);
+        // address notAllowed = address(0x12345);
         vm.expectRevert("Caller is not a factory contract");
         dinariStorage.increaseRedemptionNonce(indexToken);
 
@@ -947,7 +947,7 @@ contract DinariStorage_MainTest is OlympixUnitTest("DinariStorage") {
     // Test for DinariStorage.setRedemptionRequestId: branch opix-target-branch-382-False
     // This hit should call as any legitimate factory, processor, or balancer address and SUCCEED (i.e., require passes). It should also test that zero requestId or zero token revert as covered elsewhere, so here we focus on a happy path hitting branch 382-False (branch condition is false; the require passes and body is executed).
     function test_setRedemptionRequestId_onlyFactory_branch_false_executes() public {
-        address factory = address(0xFA123);
+        // address factory1 = address(0xFA123);
         address processor = address(0xFA456);
         address balancer = address(0xFA789);
         address indexToken = idxToken;
@@ -1162,7 +1162,7 @@ contract DinariStorage_MainTest is OlympixUnitTest("DinariStorage") {
         uint256 _amount = 1000;
 
         // Try with wrong sender first - must revert (to verify onlyFactory behavior)
-        address notFactory = address(0x1234);
+        // address notFactory = address(0x1234);
         vm.expectRevert("Caller is not a factory contract");
         dinariStorage.setBuyRequestPayedAmountById(_indexToken, _requestId, _amount);
 
@@ -1365,7 +1365,7 @@ contract DinariStorage_MainTest is OlympixUnitTest("DinariStorage") {
         dinariStorage.setFactoryBalancer(fakeBalancer);
 
         // Non-factory should revert
-        address notFactory = address(0x999);
+        // address notFactory = address(0x999);
         vm.expectRevert(bytes("Caller is not a factory contract"));
         dinariStorage.setIssuanceIndexTokenPrimaryTotalSupply(testIndexToken, testNonce, testAmount);
 
@@ -1625,7 +1625,7 @@ contract DinariStorage_MainTest is OlympixUnitTest("DinariStorage") {
     }
 
     // Test that getAmountAfterFee returns zero when percentageFeeRate==0 (DinariStorage.sol branch opix-target-branch-559-True)
-    function test_getAmountAfterFee_returnsZeroWhenPctFeeRateIsZero_opixTargetBranch559True() public {
+    function test_getAmountAfterFee_returnsZeroWhenPctFeeRateIsZero_opixTargetBranch559True() public view {
         // Act: call with percentageFeeRate == 0
         uint256 orderValue = 1000;
         uint24 pctFee = 0;

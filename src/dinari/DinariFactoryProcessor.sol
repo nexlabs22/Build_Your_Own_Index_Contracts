@@ -109,7 +109,9 @@ contract DinariFactoryProcessor is
             secondaryPortfolioValue += secondaryValue;
             DinariOrderManager dinariOrderManager = dinariStorage.dinariOrderManager();
             dinariOrderManager.withdrawFunds(tokenAddress, address(this), balance);
-            orderManager.completeIssuance(_issuanceNonce, _indexToken, tokenAddress, primaryValue, secondaryValue);
+            orderManager.completeIssuance(
+                dinariStorage.providerIndex(), _issuanceNonce, _indexToken, tokenAddress, primaryValue, secondaryValue
+            );
             _setCompleteIssuanceData(tokenAddress, balance, _indexToken);
         }
         dinariStorage.issuanceIndexTokenPrimaryTotalSupply(_indexToken, _issuanceNonce);

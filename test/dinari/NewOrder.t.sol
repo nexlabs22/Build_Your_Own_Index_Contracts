@@ -130,7 +130,7 @@ contract NewOrderTest is Test {
         });
     }
 
-    function testInitialization() public {
+    function testInitialization() public view {
         console.log("issuer.owner()", issuer.owner());
         console.log("admin", admin);
         console.log("issuer.owner()", issuer.owner() == admin);

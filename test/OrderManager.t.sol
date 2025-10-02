@@ -7,7 +7,7 @@ import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.s
 import {OrderManager} from "../../src/orderManager/OrderManager.sol";
 // import {IndexFactory} from "../src/factory/IndexFactory.sol";
 import {BackedFiFactory} from "../src/backedfi/BackedFiFactory.sol";
-import {IndexFactoryStorage} from "../src/backedfi/IndexFactoryStorage.sol";
+import {BackedFiStorage} from "../src/backedfi/BackedFiStorage.sol";
 import "./OlympixUnitTest.sol";
 import "./utils/TestERC20.sol";
 
@@ -26,8 +26,8 @@ contract OrderManagerTest is OlympixUnitTest("OrderManager") {
     OrderManager orderManager;
     BackedFiFactory indexFactoryImpl;
     BackedFiFactory indexFactory;
-    IndexFactoryStorage indexFactoryStorageImpl;
-    IndexFactoryStorage indexFactoryStorage;
+    BackedFiStorage indexFactoryStorageImpl;
+    BackedFiStorage indexFactoryStorage;
 
     event OrderCreated(
         address indexed indexToken,
@@ -49,21 +49,22 @@ contract OrderManagerTest is OlympixUnitTest("OrderManager") {
         // ---- implementations ----
         orderManagerImpl = new OrderManager();
         indexFactoryImpl = new BackedFiFactory();
-        indexFactoryStorageImpl = new IndexFactoryStorage();
+        indexFactoryStorageImpl = new BackedFiStorage();
 
         // ---- proxy: IndexFactoryStorage ----
-        indexFactoryStorage = IndexFactoryStorage(
+        indexFactoryStorage = BackedFiStorage(
             address(
                 new ERC1967Proxy(
                     address(indexFactoryStorageImpl),
                     abi.encodeCall(
-                        IndexFactoryStorage.initialize,
+                        BackedFiStorage.initialize,
                         (
                             address(0xDEAD), // _indexFactory (placeholder, non-zero)
                             address(0xBEEF), // _functionsOracle (placeholder, non-zero)
                             address(0xCAFE), // _stagingCustodyAccount (placeholder, non-zero)
                             address(0xB), // _nexBot (placeholder, non-zero)
-                            address(usdc) // _usdc (real)
+                            address(usdc), // _usdc (real)
+                            4
                         )
                     )
                 )
@@ -122,7 +123,7 @@ contract OrderManagerTest is OlympixUnitTest("OrderManager") {
 
         vm.prank(owner_);
         orderManager.setFactoryAddress(address(0xFACADE));
-        
+
         vm.expectRevert();
         orderManager.setUsdcAddress(address(usdc));
     }
@@ -146,10 +147,6 @@ contract OrderManagerTest is OlympixUnitTest("OrderManager") {
         vm.prank(user);
         orderManager.createOrder(cfg);
     }
-
-    
-
-    
 
     function testCreateOrder_Sell_SetsState_PullsFunds_Emits() public {
         uint256 amt = 77e18;

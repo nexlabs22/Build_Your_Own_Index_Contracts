@@ -213,7 +213,7 @@ contract MainChainFactory is
         address[] memory _tokenInPath,
         uint24[] memory _tokenInFees,
         uint256 _inputAmount
-    ) public view returns (uint256) {
+    ) public pure returns (uint256) {
         // get weth amount
         uint256 wethAmount;
         // if (_tokenIn == address(weth)) {

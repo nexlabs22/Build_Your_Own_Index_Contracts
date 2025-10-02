@@ -19,19 +19,13 @@ import "../../src/test/MockV3Aggregator.sol";
 import "./CCIPDeployer.sol";
 
 contract CCIPFactoryTest is Test, CCIPDeployer {
-
     using stdStorage for StdStorage;
 
     uint256 internal constant SCALAR = 1e20;
 
-
     uint256 mainnetFork;
 
-    
-
     // string MAINNET_RPC_URL = vm.envString("MAINNET_RPC_URL");
-
-    
 
     event FeeReceiverSet(address indexed feeReceiver);
     event FeeRateSet(uint256 indexed feeRatePerDayScaled);
@@ -42,9 +36,7 @@ contract CCIPFactoryTest is Test, CCIPDeployer {
     event MintFeeToReceiver(address feeReceiver, uint256 timestamp, uint256 totalSupply, uint256 amount);
     event ToggledRestricted(address indexed account, bool isRestricted);
 
-
     function setUp() public {
-        
         deployAllContracts(1000000e18);
         addLiquidityETH(positionManager, factoryV3Address, token0, wethAddress, 100000e18, 100e18);
         addLiquidityETH(positionManager, factoryV3Address, token1, wethAddress, 100000e18, 100e18);
@@ -59,7 +51,6 @@ contract CCIPFactoryTest is Test, CCIPDeployer {
         // send fee to the core sender and cross chain factory
         // payable(address(coreSender)).transfer(1e18);
         payable(address(crossChainIndexFactory)).transfer(1e18);
-        
     }
 
     function testIndexTokenInitialized() public {
@@ -73,13 +64,11 @@ contract CCIPFactoryTest is Test, CCIPDeployer {
         assertEq(indexToken.isMinter(address(factory)), true);
     }
 
-    function testFunctionsOracleInitialized() public {
+    function testFunctionsOracleInitialized() public view {
         // functions oracle variables
         assertEq(functionsOracle.owner(), address(this));
         assertEq(functionsOracle.functionsRouterAddress(), address(oracle));
     }
-
-   
 
     function updateOracleList() public {
         address[] memory indexTokens = new address[](5);
@@ -131,14 +120,12 @@ contract CCIPFactoryTest is Test, CCIPDeployer {
         usdcPath[0] = address(weth);
         usdcPath[1] = address(usdc);
 
-        uint[] memory tokenShares = new uint[](5);
+        uint256[] memory tokenShares = new uint256[](5);
         tokenShares[0] = 20e18;
         tokenShares[1] = 20e18;
         tokenShares[2] = 20e18;
         tokenShares[3] = 20e18;
         tokenShares[4] = 20e18;
-
-
 
         uint64[] memory chains = new uint64[](5);
         chains[0] = 1;
@@ -153,18 +140,14 @@ contract CCIPFactoryTest is Test, CCIPDeployer {
         providerIndex[2] = 1;
         providerIndex[3] = 1;
         providerIndex[4] = 1;
-        
+
         //update path data
         functionsOracle.updatePathData(providerIndex, chains, pathData);
         functionsOracle.updateOnlyPathAndFee(address(usdc), usdcPath, feesData);
 
         // request off-chain data
         link.transfer(address(functionsOracle), 1e17);
-        bytes32 requestId = functionsOracle.requestAssetsData(
-            "console.log('Hello, World!');",
-            0,
-            0
-        );
+        bytes32 requestId = functionsOracle.requestAssetsData("console.log('Hello, World!');", 0, 0);
         bytes memory data = abi.encode(indexTokens, assetList, tokenShares);
         bool success = oracle.fulfillRequest(address(functionsOracle), requestId, data);
         require(success, "oracle request failed");
@@ -199,7 +182,7 @@ contract CCIPFactoryTest is Test, CCIPDeployer {
         assertEq(functionsOracle.tokenCurrentMarketShare(address(indexToken), address(token3)), 20e18);
         assertEq(functionsOracle.tokenCurrentMarketShare(address(indexToken), address(token4)), 20e18);
         // token chain selector
-         // token from eth path data
+        // token from eth path data
         (address[] memory path0, uint24[] memory fees0) = functionsOracle.getFromETHPathData(address(token0));
         assertEq(path0[0], address(weth));
         assertEq(path0[1], address(token0));
@@ -241,7 +224,7 @@ contract CCIPFactoryTest is Test, CCIPDeployer {
         (address[] memory path9, uint24[] memory fees9) = functionsOracle.getToETHPathData(address(token4));
         assertEq(path9[0], address(token4));
         assertEq(path9[1], address(weth));
-        assertEq(fees9[0], 3000);   
+        assertEq(fees9[0], 3000);
     }
 
     function test_providerIndex_lists() public {
@@ -268,46 +251,53 @@ contract CCIPFactoryTest is Test, CCIPDeployer {
         assertEq(functionsOracle.oracleChainSelectorTokensCount(address(indexToken), 2), 1);
         assertEq(functionsOracle.currentChainSelectorTokensCount(address(indexToken), 2), 1);
 
-        address[] memory currentChainSelectorTokens0 = functionsOracle.allCurrentChainSelectorTokens(address(indexToken), 1);
+        address[] memory currentChainSelectorTokens0 =
+            functionsOracle.allCurrentChainSelectorTokens(address(indexToken), 1);
         assertEq(currentChainSelectorTokens0[0], address(token0));
         assertEq(currentChainSelectorTokens0[1], address(token1));
         assertEq(currentChainSelectorTokens0[2], address(token2));
         assertEq(currentChainSelectorTokens0[3], address(token3));
-        address[] memory currentChainSelectorTokens1 = functionsOracle.allCurrentChainSelectorTokens(address(indexToken), 2);
+        address[] memory currentChainSelectorTokens1 =
+            functionsOracle.allCurrentChainSelectorTokens(address(indexToken), 2);
         assertEq(currentChainSelectorTokens1[0], address(token4));
 
-        address[] memory oracleChainSelectorTokens0 = functionsOracle.allOracleChainSelectorTokens(address(indexToken), 1);
+        address[] memory oracleChainSelectorTokens0 =
+            functionsOracle.allOracleChainSelectorTokens(address(indexToken), 1);
         assertEq(oracleChainSelectorTokens0[0], address(token0));
         assertEq(oracleChainSelectorTokens0[1], address(token1));
         assertEq(oracleChainSelectorTokens0[2], address(token2));
         assertEq(oracleChainSelectorTokens0[3], address(token3));
-        address[] memory oracleChainSelectorTokens1 = functionsOracle.allOracleChainSelectorTokens(address(indexToken), 2);
+        address[] memory oracleChainSelectorTokens1 =
+            functionsOracle.allOracleChainSelectorTokens(address(indexToken), 2);
         assertEq(oracleChainSelectorTokens1[0], address(token4));
 
-        uint256[] memory oracleChainSelectorShares = functionsOracle.allOracleChainSelectorTokenShares(address(indexToken), 1);
+        uint256[] memory oracleChainSelectorShares =
+            functionsOracle.allOracleChainSelectorTokenShares(address(indexToken), 1);
         assertEq(oracleChainSelectorShares[0], 20e18);
         assertEq(oracleChainSelectorShares[1], 20e18);
         assertEq(oracleChainSelectorShares[2], 20e18);
         assertEq(oracleChainSelectorShares[3], 20e18);
-        uint256[] memory oracleChainSelectorShares1 = functionsOracle.allOracleChainSelectorTokenShares(address(indexToken), 2);
+        uint256[] memory oracleChainSelectorShares1 =
+            functionsOracle.allOracleChainSelectorTokenShares(address(indexToken), 2);
         assertEq(oracleChainSelectorShares1[0], 20e18);
 
-        uint256[] memory currentChainSelectorShares = functionsOracle.allCurrentChainSelectorTokenShares(address(indexToken), 1);
+        uint256[] memory currentChainSelectorShares =
+            functionsOracle.allCurrentChainSelectorTokenShares(address(indexToken), 1);
         assertEq(currentChainSelectorShares[0], 20e18);
         assertEq(currentChainSelectorShares[1], 20e18);
         assertEq(currentChainSelectorShares[2], 20e18);
         assertEq(currentChainSelectorShares[3], 20e18);
-        uint256[] memory currentChainSelectorShares1 = functionsOracle.allCurrentChainSelectorTokenShares(address(indexToken), 2);
+        uint256[] memory currentChainSelectorShares1 =
+            functionsOracle.allCurrentChainSelectorTokenShares(address(indexToken), 2);
         assertEq(currentChainSelectorShares1[0], 20e18);
 
-        uint oracleFilledCount = functionsOracle.oracleFilledCount(address(indexToken));
+        uint256 oracleFilledCount = functionsOracle.oracleFilledCount(address(indexToken));
         assertEq(oracleFilledCount, 1);
 
         uint64[] memory currentProviderIndexes = functionsOracle.getCurrentProviderIndexes(address(indexToken), 1);
         assertEq(currentProviderIndexes[0], 1);
         // assertEq(currentProviderIndexes[1], 2);
         assertEq(currentProviderIndexes.length, 1);
-
 
         uint64[] memory oracleProviderIndexes = functionsOracle.getOracleProviderIndexes(address(indexToken), 1);
         assertEq(oracleProviderIndexes[0], 1);
@@ -320,7 +310,11 @@ contract CCIPFactoryTest is Test, CCIPDeployer {
         assertEq(functionsOracle.getOracleChainSelectorTotalShares(address(indexToken), 1, 1), 80e18);
         assertEq(functionsOracle.getOracleChainSelectorTotalShares(address(indexToken), 1, 2), 20e18);
 
-        (uint256 currentProviderIndexTotalShares, address[] memory currentProviderIndexTokens, uint256[] memory currentProviderIndexTokenShares) = functionsOracle.getCurrentProviderIndexData(address(indexToken), 1, 1);
+        (
+            uint256 currentProviderIndexTotalShares,
+            address[] memory currentProviderIndexTokens,
+            uint256[] memory currentProviderIndexTokenShares
+        ) = functionsOracle.getCurrentProviderIndexData(address(indexToken), 1, 1);
         assertEq(currentProviderIndexTotalShares, 100e18);
         assertEq(currentProviderIndexTokens[0], address(token0));
         assertEq(currentProviderIndexTokens[1], address(token1));
@@ -350,13 +344,13 @@ contract CCIPFactoryTest is Test, CCIPDeployer {
         assertEq(address(factory.factoryStorage()), address(indexFactoryStorage));
     }
 
-    function test_initialize_orderManager() public {
+    function test_initialize_orderManager() public view {
         assertEq(orderManager.owner(), address(this));
         assertEq(address(orderManager.usdcAddress()), address(usdc));
         assertEq(address(orderManager.factory()), address(factory));
     }
 
-    function test_initialize_factoryStorage() public {
+    function test_initialize_factoryStorage() public view {
         assertEq(indexFactoryStorage.owner(), address(this));
         assertEq(indexFactoryStorage.indexFactory(), address(factory));
         assertEq(indexFactoryStorage.orderManager(), address(orderManager));
@@ -364,7 +358,7 @@ contract CCIPFactoryTest is Test, CCIPDeployer {
 
     function test_issuance() public {
         updateOracleList();
-        
+
         mockRouter.setFee(0);
         usdc.approve(address(factory), 1001e16);
         factory.issuanceIndexTokens(address(indexToken), 1000e16);
@@ -389,11 +383,12 @@ contract CCIPFactoryTest is Test, CCIPDeployer {
         // console.log("token1", tokens[1]);
         // console.log("token1", tokens[2]);
         // console.log("token1", tokens[3]);
-        uint burnAmount = indexToken.balanceOf(address(this));
+        uint256 burnAmount = indexToken.balanceOf(address(this));
         indexToken.approve(address(factory), burnAmount);
         // redeem all index tokens
         factory.redemption(address(indexToken), indexToken.balanceOf(address(this)));
-        address[] memory currentChainSelectorTokens = functionsOracle.allCurrentChainSelectorTokens(address(indexToken), 1);
+        address[] memory currentChainSelectorTokens =
+            functionsOracle.allCurrentChainSelectorTokens(address(indexToken), 1);
         mockRouter.executeAllMessages();
         assertEq(currentChainSelectorTokens.length, 4);
         console.log("redemptionTokensCount", coreSender.redemptionTokensCount());
@@ -761,10 +756,4 @@ contract CCIPFactoryTest is Test, CCIPDeployer {
 
     }
     **/
-    
-
-
-    
-
-    
 }

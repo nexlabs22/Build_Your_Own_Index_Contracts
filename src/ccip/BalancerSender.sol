@@ -25,24 +25,21 @@ contract BalancerSender is Initializable, CCIPReceiver, ProposableOwnableUpgrade
 
     MainChainStorage public mainChainStorage;
     FunctionsOracle public functionsOracle;
-    IndexFactoryBalancer public indexFactoryBalancer;   
+    IndexFactoryBalancer public indexFactoryBalancer;
 
     uint64 public currentChainSelector;
 
     IWETH public weth;
 
     event MessageSent(bytes32 messageId);
-    event AskValuesCompleted(uint time);
-    event FirstReweightActionCompleted(uint time);
-    event SecondReweightActionCompleted(uint time);
+    event AskValuesCompleted(uint256 time);
+    event FirstReweightActionCompleted(uint256 time);
+    event SecondReweightActionCompleted(uint256 time);
 
     modifier onlyMainChainBalancer() {
         require(msg.sender == mainChainStorage.mainChainBalancer(), "Only factory balancer can call this function");
         _;
     }
-
-    
-
 
     /**
      * @dev Initializes the contract with the given parameters.
@@ -127,12 +124,12 @@ contract BalancerSender is Initializable, CCIPReceiver, ProposableOwnableUpgrade
     function emitSecondReweightActionCompleted() external onlyMainChainBalancer {
         emit SecondReweightActionCompleted(block.timestamp);
     }
-    
+
     function pauseMainChainFactory() internal {
         address mainChainFactoryAddress = mainChainStorage.mainChainFactory();
         MainChainFactory mainChainFactory = MainChainFactory(payable(mainChainFactoryAddress));
-        if(!mainChainFactory.paused()){
-        mainChainFactory.pause();
+        if (!mainChainFactory.paused()) {
+            mainChainFactory.pause();
         }
     }
 
@@ -140,8 +137,8 @@ contract BalancerSender is Initializable, CCIPReceiver, ProposableOwnableUpgrade
     function unpauseMainChainFactory() internal {
         address mainChainFactoryAddress = mainChainStorage.mainChainFactory();
         MainChainFactory mainChainFactory = MainChainFactory(payable(mainChainFactoryAddress));
-        if(mainChainFactory.paused()){
-        mainChainFactory.unpause();
+        if (mainChainFactory.paused()) {
+            mainChainFactory.unpause();
         }
     }
 
@@ -190,8 +187,9 @@ contract BalancerSender is Initializable, CCIPReceiver, ProposableOwnableUpgrade
         uint256 nonce,
         uint256[] memory oracleTokenShares,
         uint256[] memory extraData
-    ) internal returns (bytes memory) {
-        address[] memory currentTokenAddresses = functionsOracle.allCurrentChainSelectorTokens(_indexToken, chainSelector);
+    ) internal view returns (bytes memory) {
+        address[] memory currentTokenAddresses =
+            functionsOracle.allCurrentChainSelectorTokens(_indexToken, chainSelector);
         address[] memory newTokenAddresses = functionsOracle.allOracleChainSelectorTokens(_indexToken, chainSelector);
 
         return abi.encode(
@@ -236,8 +234,9 @@ contract BalancerSender is Initializable, CCIPReceiver, ProposableOwnableUpgrade
         uint256 _nonce,
         uint256[] memory _oracleTokenShares,
         uint256[] memory _extraData
-    ) internal returns (bytes memory) {
-        address[] memory currentTokenAddresses = functionsOracle.allCurrentChainSelectorTokens(_indexToken, _chainSelector);
+    ) internal view returns (bytes memory) {
+        address[] memory currentTokenAddresses =
+            functionsOracle.allCurrentChainSelectorTokens(_indexToken, _chainSelector);
         address[] memory newTokenAddresses = functionsOracle.allOracleChainSelectorTokens(_indexToken, _chainSelector);
 
         return abi.encode(
@@ -272,7 +271,8 @@ contract BalancerSender is Initializable, CCIPReceiver, ProposableOwnableUpgrade
 
         address crossChainIndexFactory = mainChainStorage.crossChainFactoryBySelector(_chainSelector);
 
-        bytes memory data = _encodeSecondReweightAction(_indexToken, _chainSelector, nonce, _oracleTokenShares, extraData);
+        bytes memory data =
+            _encodeSecondReweightAction(_indexToken, _chainSelector, nonce, _oracleTokenShares, extraData);
 
         Client.EVMTokenAmount[] memory tokensToSendArray = new Client.EVMTokenAmount[](1);
         tokensToSendArray[0].token = mainChainStorage.crossChainToken(_chainSelector);
@@ -332,7 +332,13 @@ contract BalancerSender is Initializable, CCIPReceiver, ProposableOwnableUpgrade
         require(receiver != address(0), "Invalid receiver address");
         require(_data.length > 0, "Data cannot be empty");
         return MessageSender.sendMessage(
-            getRouter(), mainChainStorage.linkToken(), destinationChainSelector, receiver, _data, payFeesIn, mainChainStorage.balancerSenderGasLimit()
+            getRouter(),
+            mainChainStorage.linkToken(),
+            destinationChainSelector,
+            receiver,
+            _data,
+            payFeesIn,
+            mainChainStorage.balancerSenderGasLimit()
         );
     }
 
@@ -360,8 +366,10 @@ contract BalancerSender is Initializable, CCIPReceiver, ProposableOwnableUpgrade
         ) = abi.decode(
             any2EvmMessage.data, (uint256, address[], address[], bytes[], bytes[], uint256, uint256[], uint256[])
         ); // abi-decoding of the sent string message
-        if(any2EvmMessage.destTokenAmounts.length > 0) {
-            mainChainStorage.increaseTotalReceivedAmount(any2EvmMessage.destTokenAmounts[0].token, any2EvmMessage.destTokenAmounts[0].amount);
+        if (any2EvmMessage.destTokenAmounts.length > 0) {
+            mainChainStorage.increaseTotalReceivedAmount(
+                any2EvmMessage.destTokenAmounts[0].token, any2EvmMessage.destTokenAmounts[0].amount
+            );
         }
         if (actionType == 0) {} else if (actionType == 1) {} else if (actionType == 2) {
             for (uint256 i = 0; i < value1.length; i++) {
@@ -369,10 +377,7 @@ contract BalancerSender is Initializable, CCIPReceiver, ProposableOwnableUpgrade
                 mainChainStorage.increaseTokenValueByNonce(nonce, tokenAddresses[i], value1[i]);
                 mainChainStorage.increaseChainValueByNonce(nonce, sourceChainSelector, value1[i]);
                 mainChainStorage.increaseUpdatedTokensValueCount(nonce);
-                indexFactoryBalancer.completeAskValueCCIP(
-                    nonce,
-                    value1[i]
-                );
+                indexFactoryBalancer.completeAskValueCCIP(nonce, value1[i]);
                 emit AskValuesCompleted(block.timestamp);
             }
         } else if (actionType == 3) {
