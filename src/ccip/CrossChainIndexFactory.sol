@@ -45,6 +45,7 @@ contract CrossChainIndexFactory is
     struct ReweightActionData {
         uint256 chainSelectorCurrentTokensCount;
         uint256 portfolioValue;
+        uint256 targetPortfolioValue;
         uint256 chainSelectorTotalShares;
         uint256 swapWethAmount;
         uint256 chainValue;
@@ -425,6 +426,7 @@ contract CrossChainIndexFactory is
         data.portfolioValue = inputData.extraData[0];
         data.chainSelectorTotalShares = inputData.extraData[1];
         data.chainValue = inputData.extraData[2];
+        data.targetPortfolioValue = inputData.extraData[3];
         data.weth = weth();
         data.vault = vault();
 
@@ -554,7 +556,8 @@ contract CrossChainIndexFactory is
         // vars.chainSelectorOracleTokensCount = oracleTokens.length;
 
         vars.chainCurrentRealShare = (data.chainValue * 100e18) / data.portfolioValue;
-        vars.wethAmountToSwap = (vars.swapWethAmount * data.chainSelectorTotalShares) / vars.chainCurrentRealShare;
+        vars.wethAmountToSwap += (vars.swapWethAmount * ((data.chainSelectorTotalShares * data.targetPortfolioValue) / 100e18)) / data.chainValue;
+        // vars.wethAmountToSwap = (vars.swapWethAmount * data.chainSelectorTotalShares) / vars.chainCurrentRealShare;
         vars.extraWethAmount = vars.swapWethAmount - vars.wethAmountToSwap;
 
         _swapToTokensFirstReweightAction(

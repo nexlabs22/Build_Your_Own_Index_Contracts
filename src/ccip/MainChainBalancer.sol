@@ -239,23 +239,33 @@ contract MainChainBalancer is Initializable, ProposableOwnableUpgradeable, Pausa
         return mainChainStorage.updatePortfolioNonce();
     }
 
+    function requestOverWeightedRebalance(address _indexToken, uint256 _targetPortfolioValue) public whenNotPaused onlyOwnerOrOperator {
+        firstReweightAction(_indexToken, _targetPortfolioValue);
+    }
+
     function _firstReweightSwaps(
         uint256 i,
-        uint256 _chainValue,
+        // uint256 _chainValue,
         address _indexToken,
-        uint256 _nonce,
-        uint256 _portfolioValue,
+        // uint256 _nonce,
+        // uint256 _portfolioValue,
+        uint256 _targetPortfolioValue,
         uint64 _chainSelector,
         uint256 _latestOracleCount
     ) internal returns (bool isCrossChain) {
         uint256 _oracleChainSelectorTotalShares = functionsOracle.getOracleChainSelectorTotalShares(_indexToken, _latestOracleCount, _chainSelector);
-        if ((_chainValue * 100e18) / _portfolioValue > _oracleChainSelectorTotalShares) {
+        uint256 nonce = mainChainStorage.updatePortfolioNonce();
+        uint256 portfolioValue = mainChainStorage.portfolioTotalValueByNonce(nonce);
+        uint256 chainValue = mainChainStorage.chainValueByNonce(nonce, _chainSelector);
+
+        if ((chainValue > (_oracleChainSelectorTotalShares * _targetPortfolioValue) / 100e18)) {
                 if (_chainSelector == currentChainSelector) {
                     _swapExtraValueCurrentChain(
                         i,
                         _indexToken,
-                        _nonce,
-                        _portfolioValue,
+                        nonce,
+                        portfolioValue,
+                        _targetPortfolioValue,
                         _chainSelector,
                         _latestOracleCount,
                         _oracleChainSelectorTotalShares
@@ -264,12 +274,12 @@ contract MainChainBalancer is Initializable, ProposableOwnableUpgradeable, Pausa
                     isCrossChain = true;
                     _sendExtraValueOtherChains(
                         _indexToken,
-                        _nonce,
-                        _portfolioValue,
+                        nonce,
+                        portfolioValue,
+                        _targetPortfolioValue,
                         _chainSelector,
                         _oracleChainSelectorTotalShares,
-                        _chainValue,
-                        functionsOracle.allOracleChainSelectorTokenShares(_indexToken, _chainSelector)
+                        chainValue
                     );
                 }
             }
@@ -278,7 +288,7 @@ contract MainChainBalancer is Initializable, ProposableOwnableUpgradeable, Pausa
     /**
      * @dev Performs the first reweight action.
      */
-    function firstReweightAction(address _indexToken) public whenNotPaused onlyOwnerOrOperator {
+    function firstReweightAction(address _indexToken, uint256 _targetPortfolioValue) public whenNotPaused onlyOwnerOrOperator {
         uint256 nonce = mainChainStorage.updatePortfolioNonce();
         uint256 portfolioValue = mainChainStorage.portfolioTotalValueByNonce(nonce);
 
@@ -296,47 +306,19 @@ contract MainChainBalancer is Initializable, ProposableOwnableUpgradeable, Pausa
             //     functionsOracle.getCurrentChainSelectorTotalShares(_indexToken, latestOracleCount, chainSelector);
             uint256 oracleChainSelectorTotalShares =
                 functionsOracle.getOracleChainSelectorTotalShares(_indexToken, latestOracleCount, chainSelector);
-            uint256 chainValue = mainChainStorage.chainValueByNonce(nonce, chainSelector);
+            // uint256 chainValue = mainChainStorage.chainValueByNonce(nonce, chainSelector);
             // uint256[] memory oracleTokenShares = functionsOracle.allOracleChainSelectorTokenShares(_indexToken, chainSelector);
             bool _isCrossChain = _firstReweightSwaps(
                 i,
-                chainValue,
                 _indexToken,
-                nonce,
-                portfolioValue,
+                _targetPortfolioValue,
                 chainSelector,
                 latestOracleCount
             );
             if (_isCrossChain) {
                 isCrossChain = true;
             }
-            // if ((chainValue * 100e18) / portfolioValue > oracleChainSelectorTotalShares) {
-            //     if (chainSelector == currentChainSelector) {
-            //         _swapExtraValueCurrentChain(
-            //             i,
-            //             _indexToken,
-            //             nonce,
-            //             portfolioValue,
-            //             chainSelector,
-            //             functionsOracle.currentChainSelectorTokensCount(_indexToken, chainSelector),
-            //             functionsOracle.oracleChainSelectorTokensCount(_indexToken, chainSelector),
-            //             functionsOracle.getCurrentChainSelectorTotalShares(_indexToken, latestOracleCount, chainSelector),
-            //             oracleChainSelectorTotalShares
-            //         );
-            //     } else {
-            //         isCrossChain = true;
-            //         _sendExtraValueOtherChains(
-            //             _indexToken,
-            //             nonce,
-            //             portfolioValue,
-            //             chainSelector,
-            //             oracleChainSelectorTotalShares,
-            //             chainValue,
-            //             functionsOracle.allOracleChainSelectorTokenShares(_indexToken, chainSelector)
-            //         );
-            //     }
-            }
-        
+        }
 
         emit RequestedFirstReweightAction(block.timestamp);
         if (!isCrossChain) {
@@ -344,16 +326,16 @@ contract MainChainBalancer is Initializable, ProposableOwnableUpgradeable, Pausa
         }
     }
 
-    function _swapTokensToWETHFirstRebalance(
+    function _internalSwapTokensToWETHFirstRebalance(
         address _indexToken,
+        uint256 _nonce,
         uint64 chainSelector,
         uint256 portfolioValue,
-        uint256 oracleChainSelectorTotalShares,
-        uint256 chainValue
-    ) internal returns (uint256 chainCurrentRealShare, uint256 wethAmountToSwap, uint256 extraWethAmount) {
-        uint256 swapWethAmount;
-        Vault vault = mainChainStorage.vault();
-        uint256 initialWethBalance = weth.balanceOf(address(vault));
+        uint256 _targetPortfolioValue
+    ) internal returns(uint256 swapWethAmount) {
+        // Vault vault = mainChainStorage.vault();
+        uint256 initialWethBalance = weth.balanceOf(address(mainChainStorage.vault()));
+        // uint256 chainValue = mainChainStorage.chainValueByNonce(_nonce, chainSelector);
         address[] memory currentTokens = functionsOracle.allCurrentChainSelectorTokens(_indexToken, chainSelector);
         for (uint256 j = 0; j < currentTokens.length; j++) {
             ExtraSwapVariables memory swapVars;
@@ -362,19 +344,69 @@ contract MainChainBalancer is Initializable, ProposableOwnableUpgradeable, Pausa
                 functionsOracle.getToETHPathData(swapVars.tokenAddress);
             uint256 wethAmount;
             if (swapVars.tokenAddress == address(weth)) {
-                vault.withdrawFunds(swapVars.tokenAddress, address(this), initialWethBalance);
+                mainChainStorage.vault().withdrawFunds(swapVars.tokenAddress, address(this), initialWethBalance);
                 wethAmount = initialWethBalance;
             } else {
-                uint256 tokenAmount = IERC20(swapVars.tokenAddress).balanceOf(address(vault));
-                vault.withdrawFunds(swapVars.tokenAddress, address(this), tokenAmount);
+                uint256 tokenAmount = IERC20(swapVars.tokenAddress).balanceOf(address(mainChainStorage.vault()));
+                mainChainStorage.vault().withdrawFunds(swapVars.tokenAddress, address(this), tokenAmount);
                 wethAmount = swap(toETHPath, toETHFees, tokenAmount, address(this));
             }
             swapWethAmount += wethAmount;
         }
+    }
 
-        chainCurrentRealShare = (chainValue * 100e18) / portfolioValue;
-        wethAmountToSwap = (swapWethAmount * oracleChainSelectorTotalShares) / chainCurrentRealShare;
+    function _swapTokensToWETHFirstRebalance(
+        address _indexToken,
+        uint256 _nonce,
+        uint64 chainSelector,
+        // address[] memory currentTokens,
+        uint256 portfolioValue,
+        uint256 _targetPortfolioValue
+        // uint256 oracleChainSelectorTotalShares,
+        // uint256 chainValue
+    ) internal returns (uint256 chainCurrentRealShare, uint256 wethAmountToSwap, uint256 extraWethAmount) {
+        // uint256 swapWethAmount;
+        // // Vault vault = mainChainStorage.vault();
+        // uint256 initialWethBalance = weth.balanceOf(address(mainChainStorage.vault()));
+        // // uint256 chainValue = mainChainStorage.chainValueByNonce(_nonce, chainSelector);
+        // address[] memory currentTokens = functionsOracle.allCurrentChainSelectorTokens(_indexToken, chainSelector);
+        // for (uint256 j = 0; j < currentTokens.length; j++) {
+        //     ExtraSwapVariables memory swapVars;
+        //     swapVars.tokenAddress = currentTokens[j];
+        //     (address[] memory toETHPath, uint24[] memory toETHFees) =
+        //         functionsOracle.getToETHPathData(swapVars.tokenAddress);
+        //     uint256 wethAmount;
+        //     if (swapVars.tokenAddress == address(weth)) {
+        //         mainChainStorage.vault().withdrawFunds(swapVars.tokenAddress, address(this), initialWethBalance);
+        //         wethAmount = initialWethBalance;
+        //     } else {
+        //         uint256 tokenAmount = IERC20(swapVars.tokenAddress).balanceOf(address(mainChainStorage.vault()));
+        //         mainChainStorage.vault().withdrawFunds(swapVars.tokenAddress, address(this), tokenAmount);
+        //         wethAmount = swap(toETHPath, toETHFees, tokenAmount, address(this));
+        //     }
+        //     swapWethAmount += wethAmount;
+        // }
+
+        uint256 swapWethAmount = _internalSwapTokensToWETHFirstRebalance(
+            _indexToken,
+            _nonce,
+            chainSelector,
+            portfolioValue,
+            _targetPortfolioValue
+        );
+
+        // uint256 latestOracleCount = functionsOracle.oracleFilledCount(_indexToken);
+        uint256 oracleChainSelectorTotalShares = functionsOracle.getOracleChainSelectorTotalShares(_indexToken, functionsOracle.oracleFilledCount(_indexToken), chainSelector);
+        chainCurrentRealShare = (mainChainStorage.chainValueByNonce(_nonce, chainSelector) * 100e18) / portfolioValue;
+        wethAmountToSwap += (swapWethAmount * ((oracleChainSelectorTotalShares * _targetPortfolioValue) / 100e18)) / mainChainStorage.chainValueByNonce(_nonce, chainSelector);
         extraWethAmount = swapWethAmount - wethAmountToSwap;
+        // uint256 latestOracleCount = functionsOracle.oracleFilledCount(_indexToken);
+        // uint256 oracleChainSelectorTotalShares = functionsOracle.getOracleChainSelectorTotalShares(_indexToken, latestOracleCount, chainSelector);
+        // chainCurrentRealShare = (chainValue * 100e18) / portfolioValue;
+        // wethAmountToSwap += (swapWethAmount * ((oracleChainSelectorTotalShares * _targetPortfolioValue) / 100e18)) / chainValue;
+        // // wethAmountToSwap = (swapWethAmount * oracleChainSelectorTotalShares) / chainCurrentRealShare;
+        // extraWethAmount = swapWethAmount - wethAmountToSwap;
+        // // extraWethAmount = swapWethAmount - wethAmountToSwap;
     }
 
     function _internalSwapsWETHToTokensForFirstRebalance(
@@ -404,10 +436,11 @@ contract MainChainBalancer is Initializable, ProposableOwnableUpgradeable, Pausa
     function _swapWETHToTokensForFirstRebalance(
         address _indexToken,
         uint64 chainSelector,
-        uint256 wethAmountToSwap,
-        uint256 oracleChainSelectorTotalShares,
-        Vault vault
+        uint256 wethAmountToSwap
     ) internal {
+        Vault vault = mainChainStorage.vault();
+        uint256 _latestOracleCount = functionsOracle.oracleFilledCount(_indexToken);
+        uint256 oracleChainSelectorTotalShares = functionsOracle.getCurrentChainSelectorTotalShares(_indexToken, _latestOracleCount, chainSelector);
         address[] memory oracleTokens = functionsOracle.allOracleChainSelectorTokens(_indexToken, chainSelector);
         for (uint256 k = 0; k < oracleTokens.length; k++) {
             address newTokenAddress = oracleTokens[k];
@@ -426,29 +459,32 @@ contract MainChainBalancer is Initializable, ProposableOwnableUpgradeable, Pausa
         address _indexToken,
         uint256 nonce,
         uint256 portfolioValue,
+        uint256 _targetPortfolioValue,
         uint64 chainSelector,
         uint256 _latestOracleCount,
         uint256 oracleChainSelectorTotalShares
     ) internal {
         ExtraSwapVariables memory swapVars;
         // Vault vault = mainChainStorage.vault();
-        swapVars.chainValue = mainChainStorage.chainValueByNonce(nonce, chainSelector);
+        // swapVars.chainValue = mainChainStorage.chainValueByNonce(nonce, chainSelector);
         // uint256 initialWethBalance = weth.balanceOf(address(vault));
         (uint256 chainCurrentRealShare, uint256 wethAmountToSwap, uint256 extraWethAmount) =
         _swapTokensToWETHFirstRebalance(
             _indexToken,
+            nonce,
             chainSelector,
+            // functionsOracle.allCurrentChainSelectorTokens(_indexToken, chainSelector),
             portfolioValue,
-            functionsOracle.getCurrentChainSelectorTotalShares(_indexToken, _latestOracleCount, chainSelector),
-            swapVars.chainValue
+            _targetPortfolioValue
+            // functionsOracle.getOracleChainSelectorTotalShares(_indexToken, _latestOracleCount, chainSelector),
+            // mainChainStorage.chainValueByNonce(nonce, chainSelector)
         );
 
         _swapWETHToTokensForFirstRebalance(
             _indexToken,
             chainSelector,
-            wethAmountToSwap,
-            functionsOracle.getCurrentChainSelectorTotalShares(_indexToken, _latestOracleCount, chainSelector),
-            mainChainStorage.vault()
+            wethAmountToSwap
+            // functionsOracle.getCurrentChainSelectorTotalShares(_indexToken, _latestOracleCount, chainSelector)
         );
 
         mainChainStorage.increaseExtraWethByNonce(nonce, extraWethAmount);
@@ -460,13 +496,14 @@ contract MainChainBalancer is Initializable, ProposableOwnableUpgradeable, Pausa
         address _indexToken,
         uint256 nonce,
         uint256 portfolioValue,
+        uint256 _targetPortfolioValue,
         uint64 chainSelector,
         uint256 oracleChainSelectorTotalShares,
-        uint256 chainValue,
-        uint256[] memory oracleTokenShares
+        uint256 chainValue
     ) internal {
+        uint256[] memory oracleTokenShares = functionsOracle.allOracleChainSelectorTokenShares(_indexToken, chainSelector);
         balancerSender.sendFirstReweightAction(
-            _indexToken, nonce, portfolioValue, chainSelector, oracleChainSelectorTotalShares, chainValue, oracleTokenShares
+            _indexToken, nonce, portfolioValue, _targetPortfolioValue, chainSelector, oracleChainSelectorTotalShares, chainValue, oracleTokenShares
         );
     }
 

@@ -208,6 +208,7 @@ contract BalancerSender is Initializable, CCIPReceiver, ProposableOwnableUpgrade
         address _indexToken,
         uint256 nonce,
         uint256 portfolioValue,
+        uint256 _targetPortfolioValue,
         uint64 chainSelector,
         uint256 oracleChainSelectorTotalShares,
         uint256 chainValue,
@@ -218,10 +219,11 @@ contract BalancerSender is Initializable, CCIPReceiver, ProposableOwnableUpgrade
 
         address crossChainIndexFactory = mainChainStorage.crossChainFactoryBySelector(chainSelector);
 
-        uint256[] memory extraData = new uint256[](3);
+        uint256[] memory extraData = new uint256[](4);
         extraData[0] = portfolioValue;
         extraData[1] = oracleChainSelectorTotalShares;
         extraData[2] = chainValue;
+        extraData[3] = _targetPortfolioValue;
 
         bytes memory data = _encodeFirstReweightAction(_indexToken, chainSelector, nonce, oracleTokenShares, extraData);
 
