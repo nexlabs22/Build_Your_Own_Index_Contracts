@@ -13,20 +13,15 @@ import {MainChainBalancer} from "../ccip/MainChainBalancer.sol";
 import {IndexFactoryStorage} from "./IndexFactoryStorage.sol";
 import {Vault} from "../vault/Vault.sol";
 import {FeeCalculation} from "../libraries/FeeCalculation.sol";
+import {DinariBalancer} from "../dinari/DinariBalancer.sol";
 
-
-
-contract IndexFactoryBalancer is
-    Initializable,
-    OwnableUpgradeable,
-    PausableUpgradeable,
-    ReentrancyGuardUpgradeable
-{
+contract IndexFactoryBalancer is Initializable, OwnableUpgradeable, PausableUpgradeable, ReentrancyGuardUpgradeable {
     using SafeERC20 for IERC20;
 
     FunctionsOracle public functionsOracle;
     IndexFactoryStorage public factoryStorage;
     MainChainBalancer public mainChainBalancer;
+    DinariBalancer public dinariBalancer;
 
     uint256 public updatePortfolioNonce;
 
@@ -39,15 +34,17 @@ contract IndexFactoryBalancer is
     function initialize(
         address _functionsOracle,
         address _factoryStorage,
-        address _mainChainBalancer
+        address _mainChainBalancer,
+        address _dinariBalancer
     ) external initializer {
-        require(
-            _functionsOracle != address(0),
-            "Invalid address for _functionsOracle"
-        );
+        require(_functionsOracle != address(0), "Invalid address for _functionsOracle");
+        require(_factoryStorage != address(0), "Invalid address for _factoryStorage");
+        require(_mainChainBalancer != address(0), "Invalid address for _mainChainBalancer");
+        require(_dinariBalancer != address(0), "Invalid address for _dinariBalancer");
         functionsOracle = FunctionsOracle(_functionsOracle);
         factoryStorage = IndexFactoryStorage(_factoryStorage);
         mainChainBalancer = MainChainBalancer(_mainChainBalancer);
+        dinariBalancer = DinariBalancer(_dinariBalancer);
 
         __Ownable_init(msg.sender);
         __Pausable_init();
@@ -59,9 +56,7 @@ contract IndexFactoryBalancer is
         _disableInitializers();
     }
 
-    function increasePortfolioTotalValueByNonce(uint256 _updatePortfolioNonce, uint256 _totalValue)
-        public
-    {
+    function increasePortfolioTotalValueByNonce(uint256 _updatePortfolioNonce, uint256 _totalValue) public {
         portfolioTotalValueByNonce[_updatePortfolioNonce] += _totalValue;
     }
 
@@ -69,82 +64,77 @@ contract IndexFactoryBalancer is
     // === External Functions ==
     // =========================
     function askValues(address _indexToken) external whenNotPaused nonReentrant {
-        uint256 currentFilledCount = functionsOracle.currentFilledCount(
-            _indexToken
-        );
-        
-        uint64[] memory currentProviderIndexes = functionsOracle
-            .getCurrentProviderIndexes(_indexToken, currentFilledCount);
+        uint8 dinariProviderIndex = dinariBalancer.dinariStorage().providerIndex();
+
+        uint256 currentFilledCount = functionsOracle.currentFilledCount(_indexToken);
+
+        uint64[] memory currentProviderIndexes =
+            functionsOracle.getCurrentProviderIndexes(_indexToken, currentFilledCount);
         updatePortfolioNonce++;
         for (uint256 i = 0; i < currentProviderIndexes.length; i++) {
-            
             if (currentProviderIndexes[i] == 1) {
                 askValueCCIP(_indexToken);
+            } else if (currentProviderIndexes[i] == dinariProviderIndex) {
+                askValuesDinari(_indexToken);
             }
         }
     }
 
-    function firstReweightAction(address _indexToken, uint256 _updatePortfolioNonce) external whenNotPaused nonReentrant {
-        uint256 currentFilledCount = functionsOracle.currentFilledCount(
-            _indexToken
-        );
-        uint256 oracleFilledCount = functionsOracle.oracleFilledCount(
-            _indexToken
-        );
-        uint64[] memory currentProviderIndexes = functionsOracle
-            .getCurrentProviderIndexes(_indexToken, currentFilledCount);
+    function firstReweightAction(address _indexToken, uint256 _updatePortfolioNonce)
+        external
+        whenNotPaused
+        nonReentrant
+    {
+        uint256 currentFilledCount = functionsOracle.currentFilledCount(_indexToken);
+        uint256 oracleFilledCount = functionsOracle.oracleFilledCount(_indexToken);
+        uint64[] memory currentProviderIndexes =
+            functionsOracle.getCurrentProviderIndexes(_indexToken, currentFilledCount);
         for (uint256 i = 0; i < currentProviderIndexes.length; i++) {
-            uint256 realProviderMarketShare = (providerTotalValueByNonce[_updatePortfolioNonce][currentProviderIndexes[i]] * 100e18) / portfolioTotalValueByNonce[_updatePortfolioNonce];
+            uint256 realProviderMarketShare = (
+                providerTotalValueByNonce[_updatePortfolioNonce][currentProviderIndexes[i]] * 100e18
+            ) / portfolioTotalValueByNonce[_updatePortfolioNonce];
             uint256 targetProviderMarketShare = functionsOracle.getOracleProviderIndexTotalShares(
-                _indexToken,
-                oracleFilledCount,
-                currentProviderIndexes[i]
+                _indexToken, oracleFilledCount, currentProviderIndexes[i]
             );
             if (realProviderMarketShare > targetProviderMarketShare) {
-                if(currentProviderIndexes[i] == 1) {
+                if (currentProviderIndexes[i] == 1) {
                     reweightCCIP(_indexToken);
                 }
             }
         }
     }
 
-
-    function secondReweightAction(address _indexToken, uint256 _updatePortfolioNonce) external whenNotPaused nonReentrant {
-        uint256 currentFilledCount = functionsOracle.currentFilledCount(
-            _indexToken
-        );
-        uint256 oracleFilledCount = functionsOracle.oracleFilledCount(
-            _indexToken
-        );
-        uint64[] memory currentProviderIndexes = functionsOracle
-            .getCurrentProviderIndexes(_indexToken, currentFilledCount);
+    function secondReweightAction(address _indexToken, uint256 _updatePortfolioNonce)
+        external
+        whenNotPaused
+        nonReentrant
+    {
+        uint256 currentFilledCount = functionsOracle.currentFilledCount(_indexToken);
+        uint256 oracleFilledCount = functionsOracle.oracleFilledCount(_indexToken);
+        uint64[] memory currentProviderIndexes =
+            functionsOracle.getCurrentProviderIndexes(_indexToken, currentFilledCount);
         for (uint256 i = 0; i < currentProviderIndexes.length; i++) {
-            uint256 realProviderMarketShare = (providerTotalValueByNonce[_updatePortfolioNonce][currentProviderIndexes[i]] * 100e18) / portfolioTotalValueByNonce[_updatePortfolioNonce];
+            uint256 realProviderMarketShare = (
+                providerTotalValueByNonce[_updatePortfolioNonce][currentProviderIndexes[i]] * 100e18
+            ) / portfolioTotalValueByNonce[_updatePortfolioNonce];
             uint256 targetProviderMarketShare = functionsOracle.getOracleProviderIndexTotalShares(
-                _indexToken,
-                oracleFilledCount,
-                currentProviderIndexes[i]
+                _indexToken, oracleFilledCount, currentProviderIndexes[i]
             );
             if (realProviderMarketShare < targetProviderMarketShare) {
-                if(currentProviderIndexes[i] == 1) {
+                if (currentProviderIndexes[i] == 1) {
                     reweightCCIP(_indexToken);
                 }
             }
         }
     }
-    
-    function askValueCCIP(
-        address _indexToken
-    ) internal whenNotPaused nonReentrant returns (uint256 orderNonce) {
+
+    function askValueCCIP(address _indexToken) internal whenNotPaused nonReentrant returns (uint256 orderNonce) {
         uint256 providerUpdateNonce = mainChainBalancer.askValues(_indexToken);
         providerNonceToGlobalNonce[1][providerUpdateNonce] = updatePortfolioNonce;
         return providerUpdateNonce;
     }
 
-    function completeAskValueCCIP(
-        uint256 _updateProviderNonce,
-        uint256 _value
-    ) external whenNotPaused nonReentrant {
+    function completeAskValueCCIP(uint256 _updateProviderNonce, uint256 _value) external whenNotPaused nonReentrant {
         require(_value > 0, "Zero total value");
 
         uint256 _updatePortfolioNonce = providerNonceToGlobalNonce[1][_updateProviderNonce];
@@ -155,9 +145,29 @@ contract IndexFactoryBalancer is
         providerTotalValueByNonce[_updatePortfolioNonce][1] += _value;
     }
 
-    function reweightCCIP(
-        address _indexToken
-    ) internal whenNotPaused nonReentrant returns (uint256 orderNonce) {
+    function askValuesDinari(address _indexToken) internal whenNotPaused nonReentrant returns (uint256 orderNonce) {
+        uint8 providerIndex = dinariBalancer.dinariStorage().providerIndex();
+        uint256 providerUpdateNonce = dinariBalancer.askValues(_indexToken);
+        providerNonceToGlobalNonce[providerIndex][providerUpdateNonce] = updatePortfolioNonce;
+    }
+
+    function completeDinariAskValues(uint256 _updateProviderNonce, uint256 _value)
+        external
+        whenNotPaused
+        nonReentrant
+    {
+        require(_value > 0, "Zero total value");
+        uint8 providerIndex = dinariBalancer.dinariStorage().providerIndex();
+
+        uint256 _updatePortfolioNonce = providerNonceToGlobalNonce[providerIndex][_updateProviderNonce];
+        if (_updatePortfolioNonce == 0) {
+            revert("Invalid provider nonce");
+        }
+        portfolioTotalValueByNonce[_updatePortfolioNonce] += _value;
+        providerTotalValueByNonce[_updatePortfolioNonce][providerIndex] += _value;
+    }
+
+    function reweightCCIP(address _indexToken) internal whenNotPaused nonReentrant returns (uint256 orderNonce) {
         // to be implemented
     }
 }

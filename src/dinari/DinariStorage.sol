@@ -16,6 +16,7 @@ import "./DinariOrderManager.sol";
 import "../oracle/FunctionsOracle.sol";
 import "../libraries/Commen.sol" as PrbMath;
 import {IndexFactoryStorage} from "../factory/IndexFactoryStorage.sol";
+import {DinariBalancer} from "./DinariBalancer.sol";
 
 /// @title Dinari Storage
 /// @notice Stores data and provides functions for managing index token issuance and redemption
@@ -45,6 +46,8 @@ contract DinariStorage is Initializable, OwnableUpgradeable {
     IOrderProcessor public issuer;
     FunctionsOracle public functionsOracle;
     IndexFactoryStorage public globalFactory;
+    DinariBalancer public balancer;
+
     address public usdc;
     uint8 public usdcDecimals;
     bool public isMainnet;
@@ -54,6 +57,7 @@ contract DinariStorage is Initializable, OwnableUpgradeable {
     uint8 public latestPriceDecimals;
     address public feeReceiver;
     uint8 public providerIndex;
+    uint256 public updatePortfolioNonce;
 
     // Mappings for issuance and redemption data
     mapping(address => uint256) public issuanceNonce;
@@ -90,6 +94,7 @@ contract DinariStorage is Initializable, OwnableUpgradeable {
     function initialize(
         address _issuer,
         address _indexFactoryStorage,
+        address _balancer,
         address _usdc,
         uint8 _usdcDecimals,
         address _functionsOracle,
@@ -98,12 +103,14 @@ contract DinariStorage is Initializable, OwnableUpgradeable {
     ) external initializer {
         require(_issuer != address(0), "invalid _issuer address");
         require(_indexFactoryStorage != address(0), "invalid _indexFactoryStorage address");
+        require(_balancer != address(0), "invalid _balancer address");
         require(_usdc != address(0), "invalid _usdc address");
         require(_usdcDecimals > 0, "invalid _usdcDecimals");
         require(_functionsOracle != address(0), "invalid _functionsOracle address");
         require(_providerIndex > 0, "invalid _providerIndex");
         issuer = IOrderProcessor(_issuer);
         globalFactory = IndexFactoryStorage(_indexFactoryStorage);
+        balancer = DinariBalancer(_balancer);
         usdc = _usdc;
         usdcDecimals = _usdcDecimals;
         functionsOracle = FunctionsOracle(_functionsOracle);
@@ -132,6 +139,15 @@ contract DinariStorage is Initializable, OwnableUpgradeable {
     modifier onlyOwnerOrOperator() {
         require(msg.sender == owner() || functionsOracle.isOperator(msg.sender), "Caller is not the owner or operator");
         _;
+    }
+
+    modifier onlyBalancer() {
+        require(msg.sender == address(balancer), "Caller is not index factory balancer contract.");
+        _;
+    }
+
+    function increaseUpdatePortfolioNonce() public onlyBalancer {
+        updatePortfolioNonce++;
     }
 
     /// @notice Sets the functions oracle address

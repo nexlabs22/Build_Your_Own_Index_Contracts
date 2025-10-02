@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.25;
+pragma solidity ^0.8.25;
 
 import "../token/IndexToken.sol";
-// import "../token/RequestNFT.sol";
 import "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -10,25 +9,23 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 
-// import "../chainlink/ChainlinkClient.sol";
 import "./dinari/interfaces/IOrderProcessor.sol";
 import {FeeLib} from "./dinari/common/FeeLib.sol";
 import "./coa/ContractOwnedAccount.sol";
 import "../vault/Vault.sol";
 import "./dinari/WrappedDShare.sol";
-// import "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
-// import "../libraries/Commen.sol" as PrbMath;
 import "./DinariStorage.sol";
 import "./DinariFactory.sol";
 import "./DinariOrderManager.sol";
 import "../oracle/FunctionsOracle.sol";
 import "../libraries/Commen.sol" as PrbMath2;
 import "../factory/IndexFactoryStorage.sol";
+import "../factory/IndexFactoryBalancer.sol";
 
-/// @title Index Token Factory
+/// @title DinariBalancer
 /// @author NEX Labs Protocol
 /// @notice Allows User to initiate burn/mint requests and allows issuers to approve or deny them
-contract IndexFactoryBalancer is Initializable, OwnableUpgradeable, PausableUpgradeable, ReentrancyGuardUpgradeable {
+contract DinariBalancer is Initializable, OwnableUpgradeable, PausableUpgradeable, ReentrancyGuardUpgradeable {
     using SafeERC20 for IERC20;
 
     struct ActionInfo {
@@ -41,6 +38,7 @@ contract IndexFactoryBalancer is Initializable, OwnableUpgradeable, PausableUpgr
     DinariStorage public dinariStorage;
     FunctionsOracle public functionsOracle;
     IndexFactoryStorage public globalStorage;
+    IndexFactoryBalancer public globalBalancer;
 
     mapping(address => uint256) public rebalanceNonce;
     mapping(address => mapping(uint256 => mapping(address => uint256))) public rebalanceRequestId;
@@ -54,7 +52,10 @@ contract IndexFactoryBalancer is Initializable, OwnableUpgradeable, PausableUpgr
     mapping(address => mapping(uint256 => uint256)) public totalShortagePercentByNonce;
 
     mapping(address => mapping(uint256 => ActionInfo)) public actionInfoById;
+    mapping(address => mapping(uint256 => uint256)) public providerSurplusUsdByNonce; // expected USD realized from sells here
+    mapping(address => mapping(uint256 => uint256)) public providerShortageUsdByNonce; // USD needed to reach targets here
 
+    event AskValuesRequested(uint256 indexed providerIndex, address indexed indexToken, uint256 indexed timestamp);
     event FirstRebalanceAction(address indexed indexToken, uint256 nonce, uint256 time);
     event SecondRebalanceAction(address indexed indexToken, uint256 nonce, uint256 time);
     event CompleteRebalanceActions(address indexed indexToken, uint256 nonce, uint256 time);
@@ -69,16 +70,22 @@ contract IndexFactoryBalancer is Initializable, OwnableUpgradeable, PausableUpgr
         _;
     }
 
-    function initialize(address _factoryStorage, address _functionsOracle, address _globalStorage)
-        external
-        initializer
-    {
+    function initialize(
+        address _factoryStorage,
+        address _functionsOracle,
+        address _globalStorage,
+        address _globalBalancer
+    ) external initializer {
         require(_factoryStorage != address(0), "invalid _factoryStorage address");
         require(_functionsOracle != address(0), "invalid _functionsOracle address");
         require(_globalStorage != address(0), "invalid _globalStorage address");
+        require(_globalBalancer != address(0), "invalid _globalBalancer address");
+
         dinariStorage = DinariStorage(_factoryStorage);
         functionsOracle = FunctionsOracle(_functionsOracle);
         globalStorage = IndexFactoryStorage(_globalStorage);
+        globalBalancer = IndexFactoryBalancer(_globalBalancer);
+
         __Ownable_init(msg.sender);
         __Pausable_init();
         __ReentrancyGuard_init();
@@ -108,6 +115,31 @@ contract IndexFactoryBalancer is Initializable, OwnableUpgradeable, PausableUpgr
         return percentageFeeRate != 0
             ? PrbMath2.mulDiv(orderValue, 1_000_000, (1_000_000 + percentageFeeRate))
             : orderValue;
+    }
+
+    function askValues(address _indexToken) public whenNotPaused onlyOwnerOrOperator returns (uint256) {
+        rebalanceNonce[_indexToken] += 1;
+        uint256 nonce = rebalanceNonce[_indexToken];
+
+        uint256 portfolioValue;
+        (, address[] memory underlyingAssets,) = functionsOracle.getCurrentProviderIndexData(
+            _indexToken, functionsOracle.currentFilledCount(_indexToken), dinariStorage.providerIndex()
+        );
+
+        for (uint256 i = 0; i < underlyingAssets.length; i++) {
+            address token = underlyingAssets[i];
+            uint256 tokenValue = dinariStorage.getVaultDshareValue(_indexToken, token);
+            tokenValueByNonce[_indexToken][nonce][token] = tokenValue;
+            portfolioValue += tokenValue;
+        }
+
+        portfolioValueByNonce[_indexToken][nonce] = portfolioValue;
+
+        globalBalancer.completeDinariAskValues(nonce, portfolioValue);
+
+        emit AskValuesRequested(dinariStorage.providerIndex(), _indexToken, block.timestamp);
+
+        return dinariStorage.updatePortfolioNonce();
     }
 
     function requestBuyOrder(address _indexToken, address _token, uint256 _orderAmount, address _receiver)
@@ -149,7 +181,7 @@ contract IndexFactoryBalancer is Initializable, OwnableUpgradeable, PausableUpgr
             uint256 extra = redeemed - orderAmount;
             if (extra > 0) {
                 IERC20(_token).approve(wrapped, extra);
-                // WrappedDShare(wrapped).deposit(extra, address(dinariStorage.vault())); // if/when needed
+                WrappedDShare(wrapped).deposit(extra, vault); // if/when needed
             }
         }
 
@@ -233,17 +265,16 @@ contract IndexFactoryBalancer is Initializable, OwnableUpgradeable, PausableUpgr
     ) internal {
         uint256 tokenValue = tokenValueByNonce[indexToken][nonce][token];
 
-        // percentages are 1e18-scaled
-        uint256 currentPct = (tokenValue == 0) ? 0 : (tokenValue * 100e18) / portfolioValue;
+        // uint256 currentPct = (tokenValue == 0) ? 0 : (tokenValue * 100e18) / portfolioValue;
+        uint256 currentPct = functionsOracle.tokenCurrentMarketShare(indexToken, token);
         uint256 targetPct = functionsOracle.tokenOracleMarketShare(indexToken, token);
 
         if (currentPct > targetPct) {
-            // Overweight → compute sell amount in *wrapped dShare* units
             address wrapped = dinariStorage.wrappedDshareAddress(token);
             uint256 wrappedBalance = IERC20(wrapped).balanceOf(vault);
             if (wrappedBalance == 0) return;
 
-            uint256 sellAmount = wrappedBalance - (wrappedBalance * targetPct) / currentPct; // rounds down
+            uint256 sellAmount = wrappedBalance - (wrappedBalance * targetPct) / currentPct;
             if (sellAmount == 0) return;
 
             // Skip dust: approximate USD value being sold = tokenValue * (sellAmount / wrappedBalance)
@@ -255,10 +286,7 @@ contract IndexFactoryBalancer is Initializable, OwnableUpgradeable, PausableUpgr
 
             _recordSell(indexToken, nonce, token, requestId, assetAmount);
 
-            // // Bookkeeping for follow-ups
-            // actionInfoById[indexToken][requestId] = ActionInfo({actionType: 5, nonce: nonce});
-            // rebalanceRequestId[indexToken][nonce][token] = requestId;
-            // rebalanceSellAssetAmountById[indexToken][requestId] = assetAmount;
+            providerSurplusUsdByNonce[indexToken][nonce] += estValueToSell;
         } else if (currentPct < targetPct) {
             // Underweight → record shortage percent; actual purchases are done in second rebalance
             uint256 shortagePct = targetPct - currentPct;
@@ -267,12 +295,20 @@ contract IndexFactoryBalancer is Initializable, OwnableUpgradeable, PausableUpgr
                 tokenShortagePercentByNonce[indexToken][nonce][token] = shortagePct;
                 totalShortagePercentByNonce[indexToken][nonce] += shortagePct;
             }
+
+            uint256 targetUsd = (portfolioValue * targetPct) / 100e18;
+            if (targetUsd > tokenValue) {
+                providerShortageUsdByNonce[indexToken][nonce] += (targetUsd - tokenValue);
+            }
         }
     }
 
     function firstRebalanceAction(address _indexToken) public nonReentrant onlyOwnerOrOperator returns (uint256) {
-        rebalanceNonce[_indexToken] += 1;
+        // rebalanceNonce[_indexToken] += 1;
         uint256 nonce = rebalanceNonce[_indexToken];
+
+        providerSurplusUsdByNonce[_indexToken][nonce] = 0;
+        providerShortageUsdByNonce[_indexToken][nonce] = 0;
 
         uint256 portfolioValue;
         (, address[] memory underlyingAssets,) = functionsOracle.getCurrentProviderIndexData(
@@ -297,9 +333,14 @@ contract IndexFactoryBalancer is Initializable, OwnableUpgradeable, PausableUpgr
 
         for (uint256 i = 0; i < underlyingAssets.length; i++) {
             address token = underlyingAssets[i];
-            // push all per-iteration work into a helper to keep this frame tiny
             _processTokenForFirstRebalanceAction(_indexToken, nonce, token, vault, portfolioValue);
         }
+
+        // uint256 surplusUsd = providerSurplusUsdByNonce[_indexToken][nonce];
+        // uint256 shortageUsd = providerShortageUsdByNonce[_indexToken][nonce];
+        // globalBalancer.registerProviderNetFlow(
+        //     _indexToken, dinariStorage.providerIndex(), nonce, surplusUsd, shortageUsd
+        // );
 
         emit FirstRebalanceAction(_indexToken, nonce, block.timestamp);
         return nonce;
