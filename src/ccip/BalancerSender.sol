@@ -215,7 +215,8 @@ contract BalancerSender is Initializable, CCIPReceiver, ProposableOwnableUpgrade
         uint256[] memory oracleTokenShares
     ) public onlyMainChainBalancer {
         uint256 chainCurrentRealShare = (chainValue * 100e18) / portfolioValue;
-        mainChainStorage.increaseReweightExtraPercentage(nonce, chainCurrentRealShare - oracleChainSelectorTotalShares);
+        // mainChainStorage.increaseReweightExtraPercentage(nonce, chainCurrentRealShare - oracleChainSelectorTotalShares);
+        mainChainStorage.increaseReweightExtraPercentage(nonce, (chainValue - (oracleChainSelectorTotalShares * _targetPortfolioValue) / 100e18) * 100e18 / portfolioValue);
 
         address crossChainIndexFactory = mainChainStorage.crossChainFactoryBySelector(chainSelector);
 
