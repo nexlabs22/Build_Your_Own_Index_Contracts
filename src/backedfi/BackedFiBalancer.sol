@@ -40,7 +40,7 @@ contract BackedFiBalancer is Initializable, OwnableUpgradeable, PausableUpgradea
         bool bondDeficit;
     }
 
-    BackedFiStorage public factoryStorage;
+    BackedFiStorage public backedfiStorage;
     FunctionsOracle public functionsOracle;
     IndexFactoryStorage public globalStorage;
 
@@ -57,8 +57,8 @@ contract BackedFiBalancer is Initializable, OwnableUpgradeable, PausableUpgradea
 
     modifier onlyOwnerOrOperator() {
         require(
-            msg.sender == owner() || factoryStorage.functionsOracle().isOperator(msg.sender)
-                || msg.sender == factoryStorage.nexBot(),
+            msg.sender == owner() || backedfiStorage.functionsOracle().isOperator(msg.sender)
+                || msg.sender == backedfiStorage.nexBot(),
             "balancer: only owner / operator / bot"
         );
         _;
@@ -69,12 +69,12 @@ contract BackedFiBalancer is Initializable, OwnableUpgradeable, PausableUpgradea
         _disableInitializers();
     }
 
-    function initialize(address _storage, address _oracle, address _globalStorage) external initializer {
-        require(_storage != address(0), "balancer: zero _storage");
+    function initialize(address _backedfiStorage, address _oracle, address _globalStorage) external initializer {
+        require(_backedfiStorage != address(0), "balancer: zero _backedfiStorage");
         require(_oracle != address(0), "balancer: zero _oracle");
         require(_globalStorage != address(0), "balancer: zero _globalStorage");
 
-        factoryStorage = BackedFiStorage(_storage);
+        backedfiStorage = BackedFiStorage(_backedfiStorage);
         functionsOracle = FunctionsOracle(_oracle);
         globalStorage = IndexFactoryStorage(_globalStorage);
 
@@ -93,7 +93,7 @@ contract BackedFiBalancer is Initializable, OwnableUpgradeable, PausableUpgradea
 
         // (uint256 _totalShares, address[] memory _tokens, uint256[] memory _marketShares) = functionsOracle
         //     .getCurrentProviderIndexData(
-        //     _indexToken, functionsOracle.currentFilledCount(_indexToken), factoryStorage.providerIndex()
+        //     _indexToken, functionsOracle.currentFilledCount(_indexToken), backedfiStorage.providerIndex()
         // );
 
         address vaultAddr = globalStorage.indexTokenToVault(_indexToken);
@@ -135,7 +135,7 @@ contract BackedFiBalancer is Initializable, OwnableUpgradeable, PausableUpgradea
         // require(totalTokens == targetShares1e18.length, "rebalance: bad oracle data");
         require(prices.length == totalTokens, "rebalance: price length mismatch");
 
-        Ctx memory ctx = Ctx({vault: Vault(vaultAddr), usdc: factoryStorage.usdc()});
+        Ctx memory ctx = Ctx({vault: Vault(vaultAddr), usdc: backedfiStorage.usdc()});
 
         nonce = ++rebalanceNonce;
         RebalanceBatch storage batch = _rebalanceBatches[nonce];
@@ -186,25 +186,50 @@ contract BackedFiBalancer is Initializable, OwnableUpgradeable, PausableUpgradea
         RebalanceBatch storage batch = _rebalanceBatches[batchId];
         require(batch.firstDone && !batch.secondDone, "rebalance: bad phase");
 
-        IERC20 usdc = factoryStorage.usdc();
-        uint256 balance = usdc.balanceOf(address(this));
-        require(balance > 0, "balancer: no USDC");
+        IERC20 usdc = backedfiStorage.usdc();
+        uint256 usdcBal = usdc.balanceOf(address(this));
+        require(usdcBal > 0, "balancer: no USDC");
 
-        bool bondDeficit = false;
+        (, address[] memory tokens,) = functionsOracle.getCurrentProviderIndexData(
+            _indexToken, functionsOracle.currentFilledCount(_indexToken), backedfiStorage.providerIndex()
+        );
 
-        for (uint256 i; i < factoryStorage.functionsOracle().totalCurrentList(_indexToken); ++i) {
-            address token = factoryStorage.functionsOracle().currentList(_indexToken, i);
-            uint256 current = factoryStorage.functionsOracle().tokenCurrentMarketShare(_indexToken, token);
-            uint256 oracle = factoryStorage.functionsOracle().tokenOracleMarketShare(_indexToken, token);
+        uint256 n = tokens.length;
+        uint256[] memory shortages = new uint256[](n);
+        uint256 totalShortage;
 
-            bondDeficit = current < oracle;
+        for (uint256 i = 0; i < n; ++i) {
+            address token = tokens[i];
+            uint256 current = functionsOracle.tokenCurrentMarketShare(_indexToken, token);
+            uint256 target = functionsOracle.tokenOracleMarketShare(_indexToken, token);
+
+            if (current < target) {
+                uint256 shortage = target - current;
+                shortages[i] = shortage;
+                totalShortage += shortage;
+            }
         }
 
-        if (bondDeficit) {
-            usdc.safeTransfer(factoryStorage.nexBot(), balance);
-            // batch.tokenDelta[bond] = 0;
+        if (totalShortage == 0) {
+            batch.secondDone = true;
             require(msg.value == 0, "balancer: no ETH needed");
+            emit SecondRebalanceAction(batchId, block.timestamp);
+            return;
         }
+
+        uint256 usdcSpent;
+        for (uint256 i = 0; i < n; ++i) {
+            uint256 shortage = shortages[i];
+            if (shortage == 0) continue;
+
+            uint256 payment = Math.mulDiv(usdcBal, shortage, totalShortage);
+            if (payment == 0) continue;
+
+            usdc.safeTransfer(backedfiStorage.nexBot(), payment);
+            usdcSpent += payment;
+        }
+
+        require(msg.value == 0, "balancer: no ETH needed");
 
         batch.secondDone = true;
         emit SecondRebalanceAction(batchId, block.timestamp);
@@ -223,7 +248,7 @@ contract BackedFiBalancer is Initializable, OwnableUpgradeable, PausableUpgradea
         ctx.vault.withdrawFunds(bondToken, address(this), soldQty);
         if (soldQty == 0) return 0;
 
-        IERC20(bondToken).safeTransfer(factoryStorage.nexBot(), soldQty);
+        IERC20(bondToken).safeTransfer(backedfiStorage.nexBot(), soldQty);
 
         RebalanceBatch storage batch = _rebalanceBatches[nonce];
         batch.tokenDelta[bondToken] = soldQty;
@@ -233,22 +258,6 @@ contract BackedFiBalancer is Initializable, OwnableUpgradeable, PausableUpgradea
 
         return soldQty;
     }
-
-    // function _sellBond(uint256 nonce, address bondToken, uint256 shareDiff18, Ctx memory ctx)
-    //     internal
-    //     returns (uint256 soldQty18)
-    // {
-    //     uint256 vaultBal = IERC20(bondToken).balanceOf(address(ctx.vault));
-    //     soldQty18 = (vaultBal * shareDiff18) / ONE_BPS_1e18;
-    //     if (soldQty18 == 0) return 0;
-
-    //     RebalanceBatch storage batch = _rebalanceBatches[nonce];
-    //     batch.tokenDelta[bondToken] = soldQty18;
-
-    //     // If you want to actually move tokens now:
-    //     uint256 pulled = ctx.vault.withdrawFunds(bondToken, address(this), soldQty18);
-    //     IERC20(bondToken).safeTransfer(factoryStorage.nexBot(), pulled);
-    // }
 
     function _sellPercent(uint256 currentShare, uint256 targetShare) internal pure returns (uint256) {
         if (currentShare <= targetShare || currentShare == 0) return 0;

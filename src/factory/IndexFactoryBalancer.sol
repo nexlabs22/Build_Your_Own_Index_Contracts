@@ -149,6 +149,7 @@ contract IndexFactoryBalancer is Initializable, OwnableUpgradeable, PausableUpgr
         uint8 providerIndex = dinariBalancer.dinariStorage().providerIndex();
         uint256 providerUpdateNonce = dinariBalancer.askValues(_indexToken);
         providerNonceToGlobalNonce[providerIndex][providerUpdateNonce] = updatePortfolioNonce;
+        return providerUpdateNonce;
     }
 
     function completeDinariAskValues(uint256 _updateProviderNonce, uint256 _value)
@@ -165,6 +166,13 @@ contract IndexFactoryBalancer is Initializable, OwnableUpgradeable, PausableUpgr
         }
         portfolioTotalValueByNonce[_updatePortfolioNonce] += _value;
         providerTotalValueByNonce[_updatePortfolioNonce][providerIndex] += _value;
+    }
+
+    function askValuesBackedFi(address _indexToken) internal whenNotPaused nonReentrant returns (uint256 orderNonce) {
+        uint8 providerIndex = dinariBalancer.dinariStorage().providerIndex();
+        uint256 providerUpdateNonce = dinariBalancer.askValues(_indexToken);
+        providerNonceToGlobalNonce[providerIndex][providerUpdateNonce] = updatePortfolioNonce;
+        return providerUpdateNonce;
     }
 
     function reweightCCIP(address _indexToken) internal whenNotPaused nonReentrant returns (uint256 orderNonce) {
