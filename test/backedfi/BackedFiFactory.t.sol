@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.25;
+pragma solidity ^0.8.25;
 
-import "forge-std/Test.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
 import {BackedFiFactory} from "../../src/backedfi/BackedFiFactory.sol";
@@ -9,29 +8,54 @@ import {IndexFactoryStorage} from "../../src/backedfi/IndexFactoryStorage.sol";
 import {StagingCustodyAccount} from "../../src/backedfi/StagingCustodyAccount.sol";
 import {FunctionsOracle} from "../../src/oracle/FunctionsOracle.sol";
 import {TestERC20} from "../utils/TestERC20.sol";
-import "../OlympixUnitTest.sol";
+import {OlympixUnitTest} from "../OlympixUnitTest.sol";
 
 error ZeroAmount();
 
-contract BackedFiFactoryTest is Test {
-    address owner_ = address(0xA11CE);
-    address user = address(0xBEEF);
-    address feeVault = address(0xFEE);
-    address nexBot = address(0xB07);
+/// @title BackedFiFactoryTest
+/// @author NexLabs
+/// @notice Unit tests covering issuance and redemption behaviour for BackedFiFactory
+contract BackedFiFactoryTest is OlympixUnitTest("BackedFiFactory") {
+    /// @notice Owner address used when deploying test fixtures
+    address public owner_ = address(0xA11CE);
 
-    TestERC20 usdc;
-    TestERC20 indexToken;
+    /// @notice Arbitrary user address interacting with the factory
+    address public user = address(0xBEEF);
 
-    BackedFiFactory backedFiImpl;
-    IndexFactoryStorage storageImpl;
-    StagingCustodyAccount scaImpl;
+    /// @notice Fee vault configured within the factory storage
+    address public feeVault = address(0xFEE);
 
-    BackedFiFactory backedFi;
-    IndexFactoryStorage storage_;
-    StagingCustodyAccount sca;
+    /// @notice Address that represents NexBot permissions in storage
+    address public nexBot = address(0xB07);
 
-    FunctionsOracle oracle;
+    /// @notice Mock USDC token reference used throughout tests
+    TestERC20 public usdc;
 
+    /// @notice Mock index token minted for issuance and redemption flows
+    TestERC20 public indexToken;
+
+    /// @notice Implementation contract reference for BackedFiFactory
+    BackedFiFactory public backedFiImpl;
+
+    /// @notice Implementation contract reference for IndexFactoryStorage
+    IndexFactoryStorage public storageImpl;
+
+    /// @notice Implementation contract reference for StagingCustodyAccount
+    StagingCustodyAccount public scaImpl;
+
+    /// @notice Proxy instance of BackedFiFactory under test
+    BackedFiFactory public backedFi;
+
+    /// @notice Proxy instance of IndexFactoryStorage leveraged by the factory
+    IndexFactoryStorage public storage_;
+
+    /// @notice Proxy instance of StagingCustodyAccount used to hold assets
+    StagingCustodyAccount public sca;
+
+    /// @notice Chainlink Functions oracle mock utilised by storage
+    FunctionsOracle public oracle;
+
+    /// @notice Deploys the proxied contracts and seeds the required state for tests
     function setUp() public {
         vm.startPrank(owner_);
 
@@ -62,6 +86,7 @@ contract BackedFiFactoryTest is Test {
         vm.stopPrank();
     }
 
+    /// @notice Ensures issuance transfers funds, emits the correct event and increments nonce
     function testIssuance_Success_TransfersUSDC_Emits_IncrementsNonce() public {
         uint256 amount = 5_000e18;
 
@@ -88,6 +113,7 @@ contract BackedFiFactoryTest is Test {
         assertEq(usdc.balanceOf(address(sca)), amount, "SCA credited USDC");
     }
 
+    /// @notice Issuance should revert when attempting to submit a zero amount
     function testIssuance_RevertsOnZeroAmount() public {
         vm.startPrank(user);
         vm.expectRevert(ZeroAmount.selector);
@@ -95,6 +121,7 @@ contract BackedFiFactoryTest is Test {
         vm.stopPrank();
     }
 
+    /// @notice Ensures redemption transfers index tokens, emits events, and increments nonce
     function testRedemption_Success_TransfersIDX_Emits_IncrementsNonce() public {
         uint256 amount = 2_500e18;
         uint256 burnPct = 123_456_789_000_000_000;
@@ -122,6 +149,7 @@ contract BackedFiFactoryTest is Test {
         assertEq(indexToken.balanceOf(address(sca)), amount, "SCA credited IDX");
     }
 
+    /// @notice Redemption should revert when amount is zero
     function testRedemption_RevertsOnZeroAmount() public {
         vm.startPrank(user);
         vm.expectRevert(ZeroAmount.selector);

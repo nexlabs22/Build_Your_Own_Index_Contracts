@@ -1,7 +1,9 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.25;
+
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {Context} from "@openzeppelin/contracts/utils/Context.sol";
-
 
 contract ERC20V8 is Context, IERC20, IERC20Metadata {
     mapping(address => uint256) private _balances;
@@ -207,7 +209,8 @@ contract ERC20V8 is Context, IERC20, IERC20Metadata {
         _afterTokenTransfer(from, to, amount);
     }
 
-    /** @dev Creates `amount` tokens and assigns them to `account`, increasing
+    /**
+     * @dev Creates `amount` tokens and assigns them to `account`, increasing
      * the total supply.
      *
      * Emits a {Transfer} event with `from` set to the zero address.
@@ -312,6 +315,7 @@ contract ERC20V8 is Context, IERC20, IERC20Metadata {
      *
      * To learn more about hooks, head to xref:ROOT:extending-contracts.adoc#using-hooks[Using Hooks].
      */
+
     function _beforeTokenTransfer(address from, address to, uint256 amount) internal virtual {}
 
     /**

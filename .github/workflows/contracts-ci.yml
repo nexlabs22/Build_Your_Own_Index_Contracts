@@ -1,0 +1,96 @@
+name: Contracts CI
+
+on:
+  push:
+    branches: [main, CI/CD]
+  pull_request:
+    branches: [main]
+    
+permissions:
+  contents: read
+  pull-requests: write
+
+env:
+  FOUNDRY_PROFILE: ci
+
+jobs:
+  formatting-lint:
+    name: Formatting & Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Cache Foundry
+        uses: actions/cache@v4
+        with:
+          path: ~/.foundry
+          key: foundry-${{ runner.os }}-${{ hashFiles('foundry.toml') }}
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+
+      - name: Check Forge formatting
+        run: forge fmt --check
+
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run solhint
+        run: npm run lint:solidity
+
+  build:
+    name: Build
+    needs: formatting-lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref || github.ref }}
+          submodules: recursive
+
+      - name: Cache Foundry
+        uses: actions/cache@v4
+        with:
+          path: ~/.foundry
+          key: foundry-${{ runner.os }}-${{ hashFiles('foundry.toml') }}
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+
+
+      - name: Forge build (sizes)
+        run: forge build
+
+  unit-tests:
+    name: Unit Tests
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref || github.ref }}
+          submodules: recursive
+
+      - name: Cache Foundry
+        uses: actions/cache@v4
+        with:
+          path: ~/.foundry
+          key: foundry-${{ runner.os }}-${{ hashFiles('foundry.toml') }}
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+
+
+      - name: Run unit tests
+        run: forge test -vv --fail-fast

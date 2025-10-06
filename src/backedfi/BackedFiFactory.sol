@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.25;
+pragma solidity ^0.8.25;
 
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
@@ -8,11 +8,8 @@ import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/Own
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-import {StagingCustodyAccount} from "./StagingCustodyAccount.sol";
 import {IndexFactoryStorage} from "./IndexFactoryStorage.sol";
 import {FunctionsOracle} from "./FunctionsOracle.sol";
-import {IndexToken} from "../token/IndexToken.sol";
-import {FeeCalculation} from "../libraries/FeeCalculation.sol";
 
 error ZeroAmount();
 error WrongETHAmount();

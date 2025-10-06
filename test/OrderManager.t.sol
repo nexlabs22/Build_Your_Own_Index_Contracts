@@ -1,34 +1,65 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.25;
+pragma solidity ^0.8.25;
 
-import "forge-std/Test.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
-
-import {OrderManager} from "../../src/orderManager/OrderManager.sol";
-// import {IndexFactory} from "../src/factory/IndexFactory.sol";
+import {OrderManager} from "../src/orderManager/OrderManager.sol";
 import {BackedFiFactory} from "../src/backedfi/BackedFiFactory.sol";
 import {IndexFactoryStorage} from "../src/backedfi/IndexFactoryStorage.sol";
-import "./OlympixUnitTest.sol";
-import "./utils/TestERC20.sol";
+import {OlympixUnitTest} from "./OlympixUnitTest.sol";
+import {TestERC20} from "./utils/TestERC20.sol";
 
+/// @title OrderManagerTest
+/// @author NexLabs
+/// @notice Unit tests for the OrderManager contract
 contract OrderManagerTest is OlympixUnitTest("OrderManager") {
-    address owner_ = address(0xA11CE);
-    address operator_ = makeAddr("operator");
-    address user = address(0xBEEF);
+    /// @notice Owner address used throughout the tests
+    address public owner_ = address(0xA11CE);
 
-    address idxToken = makeAddr("IDX");
-    address outToken = makeAddr("OUT"); // dummy output token address
+    /// @notice Operator address with elevated permissions in tests
+    address public operator_ = makeAddr("operator");
 
-    TestERC20 usdc;
-    TestERC20 underlying;
+    /// @notice General user address used to simulate external callers
+    address public user = address(0xBEEF);
 
-    OrderManager orderManagerImpl;
-    OrderManager orderManager;
-    BackedFiFactory indexFactoryImpl;
-    BackedFiFactory indexFactory;
-    IndexFactoryStorage indexFactoryStorageImpl;
-    IndexFactoryStorage indexFactoryStorage;
+    /// @notice Mock index token address leveraged across test scenarios
+    address public idxToken = makeAddr("IDX");
 
+    /// @notice Placeholder output token address for order interactions
+    address public outToken = makeAddr("OUT");
+
+    /// @notice Test instance of USDC token used as input/output token
+    TestERC20 public usdc;
+
+    /// @notice Test instance of an underlying asset token
+    TestERC20 public underlying;
+
+    /// @notice Implementation contract reference for OrderManager
+    OrderManager public orderManagerImpl;
+
+    /// @notice Proxy instance of the OrderManager under test
+    OrderManager public orderManager;
+
+    /// @notice Implementation contract reference for BackedFiFactory
+    BackedFiFactory public indexFactoryImpl;
+
+    /// @notice Proxy instance of the BackedFiFactory used by OrderManager
+    BackedFiFactory public indexFactory;
+
+    /// @notice Implementation contract reference for IndexFactoryStorage
+    IndexFactoryStorage public indexFactoryStorageImpl;
+
+    /// @notice Proxy instance of IndexFactoryStorage supporting the factory
+    IndexFactoryStorage public indexFactoryStorage;
+
+    /// @notice Emitted when an order is created through the OrderManager
+    /// @param indexToken The address of the index token involved in the order
+    /// @param orderNonce The unique identifier of the order
+    /// @param user The user that initiated the order
+    /// @param isBuyOrder Whether the order represents a buy action
+    /// @param inputToken The token provided as input for the order
+    /// @param inputAmount The amount of input tokens supplied
+    /// @param outputToken The token expected as output from the order
+    /// @param outputAmount The amount of output tokens requested
     event OrderCreated(
         address indexed indexToken,
         uint256 indexed orderNonce,
@@ -40,6 +71,7 @@ contract OrderManagerTest is OlympixUnitTest("OrderManager") {
         uint256 outputAmount
     );
 
+    /// @notice Deploys and wires up all dependencies shared by test cases
     function setUp() public {
         vm.startPrank(owner_);
 
@@ -115,6 +147,7 @@ contract OrderManagerTest is OlympixUnitTest("OrderManager") {
         vm.stopPrank();
     }
 
+    /// @notice Verifies that only the owner can call administrative setters
     function testOwnerOnly_AdminSetters() public {
         vm.prank(owner_);
         orderManager.setUsdcAddress(address(underlying));
@@ -129,6 +162,7 @@ contract OrderManagerTest is OlympixUnitTest("OrderManager") {
 
     // ===== onlyOperator gating =====
 
+    /// @notice Ensures non-operators cannot create orders
     function testOnlyOperator_CreateOrder_RevertsForNonOperator() public {
         OrderManager.CreateOrderConfig memory cfg = OrderManager.CreateOrderConfig({
             requestNonce: 1,
@@ -147,6 +181,7 @@ contract OrderManagerTest is OlympixUnitTest("OrderManager") {
         orderManager.createOrder(cfg);
     }
 
+    /// @notice Ensures non-operators cannot complete orders
     function testOnlyOperator_CompleteOrder_RevertsForNonOperator() public {
         // Prepare an order first from operator
         OrderManager.CreateOrderConfig memory cfg = OrderManager.CreateOrderConfig({
@@ -169,6 +204,7 @@ contract OrderManagerTest is OlympixUnitTest("OrderManager") {
         orderManager.completeOrder(nonce);
     }
 
+    /// @notice Checks that a buy order updates state, transfers funds, and emits events
     function testCreateOrder_Buy_SetsState_PullsFunds_Emits() public {
         uint256 amt = 123e18;
 
@@ -239,6 +275,7 @@ contract OrderManagerTest is OlympixUnitTest("OrderManager") {
         assertEq(ordN, 1, "total nonce");
     }
 
+    /// @notice Checks that a sell order updates state, transfers funds, and emits events
     function testCreateOrder_Sell_SetsState_PullsFunds_Emits() public {
         uint256 amt = 77e18;
 
@@ -298,6 +335,7 @@ contract OrderManagerTest is OlympixUnitTest("OrderManager") {
         // assertEq(ordN, 1, "total nonce");
     }
 
+    /// @notice Confirms createOrder reverts with a zero input token address
     function testCreateOrder_Revert_ZeroInputToken() public {
         OrderManager.CreateOrderConfig memory cfg = OrderManager.CreateOrderConfig({
             requestNonce: 1,
@@ -316,6 +354,7 @@ contract OrderManagerTest is OlympixUnitTest("OrderManager") {
         orderManager.createOrder(cfg);
     }
 
+    /// @notice Confirms createOrder reverts when the input amount is zero
     function testCreateOrder_Revert_ZeroAmount() public {
         OrderManager.CreateOrderConfig memory cfg = OrderManager.CreateOrderConfig({
             requestNonce: 1,
@@ -334,6 +373,7 @@ contract OrderManagerTest is OlympixUnitTest("OrderManager") {
         orderManager.createOrder(cfg);
     }
 
+    /// @notice Validates completion flow and ensures double completion reverts
     function testCompleteOrder_SetsExecuted_AndRevertsOnSecondCall() public {
         OrderManager.CreateOrderConfig memory cfg = OrderManager.CreateOrderConfig({
             requestNonce: 99,
@@ -379,12 +419,14 @@ contract OrderManagerTest is OlympixUnitTest("OrderManager") {
         orderManager.completeOrder(orderNonce);
     }
 
+    /// @notice Confirms that completing an order with an invalid nonce reverts
     function testCompleteOrder_Revert_InvalidNonce() public {
         vm.expectRevert(bytes("OrderManager: invalid order nonce"));
         vm.prank(operator_);
         orderManager.completeOrder(1);
     }
 
+    /// @notice Ensures issuance with BackedFiFactory reverts for zero input amounts
     function test_issuanceWithBackedFiFactory_Revert_InvalidAmount() public {
         // Arrange: Deploy minimal mock for backedFiFactory
         address mockBackedFi = address(0x420420);
@@ -401,6 +443,7 @@ contract OrderManagerTest is OlympixUnitTest("OrderManager") {
         orderManager.issuanceWithBackedFiFactory(idxToken, 0);
     }
 
+    /// @notice Ensures issuance with BackedFiFactory reverts for zero index token addresses
     function test_issuanceWithBackedFiFactory_Revert_InvalidAddress() public {
         // Arrange: Deploy minimal mock for backedFiFactory
         address mockBackedFi = address(0x420420);
@@ -417,6 +460,7 @@ contract OrderManagerTest is OlympixUnitTest("OrderManager") {
     }
 
     // Positive branch for opix-target-branch-212-True
+    /// @notice Covers the happy path for issuance via the BackedFiFactory
     function test_issuanceWithBackedFiFactory_HappyPath() public {
         usdc.mint(address(orderManager), 1_000_000e18);
 
@@ -430,6 +474,7 @@ contract OrderManagerTest is OlympixUnitTest("OrderManager") {
             // Deploy a contract which emits log on call to issuanceIndexTokens
             bytes memory code =
                 hex"608060405234801561001057600080fd5b50610149806100206000396000f3fe6080604052600436106100235760003560e01c80636a9027e514610028575b600080fd5b610038600480360381019061003391906100da565b61003a565b005b8373ffffffffffffffffffffffffffffffffffffffff166323b872dd6040518163ffffffff1660e01b815260040160206040518083038186803b15801561007657600080fd5b505af415801561008a573d6000803e3d6000fd5b5050505056fea2646970667358221220aeed5be69bd77cbb5dc8a798e4fdd9636c3f7e6e51397bf7a10d1671b4d8b65b64736f6c63430008190033"; // minimal stub: just returns, no storage
+            // solhint-disable-next-line no-inline-assembly
             assembly {
                 mockBackedFi := create(0, add(code, 0x20), mload(code))
             }
@@ -444,6 +489,7 @@ contract OrderManagerTest is OlympixUnitTest("OrderManager") {
         orderManager.issuanceWithBackedFiFactory(idxToken, 100);
     }
 
+    /// @notice Ensures redemption with BackedFiFactory reverts for zero amount inputs
     function test_redemptionWithBackedFiFactory_zeroAmount_reverts() public {
         // Arrange: Set up a minimal mock BackedFiFactory
         // Setup the storage slot for backedFiFactory. It is slot 6 in OrderManager (after 5 vars used),
@@ -453,6 +499,7 @@ contract OrderManagerTest is OlympixUnitTest("OrderManager") {
             // Deploy a contract which has a fallback for .redemption(), just returns (for the revert test, not called)
             bytes memory code =
                 hex"6080604052348015600f57600080fd5b5060c08061001d6000396000f3fe60806040526004361060295760003560e01c8063b3fecbc514602e575b600080fd5b603c60383660046045565b603e565b005b7fffffffff00000000000000000000000000000000000000000000000000000000000000006020526000908152604090205460ff168156fea264697066735822122044b492ec3765e5486de6d7c33433851ae4b8c5e8ddbed5df10dc9b6ec4eaae6064736f6c63430008190033";
+            // solhint-disable-next-line no-inline-assembly
             assembly {
                 mockBackedFi := create(0, add(code, 0x20), mload(code))
             }
@@ -467,6 +514,7 @@ contract OrderManagerTest is OlympixUnitTest("OrderManager") {
         orderManager.redemptionWithBackedFiFactory(idxToken, 0, 123);
     }
 
+    /// @notice Ensures redemption with BackedFiFactory reverts for zero index token addresses
     function test_redemptionWithBackedFiFactory_zeroIndexTokenAddress_reverts() public {
         // Arrange: Set up a minimal mock BackedFiFactory that just returns
         address mockBackedFi;
@@ -474,6 +522,7 @@ contract OrderManagerTest is OlympixUnitTest("OrderManager") {
             // Deploy a contract that has a fallback for .redemption(), does nothing
             bytes memory code =
                 hex"6080604052348015600f57600080fd5b5060c08061001d6000396000f3fe60806040526004361060295760003560e01c8063b3fecbc514602e575b600080fd5b603c60383660046045565b603e565b005b7fffffffff00000000000000000000000000000000000000000000000000000000000000006020526000908152604090205460ff168156fea264697066735822122044b492ec3765e5486de6d7c33433851ae4b8c5e8ddbed5df10dc9b6ec4eaae6064736f6c63430008190033";
+            // solhint-disable-next-line no-inline-assembly
             assembly {
                 mockBackedFi := create(0, add(code, 0x20), mload(code))
             }

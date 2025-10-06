@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.25;
+pragma solidity ^0.8.25;
 
-import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import {FunctionsRequest} from "@chainlink/contracts/src/v0.8/functions/v1_0_0/libraries/FunctionsRequest.sol";
 
@@ -102,6 +101,7 @@ contract FunctionsOracle is Initializable, FunctionsClient, ConfirmedOwner {
      * Either response or error parameter will be set, but never both
      */
     function fulfillRequest(bytes32 requestId, bytes memory response, bytes memory err) internal override {
+        require(err.length == 0, "FunctionsOracle: fulfill failed");
         (uint8[] memory assetType, address[] memory _tokens, uint256[] memory _marketShares) =
             abi.decode(response, (uint8[], address[], uint256[]));
         require(requestId.length > 0, "invalid request id");

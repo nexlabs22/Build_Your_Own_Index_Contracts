@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.25;
+pragma solidity ^0.8.25;
 
 import "../token/IndexToken.sol";
 import "../utils/proposable/ProposableOwnableUpgradeable.sol";
@@ -238,7 +238,6 @@ contract CoreSender is Initializable, CCIPReceiver, ProposableOwnableUpgradeable
         totalSharesArr[0] = functionsOracle.getCurrentChainSelectorTotalShares(
             address(0), functionsOracle.currentFilledCount(address(0)), _chainSelector
         );
-        address crossChainIndexFactory = mainChainStorage.crossChainFactoryBySelector(_chainSelector);
 
         //encode data
         bytes memory data = _encodeIssuanceData(
@@ -312,20 +311,13 @@ contract CoreSender is Initializable, CCIPReceiver, ProposableOwnableUpgradeable
             mainChainStorage.issuanceIncreaseCompletedTokensCount(requestIssuanceNonce);
             // call the order manager here
             orderManager.completeIssuance(
-                requestIssuanceNonce, 
-                address(indexToken), 
-                tokenAddresses[i], 
-                oldTokenValue,
-                newTokenValue
+                requestIssuanceNonce, address(indexToken), tokenAddresses[i], oldTokenValue, newTokenValue
             );
             // ....
         }
-        // if (
-        //     // totalCurrentList
-        //     mainChainStorage.getIssuanceCompletedTokensCount(requestIssuanceNonce) == totalCurrentList
-        // ) {
-        //     completeIssuanceRequest(requestIssuanceNonce, messageId);
-        // }
+        if (mainChainStorage.getIssuanceCompletedTokensCount(requestIssuanceNonce) == totalCurrentList) {
+            completeIssuanceRequest(requestIssuanceNonce, messageId);
+        }
     }
 
     function sendRedemptionRequest(uint256 _burnPercent, uint256 _redemptionNonce, uint64 _chainSelector)
@@ -439,6 +431,7 @@ contract CoreSender is Initializable, CCIPReceiver, ProposableOwnableUpgradeable
         uint64 sourceChainSelector,
         bytes32 messageId
     ) internal {
+        require(sourceChainSelector == any2EvmMessage.sourceChainSelector, "CoreSender: unexpected selector");
         uint256 requestRedemptionNonce = nonce;
         Client.EVMTokenAmount[] memory tokenAmounts = any2EvmMessage.destTokenAmounts;
         address token = tokenAmounts[0].token;
@@ -451,7 +444,7 @@ contract CoreSender is Initializable, CCIPReceiver, ProposableOwnableUpgradeable
         mainChainStorage.increaseRedemptionTotalPortfolioValues(requestRedemptionNonce, crossChainPortfolioValue);
         mainChainStorage.increaseRedemptionCompletedTokensCount(requestRedemptionNonce, tokenAddresses.length);
         if (mainChainStorage.getRedemptionCompletedTokensCount(requestRedemptionNonce) == totalCurrentList) {
-            // completeRedemptionRequest(requestRedemptionNonce, messageId);
+            completeRedemptionRequest(requestRedemptionNonce, messageId);
         }
 
         // call the order manager here

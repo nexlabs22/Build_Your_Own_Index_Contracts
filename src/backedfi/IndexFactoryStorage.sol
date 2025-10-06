@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.25;
+pragma solidity ^0.8.25;
 
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
@@ -11,7 +11,6 @@ import {FunctionsOracle} from "../oracle/FunctionsOracle.sol";
 import {IndexToken} from "../token/IndexToken.sol";
 import {Vault} from "../vault/Vault.sol";
 import {StagingCustodyAccount} from "./StagingCustodyAccount.sol";
-import {IRiskAssetFactory} from "./interfaces/IRiskAssetFactory.sol";
 
 error InvalidAddress();
 error ZeroAmount();

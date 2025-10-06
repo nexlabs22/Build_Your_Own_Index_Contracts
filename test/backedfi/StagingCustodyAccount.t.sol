@@ -1,42 +1,60 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.25;
+pragma solidity ^0.8.25;
 
-import "forge-std/Test.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
-// real contracts from your repo
 import {StagingCustodyAccount} from "../../src/backedfi/StagingCustodyAccount.sol";
 import {IndexFactoryStorage} from "../../src/backedfi/IndexFactoryStorage.sol";
 import {FunctionsOracle} from "../../src/oracle/FunctionsOracle.sol";
 import {TestERC20} from "../utils/TestERC20.sol";
-import "../OlympixUnitTest.sol";
+import {OlympixUnitTest} from "../OlympixUnitTest.sol";
 
 error ZeroAddress();
 error ZeroAmount();
 error InvalidRoundId();
 error RedemptionAmountIsZero();
 
-contract StagingCustodyAccountTest is Test {
-    // actors
-    address owner_ = address(0xA11CE);
-    address user = address(0xBEEF);
-    address nexBot = address(0xB07);
-    address feeRecv = address(0xFEE);
-    address idxToken = makeAddr("IDX");
+/// @title StagingCustodyAccountTest
+/// @author NexLabs
+/// @notice Comprehensive tests for the StagingCustodyAccount contract
+contract StagingCustodyAccountTest is OlympixUnitTest("StagingCustodyAccount") {
+    /// @notice Owner address used to deploy and configure contracts
+    address public owner_ = address(0xA11CE);
 
-    // tokens
-    TestERC20 usdc;
-    TestERC20 underlyingA;
+    /// @notice Regular user interacting with the custody account
+    address public user = address(0xBEEF);
 
-    // implementations
-    StagingCustodyAccount scaImpl;
-    IndexFactoryStorage storageImpl;
+    /// @notice NexBot address with privileged permissions
+    address public nexBot = address(0xB07);
 
-    // proxies / instances
-    StagingCustodyAccount sca;
-    IndexFactoryStorage storage_;
-    FunctionsOracle oracle; // deployed as-is (not proxied here)
+    /// @notice Fee receiver address employed in redemption flows
+    address public feeRecv = address(0xFEE);
 
+    /// @notice Test index token identifier utilised across scenarios
+    address public idxToken = makeAddr("IDX");
+
+    /// @notice Test instance of USDC token minted for the suite
+    TestERC20 public usdc;
+
+    /// @notice Test instance of an underlying asset token
+    TestERC20 public underlyingA;
+
+    /// @notice Implementation contract pointer for StagingCustodyAccount
+    StagingCustodyAccount public scaImpl;
+
+    /// @notice Implementation contract pointer for IndexFactoryStorage
+    IndexFactoryStorage public storageImpl;
+
+    /// @notice Proxy instance of StagingCustodyAccount under test
+    StagingCustodyAccount public sca;
+
+    /// @notice Proxy instance of IndexFactoryStorage collaborating with the custody account
+    IndexFactoryStorage public storage_;
+
+    /// @notice Chainlink Functions oracle used by the storage contract
+    FunctionsOracle public oracle;
+
+    /// @notice Deploys proxied contracts, mocks, and seeds initial state
     function setUp() public {
         vm.startPrank(owner_);
 
@@ -76,6 +94,7 @@ contract StagingCustodyAccountTest is Test {
 
     // ============ initialize & admin ============
 
+    /// @notice Ensures initializing with a zero storage address reverts
     function testInitialize_RevertOnZeroStorage() public {
         // fresh proxy
         StagingCustodyAccount sca2 = StagingCustodyAccount(address(new ERC1967Proxy(address(scaImpl), "")));
@@ -83,6 +102,7 @@ contract StagingCustodyAccountTest is Test {
         sca2.initialize(address(0));
     }
 
+    /// @notice Verifies only the owner can update the NexBot address
     function testSetNexBotAddress_OnlyOwner() public {
         address newBot = address(0xCAFE);
         vm.prank(owner_);
@@ -92,6 +112,7 @@ contract StagingCustodyAccountTest is Test {
         sca.setNexBotAddress(address(0xD00D));
     }
 
+    /// @notice Verifies only the owner can update the factory storage address
     function testSetIndexFactoryStorageAddress_OnlyOwner() public {
         // deploy another storage proxy just to switch to
         IndexFactoryStorage storage2 = IndexFactoryStorage(address(new ERC1967Proxy(address(storageImpl), "")));
@@ -107,6 +128,7 @@ contract StagingCustodyAccountTest is Test {
 
     // ============ withdrawForPurchase ============
 
+    /// @notice Withdraw should revert when no USDC is available for the round
     function testWithdrawForPurchase_RevertsIfNoUSDCForRound() public {
         // Round has zero totalIssuanceByRound by default -> must revert
         vm.expectRevert(bytes("Insufficient USDC balance"));
@@ -116,6 +138,7 @@ contract StagingCustodyAccountTest is Test {
 
     // ============ requestIssuance gatekeeping (typical preconditions) ============
 
+    /// @notice Requesting issuance with an invalid round id must revert
     function testRequestIssuance_Reverts_InvalidRoundId() public {
         // storage.issuanceRoundId defaults to 0, so any roundId <1 or >0 is invalid
         vm.expectRevert(InvalidRoundId.selector);
@@ -123,6 +146,7 @@ contract StagingCustodyAccountTest is Test {
         sca.requestIssuance(idxToken, 1);
     }
 
+    /// @notice Requesting issuance on an inactive round must revert
     function testRequestIssuance_Reverts_WhenRoundNotActive() public {
         // make issuanceRoundId = 1 and keep active=false
         vm.prank(address(sca)); // onlyFactory allows sca
@@ -135,6 +159,7 @@ contract StagingCustodyAccountTest is Test {
 
     // ============ completeIssuance / completeRedemption auth + input checks ============
 
+    /// @notice Completing issuance without NexBot authorisation should revert
     function testCompleteIssuance_Revert_NotNexBot() public {
         address[] memory assets = new address[](1);
         assets[0] = address(underlyingA);
@@ -145,6 +170,7 @@ contract StagingCustodyAccountTest is Test {
         sca.completeIssuance(idxToken, 1, assets, prices);
     }
 
+    /// @notice Completing redemption without NexBot authorisation should revert
     function testCompleteRedemption_Revert_NotNexBot() public {
         address[] memory assets = new address[](1);
         assets[0] = address(underlyingA);
@@ -155,6 +181,7 @@ contract StagingCustodyAccountTest is Test {
         sca.completeRedemption(idxToken, 1, assets, outs);
     }
 
+    /// @notice Completing issuance with mismatched array lengths must revert
     function testCompleteIssuance_Revert_LengthMismatch() public {
         // call as nexBot to pass auth
         address[] memory assets = new address[](2);
@@ -174,6 +201,7 @@ contract StagingCustodyAccountTest is Test {
         sca.completeIssuance(idxToken, 1, assets, prices);
     }
 
+    /// @notice Completing redemption with mismatched array lengths must revert
     function testCompleteRedemption_Revert_LengthMismatch() public {
         address[] memory assets = new address[](2);
         assets[0] = address(underlyingA);
@@ -199,6 +227,7 @@ contract StagingCustodyAccountTest is Test {
         vm.stopPrank();
     }
 
+    /// @notice Completing issuance with no assets must revert
     function testCompleteIssuance_Revert_NoAssets() public {
         address[] memory assets = new address[](0);
         uint256[] memory prices = new uint256[](0);
@@ -214,6 +243,7 @@ contract StagingCustodyAccountTest is Test {
         sca.completeIssuance(idxToken, 1, assets, prices);
     }
 
+    /// @notice Completing redemption with no assets must revert
     function testCompleteRedemption_Revert_NoAssets() public {
         address[] memory assets = new address[](0);
         uint256[] memory outs = new uint256[](0);
@@ -232,6 +262,7 @@ contract StagingCustodyAccountTest is Test {
 
     // ============ requestRedemption preconditions (revert path) ============
 
+    /// @notice Requesting redemption with an invalid round id must revert
     function testRequestRedemption_Revert_InvalidRoundId() public {
         // default redemptionRoundId == 0, so 1 is invalid
         vm.expectRevert(InvalidRoundId.selector);
@@ -239,6 +270,7 @@ contract StagingCustodyAccountTest is Test {
         sca.requestRedemption(idxToken, 1);
     }
 
+    /// @notice Only the owner can transfer risk assets through `withRiskAsset`
     function testWithRiskAsset_OnlyOwner_Transfers1() public {
         // give SCA some tokens
         underlyingA.mint(address(sca), 100e18);
@@ -255,6 +287,7 @@ contract StagingCustodyAccountTest is Test {
         assertEq(underlyingA.balanceOf(address(sca)), 90e18, "sca debited");
     }
 
+    /// @notice Duplicate owner transfer test ensures consistent behaviour
     function testWithRiskAsset_OnlyOwner_Transfers() public {
         // give SCA some tokens
         underlyingA.mint(address(sca), 100e18);
@@ -271,6 +304,7 @@ contract StagingCustodyAccountTest is Test {
         assertEq(underlyingA.balanceOf(address(sca)), 90e18, "sca debited");
     }
 
+    /// @notice Setting the NexBot address to zero should revert
     function testSetNexBotAddress_RevertOnZeroAddress() public {
         // Arrange: onlyOwner function, so must call as owner
         vm.startPrank(owner_);
@@ -280,6 +314,7 @@ contract StagingCustodyAccountTest is Test {
         vm.stopPrank();
     }
 
+    /// @notice Setting the factory storage address to zero should revert
     function testSetIndexFactoryStorageAddress_RevertOnZeroAddress() public {
         // onlyOwner required
         vm.startPrank(owner_);
@@ -289,6 +324,7 @@ contract StagingCustodyAccountTest is Test {
         vm.stopPrank();
     }
 
+    /// @notice Covers request issuance branch when round id is greater than one
     function testRequestIssuance_OpixTargetBranch_117_True() public {
         // Arrange: Fully setup a scenario for requestIssuance(id = 2) where all preconditions pass up to the 'if (_roundId > 1)' branch.
         // Also ensure totalIssuanceByRound is NONZERO so next require passes, and SCA own balance has USDC to avoid USDC revert.
@@ -316,6 +352,7 @@ contract StagingCustodyAccountTest is Test {
         // This covers opix-target-branch-117-True in requestIssuance
     }
 
+    /// @notice Reverts when requesting issuance on a round already completed
     function testRequestIssuance_ElseBranch_RoundAlreadyCompleted_OpixBranch124True() public {
         // This test will cover the branch in requestIssuance (opix-target-branch-124-True):
         // require(!factoryStorage.issuanceIsCompleted(_indexToken, _roundId), "Round already completed");
@@ -335,6 +372,7 @@ contract StagingCustodyAccountTest is Test {
         sca.requestIssuance(idxToken, 1);
     }
 
+    /// @notice Covers request redemption branch with round id greater than one
     function testRequestRedemption_HitsIfBranch_RoundIdGT1() public {
         // Arrange: Prepare so that _roundId > 1, and previous round is not active and completed
         // Set up for idxToken with two redemption rounds
@@ -375,6 +413,7 @@ contract StagingCustodyAccountTest is Test {
     //     // This triggers and covers opix-target-branch-214-False
     // }
 
+    /// @notice Requesting redemption when total redemption amount is zero must revert
     function testRequestRedemption_Revert_RedemptionAmountIsZero_HitsOpixTargetBranch_219_True() public {
         // This test covers the opix-target-branch-219-True in requestRedemption():
         // If totalIdxThisRound == 0, revert RedemptionAmountIsZero
@@ -393,6 +432,7 @@ contract StagingCustodyAccountTest is Test {
         sca.requestRedemption(idxToken, 1);
     }
 
+    /// @notice Completing redemption with a round id above the tracked round must revert
     function testCompleteRedemption_Revert_InvalidRoundId_gtRedemptionRoundId() public {
         // Setup: Prepare state such that roundId > storage_.redemptionRoundId(idxToken)
         uint256 redId = 1;
@@ -408,6 +448,7 @@ contract StagingCustodyAccountTest is Test {
         sca.completeRedemption(idxToken, redId, assets, outs);
     }
 
+    /// @notice Covers the complete redemption branch when round id is greater than one
     function testCompleteRedemption_Branch_270_True_IfBlock() public {
         // This test will cover the branch at opix-target-branch-270-True, i.e.,
         // the 'if (_roundId > 1)' path in completeRedemption.
@@ -458,6 +499,7 @@ contract StagingCustodyAccountTest is Test {
         vm.stopPrank();
     }
 
+    /// @notice Completing redemption when the previous round remains active must revert
     function testCompleteRedemption_Revert_PrevRedemptionRoundActive_TriggersRequiredBranch() public {
         // Arrange: Redemption roundId > 1, and previous round is active
         // Make roundId = 2, and roundId=1 active=true, isCompleted=false
@@ -486,6 +528,7 @@ contract StagingCustodyAccountTest is Test {
         vm.stopPrank();
     }
 
+    /// @notice Completing redemption when the previous round isn’t completed must revert
     function testCompleteRedemption_prevNotCompleted_branch271False() public {
         // Test for hitting else branch of 'if (_roundId > 1)' at line 271 in completeRedemption()
         // and then proceeds to the check for !factoryStorage.redemptionIsCompleted(...)
@@ -522,6 +565,7 @@ contract StagingCustodyAccountTest is Test {
         vm.stopPrank();
     }
 
+    /// @notice Covers the branch where the current redemption round is still active
     function testCompleteRedemption_CoverElseBranch_276_False() public {
         // This test will hit the 'else' branch of the check on line 276 (opix-target-branch-276-False):
         // require(!factoryStorage.redemptionRoundActive(_indexToken, _roundId), "Round still active");
@@ -551,6 +595,7 @@ contract StagingCustodyAccountTest is Test {
         vm.stopPrank();
     }
 
+    /// @notice Withdrawing more than the available risk asset balance should revert
     function test_withRiskAsset_Revert_IfAmountExceedsBalance() public {
         // Give SCA 20 tokens
         underlyingA.mint(address(sca), 20e18);

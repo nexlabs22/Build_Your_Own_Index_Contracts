@@ -1,26 +1,35 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.7;
+pragma solidity ^0.8.25;
 
-import "forge-std/Test.sol";
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import {Vault} from "../../src/vault/Vault.sol";
+import {MockERC20} from "../mocks/MockERC20.sol";
+import {OlympixUnitTest} from "../OlympixUnitTest.sol";
 
-import "../../src/vault/Vault.sol";
-import "../mocks/MockERC20.sol";
+/// @title VaultTest
+/// @author NexLabs
+/// @notice Exercises operator withdrawal flows for the upgradeable Vault contract
+contract VaultTest is OlympixUnitTest("Vault") {
+    /// @notice Proxy instance of the vault under test
+    Vault private vault;
 
-contract VaultTest is Test {
-    Vault vault;
-    MockERC20 token;
-    address operator = address(0x1);
+    /// @notice Mock ERC20 token used to seed vault balances during tests
+    MockERC20 private token;
 
+    /// @notice Operator account granted withdrawal permissions
+    address private operator = address(0x1);
+
+    /// @notice Deploys the Vault proxy and mints mock liquidity for scenarios
     function setUp() public {
-        Vault vaultImlp = new Vault();
-        vault = Vault(address(new ERC1967Proxy(address(vaultImlp), abi.encodeCall(Vault.initialize, (operator)))));
+        Vault vaultImpl = new Vault();
+        vault = Vault(address(new ERC1967Proxy(address(vaultImpl), abi.encodeCall(Vault.initialize, (operator)))));
         token = new MockERC20("Test", "TST");
         token.mint(address(this), 10000e18);
     }
 
-    function test_withdrawFunds_FailWhenCallerIsNotOperator() public {
+    /// @notice Reverts when an unauthorised caller attempts to withdraw funds
+    function testWithdrawFundsFailWhenCallerIsNotOperator() public {
         vault.setOperator(operator, true);
 
         address token1 = address(0x2);
@@ -33,6 +42,7 @@ contract VaultTest is Test {
         vm.stopPrank();
     }
 
+    /// @notice Allows an authorised operator to withdraw ERC20 funds successfully
     function testWithdrawFundsSuccessfully() public {
         uint256 initialAmount = 1000e18;
         address to = address(0x3);
@@ -53,7 +63,8 @@ contract VaultTest is Test {
         assertGt(userBalanceAfterWithdraw, userBalanceBeforeWithdraw);
     }
 
-    function test_withdrawFunds_RevertOnZeroTokenAddress() public {
+    /// @notice Reverts when attempting to withdraw using the zero token address
+    function testWithdrawFundsRevertOnZeroTokenAddress() public {
         vault.setOperator(operator, true);
         address to = address(0x3);
         uint256 amount = 1 ether;
@@ -63,7 +74,8 @@ contract VaultTest is Test {
         vm.stopPrank();
     }
 
-    function test_withdrawFunds_RevertOnZeroToAddress() public {
+    /// @notice Reverts when attempting to withdraw to the zero address
+    function testWithdrawFundsRevertOnZeroToAddress() public {
         vault.setOperator(operator, true);
         address to = address(0);
         uint256 amount = 1 ether;
@@ -73,7 +85,8 @@ contract VaultTest is Test {
         vm.stopPrank();
     }
 
-    function test_withdrawFunds_RevertOnZeroAmount() public {
+    /// @notice Reverts when attempting to withdraw a zero amount
+    function testWithdrawFundsRevertOnZeroAmount() public {
         vault.setOperator(operator, true);
         address to = address(0x3);
         uint256 amount = 0;

@@ -27,3 +27,6 @@ broadcast/
 
 # Hardhat Ignition default folder for deployments against a local node
 ignition/deployments/chain-31337
+
+# Solhint node modules
+node_modules

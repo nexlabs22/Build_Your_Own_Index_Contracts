@@ -5,7 +5,7 @@
 // SPDX-License-Identifier: MIT
 // OpenZeppelin Contracts (last updated v4.6.0) (token/ERC20/IERC20.sol)
 
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.25;
 
 /**
  * @dev Interface of the ERC20 standard as defined in the EIP.
@@ -85,35 +85,31 @@ pragma solidity ^0.8.0;
 //     ) external returns (bool);
 // }
 
-
 // File @chainlink/token/contracts/v0.6/token/ERC677.sol@v1.1.0
 
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.25;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
-
 abstract contract ERC677 is IERC20 {
-  function transferAndCall(address to, uint value, bytes memory data) public virtual returns (bool success);
+    function transferAndCall(address to, uint256 value, bytes memory data) public virtual returns (bool success);
 
-  event Transfer(address indexed from, address indexed to, uint value, bytes data);
+    event Transfer(address indexed from, address indexed to, uint256 value, bytes data);
 }
-
 
 // File @chainlink/token/contracts/v0.6/token/ERC677Receiver.sol@v1.1.0
 
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.25;
 
 abstract contract ERC677Receiver {
-  function onTokenTransfer(address _sender, uint _value, bytes memory _data) public virtual;
+    function onTokenTransfer(address _sender, uint256 _value, bytes memory _data) public virtual;
 }
-
 
 // File @openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol@v4.8.1
 
 // OpenZeppelin Contracts v4.4.1 (token/ERC20/extensions/IERC20Metadata.sol)
 
-// pragma solidity ^0.8.0;
+// pragma solidity ^0.8.25;
 
 /**
  * @dev Interface for the optional metadata functions from the ERC20 standard.
@@ -137,12 +133,11 @@ abstract contract ERC677Receiver {
 //     function decimals() external view returns (uint8);
 // }
 
-
 // File @openzeppelin/contracts/utils/Context.sol@v4.8.1
 
 // OpenZeppelin Contracts v4.4.1 (utils/Context.sol)
 
-// pragma solidity ^0.8.0;
+// pragma solidity ^0.8.25;
 
 /**
  * @dev Provides information about the current execution context, including the
@@ -164,14 +159,11 @@ abstract contract ERC677Receiver {
 //     }
 // }
 
-
 // File @openzeppelin/contracts/token/ERC20/ERC20.sol@v4.8.1
 
 // OpenZeppelin Contracts (last updated v4.8.0) (token/ERC20/ERC20.sol)
 
-pragma solidity ^0.8.0;
-
-
+pragma solidity ^0.8.25;
 
 /**
  * @dev Implementation of the {IERC20} interface.
@@ -554,186 +546,164 @@ pragma solidity ^0.8.0;
 //     ) internal virtual {}
 // }
 
-
 // File @chainlink/token/contracts/v0.6/ERC677Token.sol@v1.1.0
 
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.25;
 
 // import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
-
 abstract contract ERC677Token is ERC20V8, ERC677 {
-  /**
-   * @dev transfer token to a contract address with additional data if the recipient is a contact.
-   * @param _to The address to transfer to.
-   * @param _value The amount to be transferred.
-   * @param _data The extra data to be passed to the receiving contract.
-   */
-  function transferAndCall(address _to, uint _value, bytes memory _data)
-    public
-    override
-    virtual
-    returns (bool success)
-  {
-    super.transfer(_to, _value);
-    emit Transfer(msg.sender, _to, _value, _data);
-    if (isContract(_to)) {
-      contractFallback(_to, _value, _data);
+    /**
+     * @dev transfer token to a contract address with additional data if the recipient is a contact.
+     * @param _to The address to transfer to.
+     * @param _value The amount to be transferred.
+     * @param _data The extra data to be passed to the receiving contract.
+     */
+    function transferAndCall(address _to, uint256 _value, bytes memory _data)
+        public
+        virtual
+        override
+        returns (bool success)
+    {
+        super.transfer(_to, _value);
+        emit Transfer(msg.sender, _to, _value, _data);
+        if (isContract(_to)) {
+            contractFallback(_to, _value, _data);
+        }
+        return true;
     }
-    return true;
-  }
 
+    // PRIVATE
 
-  // PRIVATE
+    function contractFallback(address _to, uint256 _value, bytes memory _data) private {
+        ERC677Receiver receiver = ERC677Receiver(_to);
+        receiver.onTokenTransfer(msg.sender, _value, _data);
+    }
 
-  function contractFallback(address _to, uint _value, bytes memory _data)
-    private
-  {
-    ERC677Receiver receiver = ERC677Receiver(_to);
-    receiver.onTokenTransfer(msg.sender, _value, _data);
-  }
-
-  function isContract(address _addr)
-    private
-    view
-    returns (bool hasCode)
-  {
-    uint length;
-    assembly { length := extcodesize(_addr) }
-    return length > 0;
-  }
+    function isContract(address _addr) private view returns (bool hasCode) {
+        uint256 length;
+        assembly {
+            length := extcodesize(_addr)
+        }
+        return length > 0;
+    }
 }
-
 
 // File @chainlink/token/contracts/v0.6/token/LinkERC20.sol@v1.1.0
 
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.25;
 
 // import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {ERC20V8} from "./ERC20_V8.sol";
 
-    
-
 abstract contract LinkERC20 is ERC20V8 {
-  /**
-   * @dev Atomically increases the allowance granted to `spender` by the caller.
-   *
-   * This is an alternative to {approve} that can be used as a mitigation for
-   * problems described in {IERC20-approve}.
-   *
-   * Emits an {Approval} event indicating the updated allowance.
-   *
-   * Requirements:
-   *
-   * - `spender` cannot be the zero address.
-   */
-  // function increaseApproval(address spender, uint256 addedValue) public virtual returns (bool) {
-  //   return super.increaseAllowance(spender, addedValue);
-  // }
+/**
+ * @dev Atomically increases the allowance granted to `spender` by the caller.
+ *
+ * This is an alternative to {approve} that can be used as a mitigation for
+ * problems described in {IERC20-approve}.
+ *
+ * Emits an {Approval} event indicating the updated allowance.
+ *
+ * Requirements:
+ *
+ * - `spender` cannot be the zero address.
+ */
+// function increaseApproval(address spender, uint256 addedValue) public virtual returns (bool) {
+//   return super.increaseAllowance(spender, addedValue);
+// }
 
-  /**
-   * @dev Atomically decreases the allowance granted to `spender` by the caller.
-   *
-   * This is an alternative to {approve} that can be used as a mitigation for
-   * problems described in {IERC20-approve}.
-   *
-   * Emits an {Approval} event indicating the updated allowance.
-   *
-   * Requirements:
-   *
-   * - `spender` cannot be the zero address.
-   * - `spender` must have allowance for the caller of at least
-   * `subtractedValue`.
-   */
-  // function decreaseApproval(address spender, uint256 subtractedValue) public virtual returns (bool) {
-  //   return super.decreaseAllowance(spender, subtractedValue);
-  // }
+/**
+ * @dev Atomically decreases the allowance granted to `spender` by the caller.
+ *
+ * This is an alternative to {approve} that can be used as a mitigation for
+ * problems described in {IERC20-approve}.
+ *
+ * Emits an {Approval} event indicating the updated allowance.
+ *
+ * Requirements:
+ *
+ * - `spender` cannot be the zero address.
+ * - `spender` must have allowance for the caller of at least
+ * `subtractedValue`.
+ */
+// function decreaseApproval(address spender, uint256 subtractedValue) public virtual returns (bool) {
+//   return super.decreaseAllowance(spender, subtractedValue);
+// }
 }
-
 
 // File @chainlink/token/contracts/v0.6/LinkToken.sol@v1.1.0
 
-pragma solidity ^0.8.0;
-
+pragma solidity ^0.8.25;
 
 contract LinkToken is LinkERC20, ERC677Token {
-  uint private constant TOTAL_SUPPLY = 10**27;
-  string private constant NAME = "ChainLink Token";
-  string private constant SYMBOL = "LINK";
+    uint256 private constant TOTAL_SUPPLY = 10 ** 27;
+    string private constant NAME = "ChainLink Token";
+    string private constant SYMBOL = "LINK";
 
-  constructor() ERC20V8(NAME, SYMBOL)
+    constructor() ERC20V8(NAME, SYMBOL) 
     // public
-  {
-    _onCreate();
-  }
+    {
+        _onCreate();
+    }
 
-  /**
-   * @dev Hook that is called when this contract is created.
-   * Useful to override constructor behaviour in child contracts (e.g., LINK bridge tokens).
-   * @notice Default implementation mints 10**27 tokens to msg.sender
-   */
-  function _onCreate()
-    internal
-    virtual
-  {
-    _mint(msg.sender, TOTAL_SUPPLY);
-  }
+    /**
+     * @dev Hook that is called when this contract is created.
+     * Useful to override constructor behaviour in child contracts (e.g., LINK bridge tokens).
+     * @notice Default implementation mints 10**27 tokens to msg.sender
+     */
+    function _onCreate() internal virtual {
+        _mint(msg.sender, TOTAL_SUPPLY);
+    }
 
-  /**
-   * @dev Moves tokens `amount` from `sender` to `recipient`.
-   *
-   * This is internal function is equivalent to {transfer}, and can be used to
-   * e.g. implement automatic token fees, slashing mechanisms, etc.
-   *
-   * Emits a {Transfer} event.
-   *
-   * Requirements:
-   *
-   * - `sender` cannot be the zero address.
-   * - `recipient` cannot be the zero address.
-   * - `sender` must have a balance of at least `amount`.
-   */
-  function _transfer(address sender, address recipient, uint256 amount)
-    internal
-    override
-    virtual
-    validAddress(recipient)
-  {
-    super._transfer(sender, recipient, amount);
-  }
+    /**
+     * @dev Moves tokens `amount` from `sender` to `recipient`.
+     *
+     * This is internal function is equivalent to {transfer}, and can be used to
+     * e.g. implement automatic token fees, slashing mechanisms, etc.
+     *
+     * Emits a {Transfer} event.
+     *
+     * Requirements:
+     *
+     * - `sender` cannot be the zero address.
+     * - `recipient` cannot be the zero address.
+     * - `sender` must have a balance of at least `amount`.
+     */
+    function _transfer(address sender, address recipient, uint256 amount)
+        internal
+        virtual
+        override
+        validAddress(recipient)
+    {
+        super._transfer(sender, recipient, amount);
+    }
 
-  /**
-   * @dev Sets `amount` as the allowance of `spender` over the `owner`s tokens.
-   *
-   * This is internal function is equivalent to `approve`, and can be used to
-   * e.g. set automatic allowances for certain subsystems, etc.
-   *
-   * Emits an {Approval} event.
-   *
-   * Requirements:
-   *
-   * - `owner` cannot be the zero address.
-   * - `spender` cannot be the zero address.
-   */
-  function _approve(address owner, address spender, uint256 amount)
-    internal
-    override
-    virtual
-    validAddress(spender)
-  {
-    super._approve(owner, spender, amount);
-  }
+    /**
+     * @dev Sets `amount` as the allowance of `spender` over the `owner`s tokens.
+     *
+     * This is internal function is equivalent to `approve`, and can be used to
+     * e.g. set automatic allowances for certain subsystems, etc.
+     *
+     * Emits an {Approval} event.
+     *
+     * Requirements:
+     *
+     * - `owner` cannot be the zero address.
+     * - `spender` cannot be the zero address.
+     */
+    function _approve(address owner, address spender, uint256 amount) internal virtual override validAddress(spender) {
+        super._approve(owner, spender, amount);
+    }
 
+    // MODIFIERS
 
-  // MODIFIERS
-
-  modifier validAddress(address _recipient) {
-    require(_recipient != address(this), "LinkToken: transfer/approve to this contract address");
-    _;
-  }
+    modifier validAddress(address _recipient) {
+        require(_recipient != address(this), "LinkToken: transfer/approve to this contract address");
+        _;
+    }
 }
-
 
 // File contracts/test/LinkToken.sol
 
-pragma solidity ^0.8.6;
+pragma solidity ^0.8.25;

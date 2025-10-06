@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.25;
 
 library PathHelpers {
     function getFromETHPathBytes(address[] memory _path, uint24[] memory _fees) public pure returns (bytes memory) {
