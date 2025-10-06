@@ -344,6 +344,22 @@ contract CCIPFactoryTest is Test, CCIPDeployer {
         assertEq(address(factory.factoryStorage()), address(indexFactoryStorage));
     }
 
+    function test_initialize_IndexFactoryBalancer() public {
+        assertEq(factoryBalancer.owner(), address(this));
+        assertEq(address(factoryBalancer.mainChainBalancer()), address(mainChainBalancer));
+        assertEq(address(factoryBalancer.functionsOracle()), address(functionsOracle));
+        assertEq(address(factoryBalancer.factoryStorage()), address(indexFactoryStorage));
+        assertEq(address(mainChainBalancer.indexFactoryBalancer()), address(factoryBalancer));
+        assertEq(address(mainChainBalancer.mainChainStorage()), address(mainChainStorage));
+        assertEq(address(mainChainBalancer.functionsOracle()), address(functionsOracle));
+        assertEq(address(mainChainBalancer.balancerSender()), address(balancerSender));
+        assertEq(mainChainBalancer.currentChainSelector(), 1);
+        assertEq(address(mainChainBalancer.weth()), address(weth));
+        assertEq(address(balancerSender.mainChainStorage()), address(mainChainStorage));
+        assertEq(address(balancerSender.indexFactoryBalancer()), address(factoryBalancer));
+        assertEq(address(balancerSender.functionsOracle()), address(functionsOracle));
+    }
+
     function test_initialize_orderManager() public view {
         assertEq(orderManager.owner(), address(this));
         assertEq(address(orderManager.usdcAddress()), address(usdc));
@@ -398,6 +414,33 @@ contract CCIPFactoryTest is Test, CCIPDeployer {
         console.log("token2 balance after redemption", IERC20(token2).balanceOf(address(vault)));
         console.log("token3 balance after redemption", IERC20(token3).balanceOf(address(vault)));
         console.log("token4 balance after redemption", IERC20(token4).balanceOf(address(crossChainVault)));
+    }
+
+    function test_reweight() public {
+        updateOracleList();
+
+        mockRouter.setFee(0);
+        token0.transfer(address(vault), 1000e18);
+        token1.transfer(address(vault), 1000e18);
+        token2.transfer(address(vault), 1000e18);
+        token3.transfer(address(vault), 1000e18);
+        token4.transfer(address(crossChainVault), 1000e18);
+        console.log("token0 balance of vault", token0.balanceOf(address(vault)));
+        console.log("token1 balance of vault", token1.balanceOf(address(vault)));
+        console.log("token2 balance of vault", token2.balanceOf(address(vault)));
+        console.log("token3 balance of vault", token3.balanceOf(address(vault)));
+        console.log("token4 balance of crossChainVault", token4.balanceOf(address(crossChainVault)));
+
+        indexToken.setMinter(address(this), true);
+        indexToken.mint(address(this), 100e18);
+        console.log(indexToken.totalSupply());
+        factoryBalancer.askValues(address(indexToken));
+        assertEq(mainChainStorage.updatePortfolioNonce(), 1);
+        assertEq(factoryBalancer.updatePortfolioNonce(), 1);
+        assertEq(factoryBalancer.providerNonceToGlobalNonce(1, 1), 1);
+        // usdc.approve(address(factory), 1001e16);
+        // factory.issuanceIndexTokens(address(indexToken), 1000e16);
+        // mockRouter.executeAllMessages();
     }
     /*
     function getIndexTokenPrice() public view returns (uint256) {

@@ -202,10 +202,10 @@ contract MainChainBalancer is Initializable, ProposableOwnableUpgradeable, Pausa
                 mainChainStorage.updatePortfolioNonce(), currentChainSelector, mainChainStorage.convertEthToUsd(value)
             );
             // inform factory about the value
-            indexFactoryBalancer.completeAskValueCCIP(
-                mainChainStorage.updatePortfolioNonce(),
-                mainChainStorage.convertEthToUsd(value)
-            );
+            // indexFactoryBalancer.completeAskValueCCIP(
+            //     mainChainStorage.updatePortfolioNonce(),
+            //     mainChainStorage.convertEthToUsd(value)
+            // );
         }
     }
 
@@ -216,8 +216,8 @@ contract MainChainBalancer is Initializable, ProposableOwnableUpgradeable, Pausa
     /**
      * @dev Requests values for the portfolio.
      */
-    function askValues(address _indexToken) public whenNotPaused onlyOwnerOrOperator returns(uint256) {
-        pauseMainChainFactory();
+    function askValues(address _indexToken) public whenNotPaused returns(uint256) {
+        // pauseMainChainFactory();
         mainChainStorage.increaseUpdatePortfolioNonce();
 
         uint256 totalChains = functionsOracle.currentChainSelectorsCount(_indexToken);
@@ -230,7 +230,7 @@ contract MainChainBalancer is Initializable, ProposableOwnableUpgradeable, Pausa
             if (chainSelector == currentChainSelector) {
                 _checkValuesCurrentChain(_indexToken, chainSelector, chainSelectorTokensCount);
             } else {
-                _checkValuesOtherChains(_indexToken, chainSelector);
+                // _checkValuesOtherChains(_indexToken, chainSelector);
             }
         }
 

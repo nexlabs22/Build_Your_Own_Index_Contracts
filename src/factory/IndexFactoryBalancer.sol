@@ -40,7 +40,7 @@ contract IndexFactoryBalancer is Initializable, OwnableUpgradeable, PausableUpgr
         require(_functionsOracle != address(0), "Invalid address for _functionsOracle");
         require(_factoryStorage != address(0), "Invalid address for _factoryStorage");
         require(_mainChainBalancer != address(0), "Invalid address for _mainChainBalancer");
-        require(_dinariBalancer != address(0), "Invalid address for _dinariBalancer");
+        // require(_dinariBalancer != address(0), "Invalid address for _dinariBalancer");
         functionsOracle = FunctionsOracle(_functionsOracle);
         factoryStorage = IndexFactoryStorage(_factoryStorage);
         mainChainBalancer = MainChainBalancer(_mainChainBalancer);
@@ -64,7 +64,8 @@ contract IndexFactoryBalancer is Initializable, OwnableUpgradeable, PausableUpgr
     // === External Functions ==
     // =========================
     function askValues(address _indexToken) external whenNotPaused nonReentrant {
-        uint8 dinariProviderIndex = dinariBalancer.dinariStorage().providerIndex();
+        // uint8 dinariProviderIndex = dinariBalancer.dinariStorage().providerIndex();
+        uint8 dinariProviderIndex;
 
         uint256 currentFilledCount = functionsOracle.currentFilledCount(_indexToken);
 
@@ -128,14 +129,17 @@ contract IndexFactoryBalancer is Initializable, OwnableUpgradeable, PausableUpgr
         }
     }
 
-    function askValueCCIP(address _indexToken) internal whenNotPaused nonReentrant returns (uint256 orderNonce) {
+    function askValueCCIP(address _indexToken) internal whenNotPaused returns (uint256 orderNonce) {
         uint256 providerUpdateNonce = mainChainBalancer.askValues(_indexToken);
+        require(providerUpdateNonce > 0, "Zero provider nonce in ask values");
+        require(updatePortfolioNonce > 0, "Zero portfolio nonce in ask values");
         providerNonceToGlobalNonce[1][providerUpdateNonce] = updatePortfolioNonce;
         return providerUpdateNonce;
     }
 
-    function completeAskValueCCIP(uint256 _updateProviderNonce, uint256 _value) external whenNotPaused nonReentrant {
+    function completeAskValueCCIP(uint256 _updateProviderNonce, uint256 _value) external whenNotPaused {
         require(_value > 0, "Zero total value");
+        require(_updateProviderNonce > 0, "Zero provider nonce");
 
         uint256 _updatePortfolioNonce = providerNonceToGlobalNonce[1][_updateProviderNonce];
         if (_updatePortfolioNonce == 0) {
