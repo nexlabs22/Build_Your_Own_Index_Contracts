@@ -31,6 +31,15 @@ contract IndexFactoryBalancer is Initializable, OwnableUpgradeable, PausableUpgr
     mapping(uint256 => mapping(uint64 => uint256)) public providerTotalValueByNonce; // mapping of updatePortfolioNonce to total value
     mapping(uint64 => mapping(uint256 => uint256)) public providerNonceToGlobalNonce; // mapping of providerNonce to globalNonce
 
+    event UsdcProvided(
+        address indexed indexToken,
+        uint8 indexed providerIndex,
+        uint256 indexed nonce,
+        address to,
+        uint256 requested,
+        uint256 granted
+    );
+
     function initialize(
         address _functionsOracle,
         address _factoryStorage,
@@ -177,5 +186,27 @@ contract IndexFactoryBalancer is Initializable, OwnableUpgradeable, PausableUpgr
 
     function reweightCCIP(address _indexToken) internal whenNotPaused nonReentrant returns (uint256 orderNonce) {
         // to be implemented
+    }
+
+    function provideUsdc(address indexToken, uint8 providerIndex, uint256 nonce, address to, uint256 amount)
+        external
+        nonReentrant
+        whenNotPaused
+        returns (uint256 granted)
+    {
+        require(to != address(0), "to=0");
+        require(amount > 0, "amount=0");
+
+        address usdcToken = dinariBalancer.dinariStorage().usdc();
+        uint256 balance = IERC20(usdcToken).balanceOf(address(this));
+        if (balance == 0) {
+            emit UsdcProvided(indexToken, providerIndex, nonce, to, amount, 0);
+            return 0;
+        }
+
+        granted = (balance < amount) ? balance : amount;
+        IERC20(usdcToken).safeTransfer(to, granted);
+
+        emit UsdcProvided(indexToken, providerIndex, nonce, to, amount, granted);
     }
 }

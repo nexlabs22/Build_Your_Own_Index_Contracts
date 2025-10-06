@@ -23,11 +23,20 @@ error ZeroAddress();
 contract BackedFiBalancer is Initializable, OwnableUpgradeable, PausableUpgradeable, ReentrancyGuardUpgradeable {
     using SafeERC20 for IERC20;
 
+    // struct RebalanceBatch {
+    //     bool firstDone;
+    //     bool secondDone;
+    //     uint256 totalUsdcObtained;
+    //     mapping(address => uint256) tokenDelta;
+    // }
+
     struct RebalanceBatch {
         bool firstDone;
         bool secondDone;
         uint256 totalUsdcObtained;
         mapping(address => uint256) tokenDelta;
+        mapping(address => uint256) expectedInbound;
+        mapping(address => uint256) claimedInbound;
     }
 
     struct Ctx {
@@ -47,7 +56,7 @@ contract BackedFiBalancer is Initializable, OwnableUpgradeable, PausableUpgradea
     uint256 public constant ONE_BPS_1e18 = 100e18;
     uint256 public rebalanceNonce;
 
-    mapping(uint256 => RebalanceBatch) private _rebalanceBatches;
+    mapping(uint256 => RebalanceBatch) public rebalanceBatches;
 
     event FirstRebalanceAction(
         uint256 indexed nonce, address[] tokensSold, uint256[] amountsSold, uint256 usdcExpected, uint256 time
@@ -138,7 +147,7 @@ contract BackedFiBalancer is Initializable, OwnableUpgradeable, PausableUpgradea
         Ctx memory ctx = Ctx({vault: Vault(vaultAddr), usdc: backedfiStorage.usdc()});
 
         nonce = ++rebalanceNonce;
-        RebalanceBatch storage batch = _rebalanceBatches[nonce];
+        RebalanceBatch storage batch = rebalanceBatches[nonce];
         require(!batch.firstDone, "rebalance: phase-1 done");
 
         address[] memory soldToken = new address[](totalTokens);
@@ -177,37 +186,32 @@ contract BackedFiBalancer is Initializable, OwnableUpgradeable, PausableUpgradea
         return _sellBond(nonce, token, sellPct, price, ctx);
     }
 
-    function secondRebalanceAction(address _indexToken, uint256 batchId)
+    function secondRebalanceAction(address _indexToken, uint256 batchId, uint256[] calldata prices)
         external
         payable
         nonReentrant
         onlyOwnerOrOperator
     {
-        RebalanceBatch storage batch = _rebalanceBatches[batchId];
+        RebalanceBatch storage batch = rebalanceBatches[batchId];
         require(batch.firstDone && !batch.secondDone, "rebalance: bad phase");
 
         IERC20 usdc = backedfiStorage.usdc();
-        uint256 usdcBal = usdc.balanceOf(address(this));
-        require(usdcBal > 0, "balancer: no USDC");
+        uint256 usdcBalance = usdc.balanceOf(address(this));
+        require(usdcBalance > 0, "balancer: no USDC");
 
         (, address[] memory tokens,) = functionsOracle.getCurrentProviderIndexData(
             _indexToken, functionsOracle.currentFilledCount(_indexToken), backedfiStorage.providerIndex()
         );
 
-        uint256 n = tokens.length;
-        uint256[] memory shortages = new uint256[](n);
+        uint256 totalTokens = tokens.length;
+        require(prices.length == totalTokens, "rebalance: price length mismatch");
+
+        uint256[] memory shortages = new uint256[](totalTokens);
         uint256 totalShortage;
 
-        for (uint256 i = 0; i < n; ++i) {
+        for (uint256 i = 0; i < totalTokens; ++i) {
             address token = tokens[i];
-            uint256 current = functionsOracle.tokenCurrentMarketShare(_indexToken, token);
-            uint256 target = functionsOracle.tokenOracleMarketShare(_indexToken, token);
-
-            if (current < target) {
-                uint256 shortage = target - current;
-                shortages[i] = shortage;
-                totalShortage += shortage;
-            }
+            totalShortage += _handleShortageForSecondRebalance(_indexToken, token, shortages, i);
         }
 
         if (totalShortage == 0) {
@@ -217,22 +221,78 @@ contract BackedFiBalancer is Initializable, OwnableUpgradeable, PausableUpgradea
             return;
         }
 
-        uint256 usdcSpent;
-        for (uint256 i = 0; i < n; ++i) {
+        for (uint256 i = 0; i < totalTokens; ++i) {
             uint256 shortage = shortages[i];
             if (shortage == 0) continue;
 
-            uint256 payment = Math.mulDiv(usdcBal, shortage, totalShortage);
+            uint256 payment = Math.mulDiv(usdcBalance, shortage, totalShortage);
             if (payment == 0) continue;
 
-            usdc.safeTransfer(backedfiStorage.nexBot(), payment);
-            usdcSpent += payment;
-        }
+            uint256 price = prices[i];
+            if (price > 0) {
+                uint256 expectedTokens = Math.mulDiv(payment, 1e18, price);
+                batch.expectedInbound[tokens[i]] += expectedTokens;
+            }
 
-        require(msg.value == 0, "balancer: no ETH needed");
+            usdc.safeTransfer(backedfiStorage.nexBot(), payment);
+        }
 
         batch.secondDone = true;
         emit SecondRebalanceAction(batchId, block.timestamp);
+    }
+
+    function _handleShortageForSecondRebalance(
+        address _indexToken,
+        address _token,
+        uint256[] memory _shortages,
+        uint256 index
+    ) internal view returns (uint256 shortage) {
+        uint256 current = functionsOracle.tokenCurrentMarketShare(_indexToken, _token);
+        uint256 target = functionsOracle.tokenOracleMarketShare(_indexToken, _token);
+
+        if (current < target) {
+            shortage = target - current; // 1e18-scaled delta
+            _shortages[index] = shortage;
+        } else {
+            _shortages[index] = 0;
+        }
+    }
+
+    function completeRebalanceActions(address _indexToken, uint256 batchId) external nonReentrant onlyOwnerOrOperator {
+        RebalanceBatch storage batch = rebalanceBatches[batchId];
+        require(batch.firstDone && batch.secondDone, "rebalance: wrong phase");
+
+        address vaultAddr = globalStorage.indexTokenToVault(_indexToken);
+        require(vaultAddr != address(0), "vault not set");
+
+        (, address[] memory tokens,) = functionsOracle.getCurrentProviderIndexData(
+            _indexToken, functionsOracle.currentFilledCount(_indexToken), backedfiStorage.providerIndex()
+        );
+
+        for (uint256 i = 0; i < tokens.length; ++i) {
+            address token = tokens[i];
+
+            uint256 expected = batch.expectedInbound[token];
+            if (expected == 0) continue;
+
+            uint256 already = batch.claimedInbound[token];
+            if (already >= expected) continue;
+
+            uint256 remaining = expected - already;
+
+            uint256 balance = IERC20(token).balanceOf(address(this));
+            if (balance == 0) continue;
+
+            uint256 claimable = balance < remaining ? balance : remaining;
+            if (claimable == 0) continue;
+
+            IERC20(token).approve(vaultAddr, claimable);
+            IERC20(token).safeTransfer(vaultAddr, claimable);
+
+            batch.claimedInbound[token] += claimable;
+        }
+
+        emit CompleteRebalanceActions(batchId, block.timestamp);
     }
 
     function _sellBond(uint256 nonce, address bondToken, uint256 sellPct, uint256 price, Ctx memory ctx)
@@ -250,7 +310,7 @@ contract BackedFiBalancer is Initializable, OwnableUpgradeable, PausableUpgradea
 
         IERC20(bondToken).safeTransfer(backedfiStorage.nexBot(), soldQty);
 
-        RebalanceBatch storage batch = _rebalanceBatches[nonce];
+        RebalanceBatch storage batch = rebalanceBatches[nonce];
         batch.tokenDelta[bondToken] = soldQty;
         if (price != 0) {
             batch.totalUsdcObtained += Math.mulDiv(soldQty, price, 1e18);
