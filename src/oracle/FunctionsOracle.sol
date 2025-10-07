@@ -396,7 +396,7 @@ contract FunctionsOracle is Initializable, FunctionsClient, ConfirmedOwner {
                 share
             );
             // oracle chain selector actions
-            if (providerIndex == 1 || providerIndex == 2) {
+            if (providerIndex == 1) {
                 _initChainSelectorsOracleData(
                     indexToken,
                     chainSelector,
@@ -419,7 +419,7 @@ contract FunctionsOracle is Initializable, FunctionsClient, ConfirmedOwner {
                     share
                 );
                 // current chain selector actions
-                if (providerIndex == 1 || providerIndex == 2) {
+                if (providerIndex == 1) {
                     _initChainSelectorsCurrentData(
                         indexToken,
                         chainSelector,
@@ -470,7 +470,7 @@ contract FunctionsOracle is Initializable, FunctionsClient, ConfirmedOwner {
                 tokenProviderIndex0,
                 tokenOracleMarketShare[_indexToken][tokenAddress]
             );
-            if (tokenProviderIndex0 == 2) {
+            if (tokenProviderIndex0 == 1) {
                 _initChainSelectorsCurrentData(
                     _indexToken,
                     chainSelector,

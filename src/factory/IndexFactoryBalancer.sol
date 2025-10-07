@@ -97,9 +97,11 @@ contract IndexFactoryBalancer is Initializable, OwnableUpgradeable, PausableUpgr
             uint256 targetProviderMarketShare = functionsOracle.getOracleProviderIndexTotalShares(
                 _indexToken, oracleFilledCount, currentProviderIndexes[i]
             );
-            if (realProviderMarketShare > targetProviderMarketShare) {
+            
+            if (realProviderMarketShare >= targetProviderMarketShare) {
                 if (currentProviderIndexes[i] == 1) {
-                    reweightCCIP(_indexToken);
+                    uint256 targetPortfolioValue = (providerTotalValueByNonce[_updatePortfolioNonce][1] * SHARE_DENOMINATOR) / targetProviderMarketShare;
+                    reweightCCIP(_indexToken, targetPortfolioValue);
                 }
             }
         }
@@ -123,18 +125,18 @@ contract IndexFactoryBalancer is Initializable, OwnableUpgradeable, PausableUpgr
             );
             if (realProviderMarketShare < targetProviderMarketShare) {
                 if (currentProviderIndexes[i] == 1) {
-                    reweightCCIP(_indexToken);
+                    uint256 targetPortfolioValue = (providerTotalValueByNonce[_updatePortfolioNonce][1] * SHARE_DENOMINATOR) / targetProviderMarketShare;
+                    reweightCCIP(_indexToken, targetPortfolioValue);
                 }
             }
         }
     }
 
     function askValueCCIP(address _indexToken) internal whenNotPaused returns (uint256 orderNonce) {
-        uint256 providerUpdateNonce = mainChainBalancer.askValues(_indexToken);
-        require(providerUpdateNonce > 0, "Zero provider nonce in ask values");
-        require(updatePortfolioNonce > 0, "Zero portfolio nonce in ask values");
-        providerNonceToGlobalNonce[1][providerUpdateNonce] = updatePortfolioNonce;
-        return providerUpdateNonce;
+        uint256 providerUpdateNonce = mainChainBalancer.getUpdatePortfolioNonce();
+        providerNonceToGlobalNonce[1][providerUpdateNonce + 1] = updatePortfolioNonce;
+        mainChainBalancer.askValues(_indexToken);
+        return providerUpdateNonce + 1;
     }
 
     function completeAskValueCCIP(uint256 _updateProviderNonce, uint256 _value) external whenNotPaused {
@@ -170,8 +172,9 @@ contract IndexFactoryBalancer is Initializable, OwnableUpgradeable, PausableUpgr
         portfolioTotalValueByNonce[_updatePortfolioNonce] += _value;
         providerTotalValueByNonce[_updatePortfolioNonce][providerIndex] += _value;
     }
-
-    function reweightCCIP(address _indexToken) internal whenNotPaused nonReentrant returns (uint256 orderNonce) {
-        // to be implemented
+    
+    function reweightCCIP(address _indexToken, uint256 _targetPortfolioValue) internal whenNotPaused returns (uint256 orderNonce) {
+        
+        mainChainBalancer.requestRebalance(_indexToken, _targetPortfolioValue, address(0), 0);
     }
 }
