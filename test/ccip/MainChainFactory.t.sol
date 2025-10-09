@@ -298,7 +298,7 @@ contract CCIPFactoryTest is Test, CCIPDeployer {
         tokenShares[1] = 20e18;
         tokenShares[2] = 20e18;
         tokenShares[3] = 30e18;
-        tokenShares[4] = 20e18;
+        tokenShares[4] = 10e18;
 
         uint64[] memory chains = new uint64[](5);
         chains[0] = 1;
@@ -754,11 +754,10 @@ contract CCIPFactoryTest is Test, CCIPDeployer {
         updateOracleList3();
         factoryBalancer.firstReweightAction(address(indexToken), 1);
         mockRouter.executeAllMessages();
-        // mainChainBalancer.secondReweightAction(address(indexToken));
-        // mockRouter.executeAllMessages();
+        mainChainBalancer.secondReweightAction(address(indexToken));
+        mockRouter.executeAllMessages();
         // factoryBalancer.askValues(address(indexToken));
         // mockRouter.executeAllMessages();
-        // console.log("reweight called", factoryBalancer.reweightCalled());
         console.log("token0 value", token0.balanceOf(address(vault)));
         console.log("token1 value", token1.balanceOf(address(vault)));
         console.log("token2 value", token2.balanceOf(address(vault)));

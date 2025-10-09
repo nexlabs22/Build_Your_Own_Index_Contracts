@@ -173,8 +173,8 @@ contract IndexFactoryBalancer is Initializable, OwnableUpgradeable, PausableUpgr
         providerTotalValueByNonce[_updatePortfolioNonce][providerIndex] += _value;
     }
     
+    
     function reweightCCIP(address _indexToken, uint256 _targetPortfolioValue) internal whenNotPaused returns (uint256 orderNonce) {
-        
         mainChainBalancer.requestRebalance(_indexToken, _targetPortfolioValue, address(0), 0);
     }
 }

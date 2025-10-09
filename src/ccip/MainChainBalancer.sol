@@ -671,12 +671,11 @@ contract MainChainBalancer is Initializable, ProposableOwnableUpgradeable, Pausa
         swapVars.swapWethAmount = _swapLowerValueCurrentChainToWETH(
             _indexToken, vault, chainSelector, chainSelectorCurrentTokensCount, portfolioValue, swapVars.chainValue
         );
-        // uint256 chainCurrentRealShare = (swapVars.chainValue * 100e18) / portfolioValue;
+
         uint256 targetChainValue = (_targetPortfolioValue * oracleChainSelectorTotalShares) / 100e18;
-        // uint256 negativePercentage = oracleChainSelectorTotalShares - chainCurrentRealShare;
-        uint256 negativePercentage = ((targetChainValue - portfolioValue) * 100e18) / portfolioValue;
-        uint256 extraWethAmount = (mainChainStorage.extraWethByNonce(nonce) * negativePercentage)
-            / mainChainStorage.reweightExtraPercentage(nonce);
+        uint256 negativePercentage = targetChainValue > portfolioValue ? ((targetChainValue - portfolioValue) * 100e18) / portfolioValue : 0;
+        uint256 extraWethAmount = negativePercentage > 0 ? (mainChainStorage.extraWethByNonce(nonce) * negativePercentage)
+            / mainChainStorage.reweightExtraPercentage(nonce) : mainChainStorage.extraWethByNonce(nonce);
         swapVars.swapWethAmount += extraWethAmount;
 
         _swapLowerValueCurrentChainFromWETH(
