@@ -1675,4 +1675,84 @@ contract DinariStorage_MainTest is OlympixUnitTest("DinariStorage") {
         vm.expectRevert("Invalid amount");
         dinariStorage.calculateIssuanceFee(idxToken, 0);
     }
+
+    function test_increaseUpdatePortfolioNonce_notBalancer_reverts_branch151True() public {
+        address notBalancer = address(0xDEADBEEF);
+        assertTrue(notBalancer != address(dinariStorage.balancer()));
+        assertEq(dinariStorage.updatePortfolioNonce(), 0);
+        vm.prank(notBalancer);
+        vm.expectRevert("Caller is not index factory balancer contract.");
+        dinariStorage.increaseUpdatePortfolioNonce();
+        assertEq(dinariStorage.updatePortfolioNonce(), 0);
+    }
+
+    function test_increaseUpdatePortfolioNonce_succeedsForBalancer_branch151False() public {
+        address realBalancer = address(dinariStorage.balancer());
+        vm.prank(realBalancer);
+        dinariStorage.increaseUpdatePortfolioNonce();
+        assertEq(dinariStorage.updatePortfolioNonce(), 1);
+    }
+
+    function test_setFunctionsOracle_revertOnZeroAddress_opixTargetBranch160True() public {
+        vm.prank(owner);
+        vm.expectRevert("invalid functions oracle address");
+        dinariStorage.setFunctionsOracle(address(0));
+    }
+
+    function test_setLatestPriceDecimals_revertsOnZeroInput_branch_204_true() public {
+        vm.prank(owner);
+        vm.expectRevert(bytes("invalid decimals"));
+        dinariStorage.setLatestPriceDecimals(0);
+    }
+
+    function test_setLatestPriceDecimals_branch_204_false_setsValue() public {
+        vm.prank(owner);
+        uint8 value = 9;
+        dinariStorage.setLatestPriceDecimals(value);
+        assertEq(dinariStorage.latestPriceDecimals(), value);
+    }
+
+    function test_setIssuer_revertOnIssuerZeroAddress_opixTargetBranch221True() public {
+        vm.startPrank(owner);
+        vm.expectRevert(bytes("invalid issuer address"));
+        dinariStorage.setIssuer(address(0));
+        vm.stopPrank();
+    }
+
+    function test_getOrderInstanceById_revertOnZeroId_branch_560_True() public {
+        vm.expectRevert("Invalid Request Id");
+        dinariStorage.getOrderInstanceById(idxToken, 0);
+    }
+
+    function test_getPortfolioValue_branch_opixTargetBranch592True() public {
+        address indexToken = idxToken;
+        address singleToken = address(0xBBBB1234);
+        uint256 totalShare = 1e18;
+        address[] memory assets = new address[](1);
+        assets[0] = singleToken;
+        uint256[] memory shares = new uint256[](1);
+        shares[0] = totalShare;
+        vm.prank(owner);
+        dinariStorage.setLatestPriceDecimals(18);
+        vm.prank(owner);
+        oracle.setOperator(owner, true);
+        uint64 providerIdx = 1;
+        uint64 chainSelector = 1;
+        bytes memory pathBytes = abi.encode(assets, new uint24[](0));
+        uint64[] memory providerInds = new uint64[](1);
+        uint64[] memory chainSel = new uint64[](1);
+        bytes[] memory pbs = new bytes[](1);
+        providerInds[0] = providerIdx;
+        chainSel[0] = chainSelector;
+        pbs[0] = pathBytes;
+        vm.prank(owner);
+        oracle.updatePathData(providerInds, chainSel, pbs);
+        uint256 value = dinariStorage.getPortfolioValue(indexToken);
+        assertEq(value, 0, "portfolioValue should be zero in this test stub");
+    }
+
+    function test_calculateBuyRequestFee_branch651False_executes() public view {
+        uint256 fee = dinariStorage.calculateBuyRequestFee(1e6); // smallest allowed amount
+        assertGt(fee, 0, "Fee should be > 0 for positive amount");
+    }
 }

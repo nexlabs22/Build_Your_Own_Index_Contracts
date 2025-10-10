@@ -318,4 +318,10 @@ contract DinariFactory_MainTest is OlympixUnitTest("DinariFactory") {
         vm.prank(bad);
         factory.unpause();
     }
+
+    function testSetIndexFactoryStorage_ZeroArgumentReverts_opix_branch_coverage() public {
+        vm.expectRevert(bytes("invalid factory storage address"));
+        vm.prank(owner);
+        factory.setIndexFactoryStorage(address(0));
+    }
 }
