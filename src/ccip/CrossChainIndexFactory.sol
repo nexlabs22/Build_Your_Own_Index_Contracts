@@ -556,8 +556,8 @@ contract CrossChainIndexFactory is
         // vars.chainSelectorOracleTokensCount = oracleTokens.length;
 
         vars.chainCurrentRealShare = (data.chainValue * 100e18) / data.portfolioValue;
-        vars.wethAmountToSwap += (vars.swapWethAmount * ((data.chainSelectorTotalShares * data.targetPortfolioValue) / 100e18)) / data.chainValue;
-        // vars.wethAmountToSwap = (vars.swapWethAmount * data.chainSelectorTotalShares) / vars.chainCurrentRealShare;
+        // vars.wethAmountToSwap += (vars.swapWethAmount * ((data.chainSelectorTotalShares * data.targetPortfolioValue) / 100e18)) / data.chainValue;
+        vars.wethAmountToSwap = (vars.swapWethAmount * data.chainSelectorTotalShares) / vars.chainCurrentRealShare;
         vars.extraWethAmount = vars.swapWethAmount - vars.wethAmountToSwap;
 
         _swapToTokensFirstReweightAction(
