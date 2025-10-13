@@ -8,7 +8,7 @@ import {TransparentUpgradeableProxy} from "@openzeppelin/contracts/proxy/transpa
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import "openzeppelin-foundry-upgrades/Upgrades.sol";
 
-import "../src/dinari/DinariStorage.sol";
+import "../../../src/dinari/DinariStorage.sol";
 
 contract DeployDinariStorage is Script {
     DinariStorage public dinariStorage;

@@ -8,7 +8,7 @@ import {TransparentUpgradeableProxy} from "@openzeppelin/contracts/proxy/transpa
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import "openzeppelin-foundry-upgrades/Upgrades.sol";
 
-import "../src/backedfi/BackedFiFactory.sol";
+import "../../../src/backedfi/BackedFiFactory.sol";
 
 contract DeployBackedFiFactory is Script {
     BackedFiFactory public backedFiFactory;
@@ -31,9 +31,7 @@ contract DeployBackedFiFactory is Script {
         vm.startBroadcast(deployerPrivateKey);
 
         address proxy = Upgrades.deployTransparentProxy(
-            "BackedFiFactory.sol",
-            owner,
-            abi.encodeCall(BackedFiFactory.initialize, (backedFiStorageProxy))
+            "BackedFiFactory.sol", owner, abi.encodeCall(BackedFiFactory.initialize, (backedFiStorageProxy))
         );
 
         backedFiFactory = BackedFiFactory(proxy);

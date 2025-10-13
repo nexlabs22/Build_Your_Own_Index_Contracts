@@ -8,7 +8,7 @@ import {TransparentUpgradeableProxy} from "@openzeppelin/contracts/proxy/transpa
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import "openzeppelin-foundry-upgrades/Upgrades.sol";
 
-import "../src/backedfi/BackedFiStorage.sol";
+import "../../../src/backedfi/BackedFiStorage.sol";
 
 contract DeployBackedFiStorage is Script {
     BackedFiStorage public backedFiStorage;

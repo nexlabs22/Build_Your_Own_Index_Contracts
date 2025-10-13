@@ -8,28 +8,28 @@ import {TransparentUpgradeableProxy} from "@openzeppelin/contracts/proxy/transpa
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import "openzeppelin-foundry-upgrades/Upgrades.sol";
 
-import "../src/dinari/DinariFactory.sol";
+import "../../../src/backedfi/BackedFiBalancer.sol";
 
-contract DeployDinariFactory is Script {
-    DinariFactory public dinariFactory;
+contract DeployBackedFiBalancer is Script {
+    BackedFiBalancer public backedFiBalancer;
 
     function run() external {
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
         string memory targetChain = "sepolia";
         address owner = vm.addr(deployerPrivateKey);
 
-        address indexFactoryStorageProxy;
-        address dinariStorageProxy;
+        address backedFiStorageProxy;
         address functionsOracleProxy;
+        address indexFactoryStorageProxy;
 
         if (keccak256(bytes(targetChain)) == keccak256("sepolia")) {
-            indexFactoryStorageProxy = vm.envAddress("SEPOLIA_INDEX_FACTORY_STORAGE_PROXY_ADDRESS");
-            dinariStorageProxy = vm.envAddress("SEPOLIA_DINARI_STORAGE_PROXY_ADDRESS");
+            backedFiStorageProxy = vm.envAddress("SEPOLIA_BACKEDFI_STORAGE_PROXY_ADDRESS");
             functionsOracleProxy = vm.envAddress("SEPOLIA_FUNCTIONS_ORACLE_PROXY_ADDRESS");
+            indexFactoryStorageProxy = vm.envAddress("SEPOLIA_INDEX_FACTORY_STORAGE_PROXY_ADDRESS");
         } else if (keccak256(bytes(targetChain)) == keccak256("arbitrum_mainnet")) {
-            indexFactoryStorageProxy = vm.envAddress("ARBITRUM_INDEX_FACTORY_STORAGE_PROXY_ADDRESS");
-            dinariStorageProxy = vm.envAddress("ARBITRUM_DINARI_STORAGE_PROXY_ADDRESS");
+            backedFiStorageProxy = vm.envAddress("ARBITRUM_BACKEDFI_STORAGE_PROXY_ADDRESS");
             functionsOracleProxy = vm.envAddress("ARBITRUM_FUNCTIONS_ORACLE_PROXY_ADDRESS");
+            indexFactoryStorageProxy = vm.envAddress("ARBITRUM_INDEX_FACTORY_STORAGE_PROXY_ADDRESS");
         } else {
             revert("Unsupported target chain");
         }
@@ -37,19 +37,19 @@ contract DeployDinariFactory is Script {
         vm.startBroadcast(deployerPrivateKey);
 
         address proxy = Upgrades.deployTransparentProxy(
-            "DinariFactory.sol",
+            "BackedFiBalancer.sol",
             owner,
             abi.encodeCall(
-                DinariFactory.initialize, (indexFactoryStorageProxy, dinariStorageProxy, functionsOracleProxy)
+                BackedFiBalancer.initialize, (backedFiStorageProxy, functionsOracleProxy, indexFactoryStorageProxy)
             )
         );
 
-        dinariFactory = DinariFactory(proxy);
+        backedFiBalancer = BackedFiBalancer(proxy);
         address adminAddr = Upgrades.getAdminAddress(proxy);
 
-        console.log("DinariFactory implementation deployed at:", address(dinariFactory));
-        console.log("DinariFactory proxy deployed at:", proxy);
-        console.log("ProxyAdmin for DinariFactory deployed at:", adminAddr);
+        console.log("BackedFiBalancer implementation deployed at:", address(backedFiBalancer));
+        console.log("BackedFiBalancer proxy deployed at:", proxy);
+        console.log("ProxyAdmin for BackedFiBalancer deployed at:", adminAddr);
 
         vm.stopBroadcast();
     }
