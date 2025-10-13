@@ -30,6 +30,7 @@ contract IndexFactoryBalancer is Initializable, OwnableUpgradeable, PausableUpgr
     mapping(uint256 => uint256) public portfolioTotalValueByNonce; // mapping of updatePortfolioNonce to total value
     mapping(uint256 => mapping(uint64 => uint256)) public providerTotalValueByNonce; // mapping of updatePortfolioNonce to total value
     mapping(uint64 => mapping(uint256 => uint256)) public providerNonceToGlobalNonce; // mapping of providerNonce to globalNonce
+    mapping(uint256 => uint256) public extraUsdcAmountByNonce; // mapping of updatePortfolioNonce to extra usdc amount
 
     function initialize(
         address _functionsOracle,
@@ -58,6 +59,16 @@ contract IndexFactoryBalancer is Initializable, OwnableUpgradeable, PausableUpgr
 
     function increasePortfolioTotalValueByNonce(uint256 _updatePortfolioNonce, uint256 _totalValue) public {
         portfolioTotalValueByNonce[_updatePortfolioNonce] += _totalValue;
+    }
+
+    function increaseExtraUsdcAmountByNonce(uint256 _updatePortfolioNonce, uint256 _extraUsdcAmount) public {
+        extraUsdcAmountByNonce[_updatePortfolioNonce] += _extraUsdcAmount;
+    }
+
+
+    function getGlobalPortfolioValueByProviderNonce(uint64 _providerIndex, uint256 _providerNonce) public view returns (uint256) {
+        uint256 _updatePortfolioNonce = providerNonceToGlobalNonce[_providerIndex][_providerNonce];
+        return portfolioTotalValueByNonce[_updatePortfolioNonce];
     }
 
     // =========================
@@ -101,7 +112,7 @@ contract IndexFactoryBalancer is Initializable, OwnableUpgradeable, PausableUpgr
             if (realProviderMarketShare >= targetProviderMarketShare) {
                 if (currentProviderIndexes[i] == 1) {
                     uint256 targetPortfolioValue = (providerTotalValueByNonce[_updatePortfolioNonce][1] * SHARE_DENOMINATOR) / targetProviderMarketShare;
-                    reweightCCIP(_indexToken, targetPortfolioValue);
+                    reweightCCIP(_indexToken, targetPortfolioValue, 0);
                 }
             }
         }
@@ -123,10 +134,10 @@ contract IndexFactoryBalancer is Initializable, OwnableUpgradeable, PausableUpgr
             uint256 targetProviderMarketShare = functionsOracle.getOracleProviderIndexTotalShares(
                 _indexToken, oracleFilledCount, currentProviderIndexes[i]
             );
-            if (realProviderMarketShare < targetProviderMarketShare) {
+            if (realProviderMarketShare <= targetProviderMarketShare) {
                 if (currentProviderIndexes[i] == 1) {
-                    uint256 targetPortfolioValue = (providerTotalValueByNonce[_updatePortfolioNonce][1] * SHARE_DENOMINATOR) / targetProviderMarketShare;
-                    reweightCCIP(_indexToken, targetPortfolioValue);
+                    uint256 targetPortfolioValue = (portfolioTotalValueByNonce[_updatePortfolioNonce] * targetProviderMarketShare) / 100e18;
+                    reweightCCIP(_indexToken, targetPortfolioValue, extraUsdcAmountByNonce[_updatePortfolioNonce]);
                 }
             }
         }
@@ -137,6 +148,13 @@ contract IndexFactoryBalancer is Initializable, OwnableUpgradeable, PausableUpgr
         providerNonceToGlobalNonce[1][providerUpdateNonce + 1] = updatePortfolioNonce;
         mainChainBalancer.askValues(_indexToken);
         return providerUpdateNonce + 1;
+    }
+
+    function completeAskValues(uint256 _updatePortfolioNonce, uint256 _value) external whenNotPaused {
+        require(_value > 0, "Zero total value");
+        require(_updatePortfolioNonce > 0, "Zero provider nonce");
+        
+        portfolioTotalValueByNonce[_updatePortfolioNonce] += _value;
     }
 
     function completeAskValueCCIP(uint256 _updateProviderNonce, uint256 _value) external whenNotPaused {
@@ -172,9 +190,15 @@ contract IndexFactoryBalancer is Initializable, OwnableUpgradeable, PausableUpgr
         portfolioTotalValueByNonce[_updatePortfolioNonce] += _value;
         providerTotalValueByNonce[_updatePortfolioNonce][providerIndex] += _value;
     }
+
+
     
-    
-    function reweightCCIP(address _indexToken, uint256 _targetPortfolioValue) internal whenNotPaused returns (uint256 orderNonce) {
-        mainChainBalancer.requestRebalance(_indexToken, _targetPortfolioValue, address(0), 0);
+    uint256 public reweightCalled;
+    function reweightCCIP(address _indexToken, uint256 _targetPortfolioValue, uint256 _extraUsdcAmount) internal whenNotPaused returns (uint256 orderNonce) {
+        if(_extraUsdcAmount > 0) {
+            IERC20(factoryStorage.usdcAddress()).approve(address(mainChainBalancer), _extraUsdcAmount);
+        }
+        reweightCalled++;
+        mainChainBalancer.requestRebalance(_indexToken, _targetPortfolioValue, address(factoryStorage.usdcAddress()), _extraUsdcAmount);
     }
 }

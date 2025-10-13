@@ -204,6 +204,7 @@ contract BalancerSender is Initializable, CCIPReceiver, ProposableOwnableUpgrade
         );
     }
 
+    uint public reweightCalled;
     function sendFirstReweightAction(
         address _indexToken,
         uint256 nonce,
@@ -214,10 +215,10 @@ contract BalancerSender is Initializable, CCIPReceiver, ProposableOwnableUpgrade
         uint256 chainValue,
         uint256[] memory oracleTokenShares
     ) public onlyMainChainBalancer {
-        uint256 chainCurrentRealShare = (chainValue * 100e18) / portfolioValue;
+        uint256 chainCurrentRealShare = (chainValue * 100e18) / indexFactoryBalancer.getGlobalPortfolioValueByProviderNonce(1, nonce);
         mainChainStorage.increaseReweightExtraPercentage(nonce, chainCurrentRealShare - oracleChainSelectorTotalShares);
         // mainChainStorage.increaseReweightExtraPercentage(nonce, (chainValue - (oracleChainSelectorTotalShares * _targetPortfolioValue) / 100e18) * 100e18 / portfolioValue);
-
+        reweightCalled = portfolioValue;
         address crossChainIndexFactory = mainChainStorage.crossChainFactoryBySelector(chainSelector);
 
         uint256[] memory extraData = new uint256[](4);

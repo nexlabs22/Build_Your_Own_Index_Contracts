@@ -414,6 +414,188 @@ contract CCIPFactoryTest is Test, CCIPDeployer {
         // oracle.fulfillOracleFundingRateRequest(requestId, assetList, tokenShares, swapFees, chains);
     }
 
+
+    function updateOracleList5() public {
+        address[] memory indexTokens = new address[](6);
+        indexTokens[0] = address(indexToken);
+        indexTokens[1] = address(indexToken);
+        indexTokens[2] = address(indexToken);
+        indexTokens[3] = address(indexToken);
+        indexTokens[4] = address(indexToken);
+        indexTokens[5] = address(indexToken);
+
+        address[] memory assetList = new address[](6);
+        assetList[0] = address(token0);
+        assetList[1] = address(token1);
+        assetList[2] = address(token2);
+        assetList[3] = address(token3);
+        assetList[4] = address(token4);
+        assetList[5] = address(token4);
+
+        uint24[] memory feesData = new uint24[](1);
+        feesData[0] = 3000;
+
+        bytes[] memory pathData = new bytes[](6);
+        //updating path data for token0
+        address[] memory path0 = new address[](2);
+        path0[0] = address(weth);
+        path0[1] = address(token0);
+        pathData[0] = abi.encode(path0, feesData);
+        //updating path data for token1
+        address[] memory path1 = new address[](2);
+        path1[0] = address(weth);
+        path1[1] = address(token1);
+        pathData[1] = abi.encode(path1, feesData);
+        //updating path data for token2
+        address[] memory path2 = new address[](2);
+        path2[0] = address(weth);
+        path2[1] = address(token2);
+        pathData[2] = abi.encode(path2, feesData);
+        //updating path data for token3
+        address[] memory path3 = new address[](2);
+        path3[0] = address(weth);
+        path3[1] = address(token3);
+        pathData[3] = abi.encode(path3, feesData);
+        //updating path data for token4
+        address[] memory path4 = new address[](2);
+        path4[0] = address(weth);
+        path4[1] = address(token4);
+        pathData[4] = abi.encode(path4, feesData);
+        //updating path data for token5
+        address[] memory path5 = new address[](2);
+        path5[0] = address(weth);
+        path5[1] = address(token5);
+        pathData[5] = abi.encode(path5, feesData);
+
+        // updating path data for usdc
+        address[] memory usdcPath = new address[](2);
+        usdcPath[0] = address(weth);
+        usdcPath[1] = address(usdc);
+
+        uint256[] memory tokenShares = new uint256[](6);
+        tokenShares[0] = 20e18;
+        tokenShares[1] = 20e18;
+        tokenShares[2] = 20e18;
+        tokenShares[3] = 10e18;
+        tokenShares[4] = 10e18;
+        tokenShares[5] = 20e18;
+
+        uint64[] memory chains = new uint64[](6);
+        chains[0] = 1;
+        chains[1] = 1;
+        chains[2] = 1;
+        chains[3] = 1;
+        chains[4] = 2;
+        chains[5] = 3;
+
+        uint64[] memory providerIndex = new uint64[](6);
+        providerIndex[0] = 1;
+        providerIndex[1] = 1;
+        providerIndex[2] = 1;
+        providerIndex[3] = 1;
+        providerIndex[4] = 1;
+        providerIndex[5] = 5;
+
+        //update path data
+        functionsOracle.updatePathData(providerIndex, chains, pathData);
+        functionsOracle.updateOnlyPathAndFee(address(usdc), usdcPath, feesData);
+
+        // request off-chain data
+        link.transfer(address(functionsOracle), 1e17);
+        bytes32 requestId = functionsOracle.requestAssetsData("console.log('Hello, World!');", 0, 0);
+        bytes memory data = abi.encode(indexTokens, assetList, tokenShares);
+        bool success = oracle.fulfillRequest(address(functionsOracle), requestId, data);
+        require(success, "oracle request failed");
+        // update path data
+        // oracle.fulfillOracleFundingRateRequest(requestId, assetList, tokenShares, swapFees, chains);
+    }
+
+
+    function updateOracleList6() public {
+        address[] memory indexTokens = new address[](5);
+        indexTokens[0] = address(indexToken);
+        indexTokens[1] = address(indexToken);
+        indexTokens[2] = address(indexToken);
+        indexTokens[3] = address(indexToken);
+        indexTokens[4] = address(indexToken);
+
+        address[] memory assetList = new address[](5);
+        assetList[0] = address(token0);
+        assetList[1] = address(token1);
+        assetList[2] = address(token2);
+        assetList[3] = address(token3);
+        assetList[4] = address(token4);
+
+        uint24[] memory feesData = new uint24[](1);
+        feesData[0] = 3000;
+
+        bytes[] memory pathData = new bytes[](5);
+        //updating path data for token0
+        address[] memory path0 = new address[](2);
+        path0[0] = address(weth);
+        path0[1] = address(token0);
+        pathData[0] = abi.encode(path0, feesData);
+        //updating path data for token1
+        address[] memory path1 = new address[](2);
+        path1[0] = address(weth);
+        path1[1] = address(token1);
+        pathData[1] = abi.encode(path1, feesData);
+        //updating path data for token2
+        address[] memory path2 = new address[](2);
+        path2[0] = address(weth);
+        path2[1] = address(token2);
+        pathData[2] = abi.encode(path2, feesData);
+        //updating path data for token3
+        address[] memory path3 = new address[](2);
+        path3[0] = address(weth);
+        path3[1] = address(token3);
+        pathData[3] = abi.encode(path3, feesData);
+        //updating path data for token4
+        address[] memory path4 = new address[](2);
+        path4[0] = address(weth);
+        path4[1] = address(token4);
+        pathData[4] = abi.encode(path4, feesData);
+
+        // updating path data for usdc
+        address[] memory usdcPath = new address[](2);
+        usdcPath[0] = address(weth);
+        usdcPath[1] = address(usdc);
+
+        uint256[] memory tokenShares = new uint256[](5);
+        tokenShares[0] = 20e18;
+        tokenShares[1] = 20e18;
+        tokenShares[2] = 20e18;
+        tokenShares[3] = 20e18;
+        tokenShares[4] = 20e18;
+
+        uint64[] memory chains = new uint64[](5);
+        chains[0] = 1;
+        chains[1] = 1;
+        chains[2] = 1;
+        chains[3] = 1;
+        chains[4] = 2;
+
+        uint64[] memory providerIndex = new uint64[](5);
+        providerIndex[0] = 1;
+        providerIndex[1] = 1;
+        providerIndex[2] = 1;
+        providerIndex[3] = 1;
+        providerIndex[4] = 1;
+
+        //update path data
+        functionsOracle.updatePathData(providerIndex, chains, pathData);
+        functionsOracle.updateOnlyPathAndFee(address(usdc), usdcPath, feesData);
+
+        // request off-chain data
+        link.transfer(address(functionsOracle), 1e17);
+        bytes32 requestId = functionsOracle.requestAssetsData("console.log('Hello, World!');", 0, 0);
+        bytes memory data = abi.encode(indexTokens, assetList, tokenShares);
+        bool success = oracle.fulfillRequest(address(functionsOracle), requestId, data);
+        require(success, "oracle request failed");
+        // update path data
+        // oracle.fulfillOracleFundingRateRequest(requestId, assetList, tokenShares, swapFees, chains);
+    }
+
     function testOracleList() public {
         updateOracleList();
         // token  oracle list
@@ -860,11 +1042,11 @@ contract CCIPFactoryTest is Test, CCIPDeployer {
         updateOracleList();
 
         mockRouter.setFee(0);
-        token0.transfer(address(vault), 1000e18);
-        token1.transfer(address(vault), 1000e18);
-        token2.transfer(address(vault), 1000e18);
-        token3.transfer(address(vault), 1000e18);
-        token4.transfer(address(crossChainVault), 1000e18);
+        token0.transfer(address(vault), 10e18);
+        token1.transfer(address(vault), 10e18);
+        token2.transfer(address(vault), 10e18);
+        token3.transfer(address(vault), 10e18);
+        token4.transfer(address(crossChainVault), 10e18);
         console.log("token0 balance of vault", token0.balanceOf(address(vault)));
         console.log("token1 balance of vault", token1.balanceOf(address(vault)));
         console.log("token2 balance of vault", token2.balanceOf(address(vault)));
@@ -900,6 +1082,68 @@ contract CCIPFactoryTest is Test, CCIPDeployer {
         console.log("token2 value", token2.balanceOf(address(vault)));
         console.log("token3 value", token3.balanceOf(address(vault)));
         console.log("token4 value", token4.balanceOf(address(crossChainVault)));
+        console.log("extra weth amount", mainChainStorage.extraWethByNonce(1));
+        console.log("extra percentage", mainChainStorage.reweightExtraPercentage(1));
+        // console.log("updateAskValuesCount", factoryBalancer.updateAskValuesCount());
+        // usdc.approve(address(factory), 1001e16);
+        // factory.issuanceIndexTokens(address(indexToken), 1000e16);
+        // mockRouter.executeAllMessages();
+    }
+
+
+    function test_reweight4() public {
+        updateOracleList5();
+
+        mockRouter.setFee(0);
+        token0.transfer(address(vault), 10e18);
+        token1.transfer(address(vault), 10e18);
+        token2.transfer(address(vault), 10e18);
+        token3.transfer(address(vault), 5e18);
+        token4.transfer(address(crossChainVault), 5e18);
+        console.log("token0 balance of vault", token0.balanceOf(address(vault)));
+        console.log("token1 balance of vault", token1.balanceOf(address(vault)));
+        console.log("token2 balance of vault", token2.balanceOf(address(vault)));
+        console.log("token3 balance of vault", token3.balanceOf(address(vault)));
+        console.log("token4 balance of crossChainVault", token4.balanceOf(address(crossChainVault)));
+
+        indexToken.setMinter(address(this), true);
+        indexToken.mint(address(this), 100e18);
+        console.log(indexToken.totalSupply());
+        factoryBalancer.askValues(address(indexToken));
+        mockRouter.executeAllMessages();
+        usdc.transfer(address(factoryBalancer), 720e18);
+        factoryBalancer.increaseExtraUsdcAmountByNonce(1, 720e18);
+        factoryBalancer.completeAskValues(1, 20e18);
+
+        assertEq(mainChainStorage.updatePortfolioNonce(), 1);
+        assertEq(factoryBalancer.updatePortfolioNonce(), 1);
+        assertEq(factoryBalancer.providerNonceToGlobalNonce(1, 1), 1);
+        console.log("token0 value", mainChainStorage.tokenValueByNonce(1, address(token0)));
+        console.log("token1 value", mainChainStorage.tokenValueByNonce(1, address(token1)));
+        console.log("token2 value", mainChainStorage.tokenValueByNonce(1, address(token2)));
+        console.log("token3 value", mainChainStorage.tokenValueByNonce(1, address(token3)));
+        console.log("token4 value", mainChainStorage.tokenValueByNonce(1, address(token4)));
+        console.log("portfolioTotalValueByNonce", factoryBalancer.portfolioTotalValueByNonce(1));
+        console.log("providerTotalValueByNonce", factoryBalancer.providerTotalValueByNonce(1, 1));
+
+        updateOracleList6();
+        
+        factoryBalancer.secondReweightAction(address(indexToken), 1);
+        mockRouter.executeAllMessages();
+        // mainChainBalancer.secondReweightAction(address(indexToken));
+        // mockRouter.executeAllMessages();
+        // factoryBalancer.askValues(address(indexToken));
+        // mockRouter.executeAllMessages();
+        console.log("reweight called", factoryBalancer.reweightCalled());
+        console.log("reweight called", mainChainBalancer.reweightCalled());
+        console.log("reweight called", balancerSender.reweightCalled());
+        console.log("token0 value", token0.balanceOf(address(vault)));
+        console.log("token1 value", token1.balanceOf(address(vault)));
+        console.log("token2 value", token2.balanceOf(address(vault)));
+        console.log("token3 value", token3.balanceOf(address(vault)));
+        console.log("token4 value", token4.balanceOf(address(crossChainVault)));
+        console.log("extra weth amount", mainChainStorage.extraWethByNonce(1));
+        console.log("extra percentage", mainChainStorage.reweightExtraPercentage(1));
         // console.log("updateAskValuesCount", factoryBalancer.updateAskValuesCount());
         // usdc.approve(address(factory), 1001e16);
         // factory.issuanceIndexTokens(address(indexToken), 1000e16);

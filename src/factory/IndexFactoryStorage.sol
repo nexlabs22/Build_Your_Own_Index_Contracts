@@ -15,6 +15,7 @@ contract IndexFactoryStorage is Initializable, ProposableOwnableUpgradeable {
     address public mainChainBalancer;
     address public orderManager;
     address public feeReceiver;
+    address public usdcAddress;
 
     uint8 public feeRate;
 
@@ -45,6 +46,11 @@ contract IndexFactoryStorage is Initializable, ProposableOwnableUpgradeable {
     function setIndexFactory(address _indexFactory) external {
         // if (_indexFactory == address(0)) revert ZeroAddress();
         indexFactory = _indexFactory;
+    }
+
+    function setUsdcAddress(address _usdcAddress) external {
+        // if (_usdcAddress == address(0)) revert ZeroAddress();
+        usdcAddress = _usdcAddress;
     }
 
     function setMainChainBalancer(address _mainChainBalancer) external {

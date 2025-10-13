@@ -500,6 +500,7 @@ contract CCIPDeployer is
         orderManager.setOperator(address(mainChainFactory), true);
         indexFactoryStorage.setOrderManager(address(orderManager));
         indexFactoryStorage.setIndexFactory(address(factory));
+        indexFactoryStorage.setUsdcAddress(address(usdc));
         mainChainBalancer.setIndexFactoryBalancer(address(factoryBalancer));
         balancerSender.setIndexFactoryBalancer(address(factoryBalancer));
         mainChainStorage.setCrossChainToken(2, address(crossChainToken), path, feesData);
