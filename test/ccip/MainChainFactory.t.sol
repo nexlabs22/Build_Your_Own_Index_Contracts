@@ -430,7 +430,7 @@ contract CCIPFactoryTest is Test, CCIPDeployer {
         assetList[2] = address(token2);
         assetList[3] = address(token3);
         assetList[4] = address(token4);
-        assetList[5] = address(token4);
+        assetList[5] = address(token5);
 
         uint24[] memory feesData = new uint24[](1);
         feesData[0] = 3000;
@@ -1111,8 +1111,8 @@ contract CCIPFactoryTest is Test, CCIPDeployer {
         console.log(indexToken.totalSupply());
         factoryBalancer.askValues(address(indexToken));
         mockRouter.executeAllMessages();
-        usdc.transfer(address(factoryBalancer), 720e18);
-        factoryBalancer.increaseExtraUsdcAmountByNonce(1, 720e18);
+        usdc.transfer(address(factoryBalancer), 1100e18);
+        factoryBalancer.increaseExtraUsdcAmountByNonce(1, 1100e18);
         factoryBalancer.completeAskValues(1, 20e18);
 
         assertEq(mainChainStorage.updatePortfolioNonce(), 1);
@@ -1130,8 +1130,8 @@ contract CCIPFactoryTest is Test, CCIPDeployer {
         
         factoryBalancer.secondReweightAction(address(indexToken), 1);
         mockRouter.executeAllMessages();
-        // mainChainBalancer.secondReweightAction(address(indexToken));
-        // mockRouter.executeAllMessages();
+        mainChainBalancer.secondReweightAction(address(indexToken));
+        mockRouter.executeAllMessages();
         // factoryBalancer.askValues(address(indexToken));
         // mockRouter.executeAllMessages();
         console.log("reweight called", factoryBalancer.reweightCalled());

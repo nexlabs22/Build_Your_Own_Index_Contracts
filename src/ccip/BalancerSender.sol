@@ -268,7 +268,7 @@ contract BalancerSender is Initializable, CCIPReceiver, ProposableOwnableUpgrade
         (address[] memory fromETHPath, uint24[] memory fromETHFees) =
             mainChainStorage.getFromETHPathData(mainChainStorage.crossChainToken(_chainSelector));
         uint256 crossChainTokenAmount = swap(fromETHPath, fromETHFees, _extraWethAmount, address(this));
-
+        reweightCalled = _oracleTokenShares.length;
         uint256[] memory extraData = new uint256[](2);
         extraData[0] = _portfolioValue;
         extraData[1] = _oracleChainSelectorTotalShares;
