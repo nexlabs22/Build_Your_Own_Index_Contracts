@@ -324,4 +324,16 @@ contract DinariFactory_MainTest is OlympixUnitTest("DinariFactory") {
         vm.prank(owner);
         factory.setIndexFactoryStorage(address(0));
     }
+
+    function testSetIndexFactoryStorageUpdatesReference() public {
+        IndexFactoryStorage newStorageImpl = new IndexFactoryStorage();
+        IndexFactoryStorage newStorage =
+            IndexFactoryStorage(address(new ERC1967Proxy(address(newStorageImpl), "")));
+        newStorage.initialize();
+
+        vm.prank(owner);
+        factory.setIndexFactoryStorage(address(newStorage));
+
+        assertEq(address(factory.factoryStorage()), address(newStorage));
+    }
 }

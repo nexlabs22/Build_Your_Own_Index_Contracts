@@ -116,6 +116,12 @@ contract BackedFiBalancerTest is OlympixUnitTest("BackedFiBalancer") {
         assertEq(nonce, 1);
     }
 
+    function testNexBotCanRunFirstRebalanceAction() public {
+        vm.prank(nexBot);
+        uint256 nonce = balancer.firstRebalanceAction(indexToken, 2, new uint256[](0));
+        assertEq(nonce, 1);
+    }
+
     function testSecondRebalanceActionRequiresFirstDone() public {
         vm.prank(owner);
         vm.expectRevert("rebalance: bad phase");

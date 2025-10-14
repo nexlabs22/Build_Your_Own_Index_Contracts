@@ -229,6 +229,34 @@ contract DinariBalancerTest is OlympixUnitTest("DinariBalancer") {
         vm.clearMockedCalls();
     }
 
+    function testAskValuesAllowsOperator() public {
+        address indexToken = makeAddr("operator-index");
+
+        address[] memory emptyTokens = new address[](0);
+        uint256[] memory emptyShares = new uint256[](0);
+        vm.mockCall(
+            address(oracle),
+            abi.encodeWithSelector(
+                FunctionsOracle.getCurrentProviderIndexData.selector,
+                indexToken,
+                0,
+                dinariStorage.providerIndex()
+            ),
+            abi.encode(uint256(0), emptyTokens, emptyShares)
+        );
+        vm.mockCall(
+            address(globalBalancer),
+            abi.encodeWithSelector(IndexFactoryBalancer.completeDinariAskValues.selector, uint256(1), uint256(0)),
+            abi.encode()
+        );
+
+        vm.prank(operator);
+        uint256 reported = balancer.askValues(indexToken);
+        assertEq(reported, dinariStorage.updatePortfolioNonce());
+
+        vm.clearMockedCalls();
+    }
+
     function testAskValuesRequiresOwnerOrOperator() public {
         address indexToken = makeAddr("ask-index");
 

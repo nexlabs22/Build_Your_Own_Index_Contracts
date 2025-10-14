@@ -188,7 +188,6 @@ contract BackedFiBalancer is Initializable, OwnableUpgradeable, PausableUpgradea
 
     function secondRebalanceAction(address _indexToken, uint256 batchId, uint256[] calldata prices)
         external
-        payable
         nonReentrant
         onlyOwnerOrOperator
     {
@@ -216,7 +215,6 @@ contract BackedFiBalancer is Initializable, OwnableUpgradeable, PausableUpgradea
 
         if (totalShortage == 0) {
             batch.secondDone = true;
-            require(msg.value == 0, "balancer: no ETH needed");
             emit SecondRebalanceAction(batchId, block.timestamp);
             return;
         }
@@ -262,8 +260,8 @@ contract BackedFiBalancer is Initializable, OwnableUpgradeable, PausableUpgradea
         RebalanceBatch storage batch = rebalanceBatches[batchId];
         require(batch.firstDone && batch.secondDone, "rebalance: wrong phase");
 
-        address vaultAddr = globalStorage.indexTokenToVault(_indexToken);
-        require(vaultAddr != address(0), "vault not set");
+        address vault = globalStorage.indexTokenToVault(_indexToken);
+        require(vault != address(0), "vault not set");
 
         (, address[] memory tokens,) = functionsOracle.getCurrentProviderIndexData(
             _indexToken, functionsOracle.currentFilledCount(_indexToken), backedfiStorage.providerIndex()
@@ -286,8 +284,8 @@ contract BackedFiBalancer is Initializable, OwnableUpgradeable, PausableUpgradea
             uint256 claimable = balance < remaining ? balance : remaining;
             if (claimable == 0) continue;
 
-            IERC20(token).approve(vaultAddr, claimable);
-            IERC20(token).safeTransfer(vaultAddr, claimable);
+            IERC20(token).approve(vault, claimable);
+            IERC20(token).safeTransfer(vault, claimable);
 
             batch.claimedInbound[token] += claimable;
         }

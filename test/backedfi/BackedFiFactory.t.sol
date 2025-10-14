@@ -128,4 +128,12 @@ contract BackedFiFactoryTest is Test {
         backedFi.redemption(address(indexToken), 0, 0);
         vm.stopPrank();
     }
+
+    function testPauseAsOperatorWithoutOracleReverts() public {
+        address operator = address(0xC0FFEE);
+        vm.startPrank(operator);
+        vm.expectRevert();
+        backedFi.pause();
+        vm.stopPrank();
+    }
 }

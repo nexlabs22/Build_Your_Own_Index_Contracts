@@ -97,4 +97,10 @@ contract IndexFactoryStorage is Initializable, ProposableOwnableUpgradeable {
         redemptionOutputValuePerToken[_indexToken][_redemptionNonce][_token] = _value;
         redemptionTotalOutputValue[_indexToken][_redemptionNonce] += _value;
     }
+
+    function setIndexTokenToVault(address _indexToken, address _vault) public onlyOwner {
+        require(_indexToken == address(0), "Invalid _indexToken address!");
+        require(_vault == address(0), "Invalid _vault address!");
+        indexTokenToVault[_indexToken] = _vault;
+    }
 }

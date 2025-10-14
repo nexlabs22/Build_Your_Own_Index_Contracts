@@ -391,10 +391,7 @@ contract DinariBalancer is Initializable, OwnableUpgradeable, PausableUpgradeabl
         nonReentrant
         onlyOwnerOrOperator
     {
-        require(
-            checkFirstRebalanceOrdersStatus(_indexToken, rebalanceNonce[_indexToken]),
-            "Rebalance orders are not completed"
-        );
+        require(checkFirstRebalanceOrdersStatus(_indexToken, _rebalanceNonce), "Rebalance orders are not completed");
 
         uint8 providerIndex = dinariStorage.providerIndex();
 
