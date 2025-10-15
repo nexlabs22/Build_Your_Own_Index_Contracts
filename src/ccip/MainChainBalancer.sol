@@ -278,8 +278,8 @@ contract MainChainBalancer is Initializable, ProposableOwnableUpgradeable, Pausa
         uint256 portfolioValue = mainChainStorage.portfolioTotalValueByNonce(nonce);
         uint256 chainValue = mainChainStorage.chainValueByNonce(nonce, _chainSelector);
 
-        // if (chainValue*100e18/portfolioValue > _oracleChainSelectorTotalShares) {
-        if (chainValue > (_oracleChainSelectorTotalShares * _targetPortfolioValue) / 100e18) {
+        if (chainValue*100e18/indexFactoryBalancer.getGlobalPortfolioValueByProviderNonce(1, nonce) > _oracleChainSelectorTotalShares) {
+        // if (chainValue > (_oracleChainSelectorTotalShares * _targetPortfolioValue) / 100e18) {
                 if (_chainSelector == currentChainSelector) {
                     _swapExtraValueCurrentChain(
                         i,
@@ -380,33 +380,10 @@ contract MainChainBalancer is Initializable, ProposableOwnableUpgradeable, Pausa
         address _indexToken,
         uint256 _nonce,
         uint64 chainSelector,
-        // address[] memory currentTokens,
         uint256 portfolioValue,
         uint256 _targetPortfolioValue
-        // uint256 oracleChainSelectorTotalShares,
-        // uint256 chainValue
     ) internal returns (uint256 chainCurrentRealShare, uint256 wethAmountToSwap, uint256 extraWethAmount) {
-        // uint256 swapWethAmount;
-        // // Vault vault = mainChainStorage.vault();
-        // uint256 initialWethBalance = weth.balanceOf(address(mainChainStorage.vault()));
-        // // uint256 chainValue = mainChainStorage.chainValueByNonce(_nonce, chainSelector);
-        // address[] memory currentTokens = functionsOracle.allCurrentChainSelectorTokens(_indexToken, chainSelector);
-        // for (uint256 j = 0; j < currentTokens.length; j++) {
-        //     ExtraSwapVariables memory swapVars;
-        //     swapVars.tokenAddress = currentTokens[j];
-        //     (address[] memory toETHPath, uint24[] memory toETHFees) =
-        //         functionsOracle.getToETHPathData(swapVars.tokenAddress);
-        //     uint256 wethAmount;
-        //     if (swapVars.tokenAddress == address(weth)) {
-        //         mainChainStorage.vault().withdrawFunds(swapVars.tokenAddress, address(this), initialWethBalance);
-        //         wethAmount = initialWethBalance;
-        //     } else {
-        //         uint256 tokenAmount = IERC20(swapVars.tokenAddress).balanceOf(address(mainChainStorage.vault()));
-        //         mainChainStorage.vault().withdrawFunds(swapVars.tokenAddress, address(this), tokenAmount);
-        //         wethAmount = swap(toETHPath, toETHFees, tokenAmount, address(this));
-        //     }
-        //     swapWethAmount += wethAmount;
-        // }
+        
 
         uint256 swapWethAmount = _internalSwapTokensToWETHFirstRebalance(
             _indexToken,
@@ -418,10 +395,13 @@ contract MainChainBalancer is Initializable, ProposableOwnableUpgradeable, Pausa
 
         // uint256 latestOracleCount = functionsOracle.oracleFilledCount(_indexToken);
         uint256 oracleChainSelectorTotalShares = functionsOracle.getOracleChainSelectorTotalShares(_indexToken, functionsOracle.oracleFilledCount(_indexToken), chainSelector);
-        chainCurrentRealShare = (mainChainStorage.chainValueByNonce(_nonce, chainSelector) * 100e18) / portfolioValue;
-        wethAmountToSwap += (swapWethAmount *_targetPortfolioValue ) / mainChainStorage.chainValueByNonce(_nonce, chainSelector);
-        // wethAmountToSwap += (swapWethAmount * oracleChainSelectorTotalShares)/ chainCurrentRealShare;
+        chainCurrentRealShare = (mainChainStorage.chainValueByNonce(_nonce, chainSelector) * 100e18) / indexFactoryBalancer.getGlobalPortfolioValueByProviderNonce(1, _nonce);
+        // wethAmountToSwap += (swapWethAmount *_targetPortfolioValue ) / mainChainStorage.chainValueByNonce(_nonce, chainSelector);
+        wethAmountToSwap = (swapWethAmount * oracleChainSelectorTotalShares) / chainCurrentRealShare;
         extraWethAmount = swapWethAmount - wethAmountToSwap;
+
+
+        // wethAmountToSwap += (swapWethAmount * oracleChainSelectorTotalShares)/ chainCurrentRealShare;
         // uint256 latestOracleCount = functionsOracle.oracleFilledCount(_indexToken);
         // uint256 oracleChainSelectorTotalShares = functionsOracle.getOracleChainSelectorTotalShares(_indexToken, latestOracleCount, chainSelector);
         // chainCurrentRealShare = (chainValue * 100e18) / portfolioValue;
@@ -484,7 +464,8 @@ contract MainChainBalancer is Initializable, ProposableOwnableUpgradeable, Pausa
         uint256 extraWethAmount
     ) internal {
         uint chainValue = mainChainStorage.chainValueByNonce(nonce, chainSelector);
-        uint256 targetChainValue = (_targetPortfolioValue * oracleChainSelectorTotalShares) / 100e18;
+        uint256 targetChainValue = (indexFactoryBalancer.getGlobalPortfolioValueByProviderNonce(1, nonce) * oracleChainSelectorTotalShares) / 100e18;
+        // reweightCalled = chainValue;
         uint256 reweightExtraPercentage = ((chainValue - targetChainValue) * 100e18) / indexFactoryBalancer.getGlobalPortfolioValueByProviderNonce(1, nonce);
         mainChainStorage.increaseExtraWethByNonce(nonce, extraWethAmount);
         mainChainStorage.increasePendingExtraWethByNonce(nonce, extraWethAmount);
@@ -561,8 +542,8 @@ contract MainChainBalancer is Initializable, ProposableOwnableUpgradeable, Pausa
             uint256 chainValue = mainChainStorage.chainValueByNonce(nonce, chainSelector);
             uint256[] memory oracleTokenShares = functionsOracle.allOracleChainSelectorTokenShares(_indexToken, chainSelector);
 
-            // if ((chainValue * 100e18) / portfolioValue < oracleChainSelectorTotalShares) {
-            if (chainValue < oracleChainSelectorTotalShares * _targetPortfolioValue / 100e18) {
+            if ((chainValue * 100e18) / indexFactoryBalancer.getGlobalPortfolioValueByProviderNonce(1, nonce) < oracleChainSelectorTotalShares) {
+            // if (chainValue < oracleChainSelectorTotalShares * _targetPortfolioValue / 100e18) {
                 if (chainSelector == currentChainSelector) {
                     _swapLowerValueCurrentChain(
                         i,
@@ -676,9 +657,9 @@ contract MainChainBalancer is Initializable, ProposableOwnableUpgradeable, Pausa
             _indexToken, vault, chainSelector, chainSelectorCurrentTokensCount, portfolioValue, swapVars.chainValue
         );
 
-        uint256 targetChainValue = (_targetPortfolioValue * oracleChainSelectorTotalShares) / 100e18;
+        uint256 targetChainValue = (indexFactoryBalancer.getGlobalPortfolioValueByProviderNonce(1, nonce) * oracleChainSelectorTotalShares) / 100e18;
         // uint256 negativePercentage = targetChainValue > portfolioValue ? ((targetChainValue - portfolioValue) * 100e18) / portfolioValue : 0;
-        uint256 negativePercentage = (targetChainValue - swapVars.chainValue) * 100e18 / portfolioValue;
+        uint256 negativePercentage = (targetChainValue - swapVars.chainValue) * 100e18 / indexFactoryBalancer.getGlobalPortfolioValueByProviderNonce(1, nonce);
         uint256 extraWethAmount = (mainChainStorage.extraWethByNonce(nonce) * negativePercentage)
             / mainChainStorage.reweightExtraPercentage(nonce);
         swapVars.swapWethAmount += extraWethAmount;
@@ -701,12 +682,11 @@ contract MainChainBalancer is Initializable, ProposableOwnableUpgradeable, Pausa
         uint256 _oracleChainSelectorTotalShares
     ) internal returns (uint256) {
         // uint256 chainCurrentRealShare = (_chainValue * 100e18) / _portfolioValue;
-        uint256 targetChainValue = (_targetPortfolioValue * _oracleChainSelectorTotalShares) / 100e18;
+        uint256 targetChainValue = (indexFactoryBalancer.getGlobalPortfolioValueByProviderNonce(1, _nonce) * _oracleChainSelectorTotalShares) / 100e18;
         // uint256 negativePercentage = _oracleChainSelectorTotalShares - chainCurrentRealShare;
-        uint256 negativePercentage = (targetChainValue - _chainValue) * 100e18 / _portfolioValue;
+        uint256 negativePercentage = (targetChainValue - _chainValue) * 100e18 / indexFactoryBalancer.getGlobalPortfolioValueByProviderNonce(1, _nonce);
         uint256 extraWethAmount = mainChainStorage.extraWethByNonce(_nonce) * negativePercentage
             / mainChainStorage.reweightExtraPercentage(_nonce);
-        reweightCalled = extraWethAmount;
         return extraWethAmount;
     }
 
