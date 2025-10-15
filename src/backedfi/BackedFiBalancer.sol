@@ -135,6 +135,7 @@ contract BackedFiBalancer is Initializable, OwnableUpgradeable, PausableUpgradea
     {
         address vaultAddr = globalStorage.indexTokenToVault(_indexToken);
         require(vaultAddr != address(0), "rebalance: vault not set");
+        // if (vaultAddr == address(0)) revert ZeroAddress();
 
         (, address[] memory tokens,) = functionsOracle.getCurrentProviderIndexData(
             _indexToken, functionsOracle.currentFilledCount(_indexToken), _providerIndex

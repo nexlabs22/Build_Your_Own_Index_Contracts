@@ -792,4 +792,12 @@ contract BackedFiBalancerTest is OlympixUnitTest("BackedFiBalancer") {
         // Assert: The contract should not be paused
         assertFalse(balancer.paused(), "Balancer should be unpaused after calling unpause");
     }
+
+    // function test_Gas_firstRebalanceAction_Success() public {
+    //     // set up state so it succeeds…
+    //     uint256 g0 = gasleft();
+    //     balancer.firstRebalanceAction(indexToken, 4, [1e18]);
+    //     uint256 used = g0 - gasleft();
+    //     emit log_named_uint("gas used (success path)", used);
+    // }
 }

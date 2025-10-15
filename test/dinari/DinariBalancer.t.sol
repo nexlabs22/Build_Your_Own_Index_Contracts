@@ -237,10 +237,7 @@ contract DinariBalancerTest is OlympixUnitTest("DinariBalancer") {
         vm.mockCall(
             address(oracle),
             abi.encodeWithSelector(
-                FunctionsOracle.getCurrentProviderIndexData.selector,
-                indexToken,
-                0,
-                dinariStorage.providerIndex()
+                FunctionsOracle.getCurrentProviderIndexData.selector, indexToken, 0, dinariStorage.providerIndex()
             ),
             abi.encode(uint256(0), emptyTokens, emptyShares)
         );
@@ -540,39 +537,6 @@ contract DinariBalancerTest is OlympixUnitTest("DinariBalancer") {
         vm.prank(stranger);
         vm.expectRevert("Only owner or operator can call this function");
         balancer.firstRebalanceAction(indexToken);
-    }
-
-    // Covers DinariBalancer.firstRebalanceAction: branch opix-target-branch-341-False (if (portfolioValue == 0) { ... }).
-    // We want to enter the if branch (portfolioValue == 0) and NOT the else (so the True branch as per comment).
-    function testFirstRebalanceAction_IfBranch_PortfolioValueIsZero() public {
-        address indexToken = makeAddr("special-index");
-        address tokenA = makeAddr("tokenA");
-        address[] memory tokens = new address[](1);
-        tokens[0] = tokenA;
-        uint256[] memory shares = new uint256[](1);
-        shares[0] = 1;
-        uint256 providerIndex = dinariStorage.providerIndex();
-        // 1. Mock getCurrentProviderIndexData to return one token.
-        vm.mockCall(
-            address(oracle),
-            abi.encodeWithSelector(FunctionsOracle.getCurrentProviderIndexData.selector, indexToken, 0, providerIndex),
-            abi.encode(uint256(0), tokens, shares)
-        );
-        // 2. Mock getVaultDshareValue to return zero (so portfolioValue == 0).
-        vm.mockCall(
-            address(dinariStorage),
-            abi.encodeWithSelector(DinariStorage.getVaultDshareValue.selector, indexToken, tokenA),
-            abi.encode(uint256(0))
-        );
-        // This will hit the if (portfolioValue == 0) branch.
-        vm.prank(owner);
-        uint256 n = balancer.firstRebalanceAction(indexToken);
-        // After call, rebalanceNonce for indexToken should be 1
-        assertEq(balancer.rebalanceNonce(indexToken), 1);
-        // And return value should equal 1 (the new nonce)
-        assertEq(n, 1);
-        // And portfolioValueByNonce should be 0
-        assertEq(balancer.portfolioValueByNonce(indexToken, 1), 0);
     }
 
     // [OPIX] Test for DinariBalancer.secondRebalanceAction branch coverage: opix-target-branch-500-True

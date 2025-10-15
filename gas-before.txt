@@ -1,0 +1,1008 @@
+Unable to resolve imports:
+      "../../src/orderManager/OrderManager.sol" in "/Users/soheilparsaei/projects/Nex-Labs/Build_Your_Own_Index_Contracts/test/OrderManager.t.sol"
+with remappings:
+      @openzeppelin/contracts-upgradeable/=/Users/soheilparsaei/projects/Nex-Labs/Build_Your_Own_Index_Contracts/lib/openzeppelin-contracts-upgradeable/contracts/
+      @openzeppelin/contracts/=/Users/soheilparsaei/projects/Nex-Labs/Build_Your_Own_Index_Contracts/lib/openzeppelin-contracts/contracts/
+      ccip/=/Users/soheilparsaei/projects/Nex-Labs/Build_Your_Own_Index_Contracts/lib/ccip/contracts/
+      contracts-ccip/=/Users/soheilparsaei/projects/Nex-Labs/Build_Your_Own_Index_Contracts/lib/chainlink-ccip/chains/evm/
+      chainlink-ccip/=/Users/soheilparsaei/projects/Nex-Labs/Build_Your_Own_Index_Contracts/lib/chainlink-ccip/chains/evm/
+      @chainlink/contracts/=/Users/soheilparsaei/projects/Nex-Labs/Build_Your_Own_Index_Contracts/lib/chainlink/contracts/
+      chainlink/=/Users/soheilparsaei/projects/Nex-Labs/Build_Your_Own_Index_Contracts/lib/chainlink/
+      ds-test/=/Users/soheilparsaei/projects/Nex-Labs/Build_Your_Own_Index_Contracts/lib/ccip/contracts/foundry-lib/forge-std/lib/ds-test/src/
+      erc4626-tests/=/Users/soheilparsaei/projects/Nex-Labs/Build_Your_Own_Index_Contracts/lib/openzeppelin-contracts-upgradeable/lib/erc4626-tests/
+      forge-std/=/Users/soheilparsaei/projects/Nex-Labs/Build_Your_Own_Index_Contracts/lib/forge-std/src/
+      halmos-cheatcodes/=/Users/soheilparsaei/projects/Nex-Labs/Build_Your_Own_Index_Contracts/lib/openzeppelin-contracts-upgradeable/lib/halmos-cheatcodes/src/
+      openzeppelin-contracts-upgradeable/=/Users/soheilparsaei/projects/Nex-Labs/Build_Your_Own_Index_Contracts/lib/openzeppelin-contracts-upgradeable/
+      openzeppelin-contracts/=/Users/soheilparsaei/projects/Nex-Labs/Build_Your_Own_Index_Contracts/lib/openzeppelin-contracts/
+      openzeppelin-upgrades/=/Users/soheilparsaei/projects/Nex-Labs/Build_Your_Own_Index_Contracts/lib/openzeppelin-upgrades/
+      @uniswap/v3-periphery/=/Users/soheilparsaei/projects/Nex-Labs/Build_Your_Own_Index_Contracts/lib/v3-periphery/
+      @uniswap/v3-core/=/Users/soheilparsaei/projects/Nex-Labs/Build_Your_Own_Index_Contracts/lib/v3-core/
+      solady/=/Users/soheilparsaei/projects/Nex-Labs/Build_Your_Own_Index_Contracts/lib/solady/
+      prp-math/=/Users/soheilparsaei/projects/Nex-Labs/Build_Your_Own_Index_Contracts/lib/prb-math/
+      @prb/=/Users/soheilparsaei/projects/Nex-Labs/Build_Your_Own_Index_Contracts/lib/prb-math/
+      openzeppelin-foundry-upgrades/=/Users/soheilparsaei/projects/Nex-Labs/Build_Your_Own_Index_Contracts/lib/openzeppelin-foundry-upgrades/src/
+      prb-math/=/Users/soheilparsaei/projects/Nex-Labs/Build_Your_Own_Index_Contracts/lib/prb-math/src/
+      v3-core/=/Users/soheilparsaei/projects/Nex-Labs/Build_Your_Own_Index_Contracts/lib/v3-core/
+      v3-periphery/=/Users/soheilparsaei/projects/Nex-Labs/Build_Your_Own_Index_Contracts/lib/v3-periphery/contracts/
+Compiling 200 files with Solc 0.8.25
+Compiling 13 files with Solc 0.8.24
+Compiling 12 files with Solc 0.7.6
+Solc 0.7.6 finished in 47.57ms
+Solc 0.8.24 finished in 188.37ms
+Solc 0.8.25 finished in 14.74s
+Compiler run successful with warnings:
+Warning (3420): Source file does not specify required compiler version! Consider adding "pragma solidity ^0.8.25;"
+--> src/test/ERC20_V8.sol
+
+Warning (2519): This declaration shadows an existing declaration.
+   --> src/oracle/FunctionsOracle.sol:665:9:
+    |
+665 |         uint256 currentFilledCount
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^
+Note: The shadowed declaration is here:
+  --> src/oracle/FunctionsOracle.sol:64:5:
+   |
+64 |     mapping(address => uint256) public currentFilledCount;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Warning (2519): This declaration shadows an existing declaration.
+   --> src/oracle/FunctionsOracle.sol:681:9:
+    |
+681 |         uint256 currentFilledCount
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^
+Note: The shadowed declaration is here:
+  --> src/oracle/FunctionsOracle.sol:64:5:
+   |
+64 |     mapping(address => uint256) public currentFilledCount;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Warning (2519): This declaration shadows an existing declaration.
+   --> src/oracle/FunctionsOracle.sol:688:9:
+    |
+688 |         uint256 oracleFilledCount
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^
+Note: The shadowed declaration is here:
+  --> src/oracle/FunctionsOracle.sol:63:5:
+   |
+63 |     mapping(address => uint256) public oracleFilledCount;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Warning (2519): This declaration shadows an existing declaration.
+   --> src/oracle/FunctionsOracle.sol:695:9:
+    |
+695 |         uint256 currentFilledCount,
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^
+Note: The shadowed declaration is here:
+  --> src/oracle/FunctionsOracle.sol:64:5:
+   |
+64 |     mapping(address => uint256) public currentFilledCount;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Warning (2519): This declaration shadows an existing declaration.
+   --> src/oracle/FunctionsOracle.sol:705:9:
+    |
+705 |         uint256 oracleFilledCount,
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^
+Note: The shadowed declaration is here:
+  --> src/oracle/FunctionsOracle.sol:63:5:
+   |
+63 |     mapping(address => uint256) public oracleFilledCount;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Warning (2519): This declaration shadows an existing declaration.
+   --> src/oracle/FunctionsOracle.sol:715:9:
+    |
+715 |         uint256 currentFilledCount,
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^
+Note: The shadowed declaration is here:
+  --> src/oracle/FunctionsOracle.sol:64:5:
+   |
+64 |     mapping(address => uint256) public currentFilledCount;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Warning (2519): This declaration shadows an existing declaration.
+   --> src/oracle/FunctionsOracle.sol:725:9:
+    |
+725 |         uint256 oracleFilledCount,
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^
+Note: The shadowed declaration is here:
+  --> src/oracle/FunctionsOracle.sol:63:5:
+   |
+63 |     mapping(address => uint256) public oracleFilledCount;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Warning (2519): This declaration shadows an existing declaration.
+   --> src/oracle/FunctionsOracle.sol:735:9:
+    |
+735 |         uint256 currentFilledCount,
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^
+Note: The shadowed declaration is here:
+  --> src/oracle/FunctionsOracle.sol:64:5:
+   |
+64 |     mapping(address => uint256) public currentFilledCount;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Warning (2519): This declaration shadows an existing declaration.
+   --> src/ccip/MainChainStorage.sol:578:10:
+    |
+578 |         (address[] memory toETHPath, uint24[] memory toETHFees) = functionsOracle.getToETHPathData(tokenAddress);
+    |          ^^^^^^^^^^^^^^^^^^^^^^^^^^
+Note: The shadowed declaration is here:
+  --> src/ccip/MainChainStorage.sol:74:5:
+   |
+74 |     mapping(address => address[]) public toETHPath;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Warning (2519): This declaration shadows an existing declaration.
+   --> src/ccip/MainChainStorage.sol:578:38:
+    |
+578 |         (address[] memory toETHPath, uint24[] memory toETHFees) = functionsOracle.getToETHPathData(tokenAddress);
+    |                                      ^^^^^^^^^^^^^^^^^^^^^^^^^
+Note: The shadowed declaration is here:
+  --> src/ccip/MainChainStorage.sol:76:5:
+   |
+76 |     mapping(address => uint24[]) public toETHFees;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Warning (2519): This declaration shadows an existing declaration.
+   --> src/ccip/MainChainFactory.sol:267:9:
+    |
+267 |         uint256 burnPercent = (amountIn * 1e18) / indexToken.totalSupply();
+    |         ^^^^^^^^^^^^^^^^^^^
+Note: The shadowed declaration is here:
+   --> src/ccip/MainChainFactory.sol:551:5:
+    |
+551 |     uint256 public burnPercent;
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Warning (2519): This declaration shadows an existing declaration.
+   --> src/ccip/MainChainFactory.sol:308:9:
+    |
+308 |         IWETH weth = mainChainStorage.weth();
+    |         ^^^^^^^^^^
+Note: The shadowed declaration is here:
+  --> src/ccip/MainChainFactory.sol:51:5:
+   |
+51 |     IWETH public weth;
+   |     ^^^^^^^^^^^^^^^^^
+
+Warning (2519): This declaration shadows an existing declaration.
+   --> src/ccip/MainChainBalancer.sol:541:9:
+    |
+541 |         Vault vault = mainChainStorage.vault();
+    |         ^^^^^^^^^^^
+Note: The shadowed declaration is here:
+   --> src/ccip/MainChainBalancer.sol:534:9:
+    |
+534 |         Vault vault,
+    |         ^^^^^^^^^^^
+
+Warning (2519): This declaration shadows an existing declaration.
+   --> src/ccip/CrossChainIndexFactory.sol:294:14:
+    |
+294 |             (address[] memory fromETHPath, uint24[] memory fromETHFees) = PathHelpers.decodePathBytes(targetPaths[i]);
+    |              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Note: The shadowed declaration is here:
+   --> src/ccip/CrossChainIndexFactory.sol:123:5:
+    |
+123 |     function fromETHPath(address token) public view returns (address[] memory) {
+    |     ^ (Relevant source part starts here and spans across multiple lines).
+
+Warning (2519): This declaration shadows an existing declaration.
+   --> src/ccip/CrossChainIndexFactory.sol:294:44:
+    |
+294 |             (address[] memory fromETHPath, uint24[] memory fromETHFees) = PathHelpers.decodePathBytes(targetPaths[i]);
+    |                                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Note: The shadowed declaration is here:
+   --> src/ccip/CrossChainIndexFactory.sol:127:5:
+    |
+127 |     function fromETHFees(address token) public view returns (uint24[] memory) {
+    |     ^ (Relevant source part starts here and spans across multiple lines).
+
+Warning (2519): This declaration shadows an existing declaration.
+   --> src/ccip/CrossChainIndexFactory.sol:391:14:
+    |
+391 |             (address[] memory fromETHPath, uint24[] memory fromETHFees) = PathHelpers.decodePathBytes(targetPaths[i]);
+    |              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Note: The shadowed declaration is here:
+   --> src/ccip/CrossChainIndexFactory.sol:123:5:
+    |
+123 |     function fromETHPath(address token) public view returns (address[] memory) {
+    |     ^ (Relevant source part starts here and spans across multiple lines).
+
+Warning (2519): This declaration shadows an existing declaration.
+   --> src/ccip/CrossChainIndexFactory.sol:391:44:
+    |
+391 |             (address[] memory fromETHPath, uint24[] memory fromETHFees) = PathHelpers.decodePathBytes(targetPaths[i]);
+    |                                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Note: The shadowed declaration is here:
+   --> src/ccip/CrossChainIndexFactory.sol:127:5:
+    |
+127 |     function fromETHFees(address token) public view returns (uint24[] memory) {
+    |     ^ (Relevant source part starts here and spans across multiple lines).
+
+Warning (2519): This declaration shadows an existing declaration.
+   --> src/ccip/CrossChainIndexFactory.sol:488:9:
+    |
+488 |         Vault vault,
+    |         ^^^^^^^^^^^
+Note: The shadowed declaration is here:
+   --> src/ccip/CrossChainIndexFactory.sol:115:5:
+    |
+115 |     function vault() public view returns (Vault) {
+    |     ^ (Relevant source part starts here and spans across multiple lines).
+
+Warning (2519): This declaration shadows an existing declaration.
+   --> src/ccip/CrossChainIndexFactory.sol:489:9:
+    |
+489 |         IWETH weth
+    |         ^^^^^^^^^^
+Note: The shadowed declaration is here:
+   --> src/ccip/CrossChainIndexFactory.sol:119:5:
+    |
+119 |     function weth() public view returns (IWETH) {
+    |     ^ (Relevant source part starts here and spans across multiple lines).
+
+Warning (2519): This declaration shadows an existing declaration.
+   --> src/ccip/CrossChainIndexFactory.sol:518:9:
+    |
+518 |         Vault vault,
+    |         ^^^^^^^^^^^
+Note: The shadowed declaration is here:
+   --> src/ccip/CrossChainIndexFactory.sol:115:5:
+    |
+115 |     function vault() public view returns (Vault) {
+    |     ^ (Relevant source part starts here and spans across multiple lines).
+
+Warning (2519): This declaration shadows an existing declaration.
+   --> src/ccip/CrossChainIndexFactory.sol:519:9:
+    |
+519 |         IWETH weth
+    |         ^^^^^^^^^^
+Note: The shadowed declaration is here:
+   --> src/ccip/CrossChainIndexFactory.sol:119:5:
+    |
+119 |     function weth() public view returns (IWETH) {
+    |     ^ (Relevant source part starts here and spans across multiple lines).
+
+Warning (2519): This declaration shadows an existing declaration.
+   --> src/ccip/CrossChainIndexFactory.sol:632:9:
+    |
+632 |         IWETH weth,
+    |         ^^^^^^^^^^
+Note: The shadowed declaration is here:
+   --> src/ccip/CrossChainIndexFactory.sol:119:5:
+    |
+119 |     function weth() public view returns (IWETH) {
+    |     ^ (Relevant source part starts here and spans across multiple lines).
+
+Warning (2519): This declaration shadows an existing declaration.
+   --> src/ccip/CrossChainIndexFactory.sol:633:9:
+    |
+633 |         Vault vault
+    |         ^^^^^^^^^^^
+Note: The shadowed declaration is here:
+   --> src/ccip/CrossChainIndexFactory.sol:115:5:
+    |
+115 |     function vault() public view returns (Vault) {
+    |     ^ (Relevant source part starts here and spans across multiple lines).
+
+Warning (2519): This declaration shadows an existing declaration.
+   --> test/ccip/CCIPDeployer.sol:160:9:
+    |
+160 |         LinkToken link = new LinkToken();
+    |         ^^^^^^^^^^^^^^
+Note: The shadowed declaration is here:
+  --> test/ccip/CCIPDeployer.sol:86:5:
+   |
+86 |     LinkToken link;
+   |     ^^^^^^^^^^^^^^
+
+Warning (2519): This declaration shadows an existing declaration.
+   --> test/ccip/CCIPDeployer.sol:161:9:
+    |
+161 |         MockApiOracle oracle = new MockApiOracle();
+    |         ^^^^^^^^^^^^^^^^^^^^
+Note: The shadowed declaration is here:
+  --> test/ccip/CCIPDeployer.sol:85:5:
+   |
+85 |     MockApiOracle public oracle;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Warning (2519): This declaration shadows an existing declaration.
+   --> test/ccip/CCIPDeployer.sol:163:9:
+    |
+163 |         MockV3Aggregator ethPriceOracle = new MockV3Aggregator(
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Note: The shadowed declaration is here:
+   --> test/ccip/CCIPDeployer.sol:119:5:
+    |
+119 |     MockV3Aggregator public ethPriceOracle;
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Warning (2519): This declaration shadows an existing declaration.
+   --> test/ccip/CCIPDeployer.sol:168:9:
+    |
+168 |         MockRouter3 mockRouter = new MockRouter3();
+    |         ^^^^^^^^^^^^^^^^^^^^^^
+Note: The shadowed declaration is here:
+   --> test/ccip/CCIPDeployer.sol:127:5:
+    |
+127 |     MockRouter3 mockRouter;
+    |     ^^^^^^^^^^^^^^^^^^^^^^
+
+Warning (2519): This declaration shadows an existing declaration.
+   --> test/ccip/CCIPDeployer.sol:352:9:
+    |
+352 |         MainChainFactory mainChainFactory = MainChainFactory(
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Note: The shadowed declaration is here:
+  --> test/ccip/CCIPDeployer.sol:88:5:
+   |
+88 |     MainChainFactory public mainChainFactory;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Warning (2519): This declaration shadows an existing declaration.
+   --> test/ccip/CCIPDeployer.sol:397:9:
+    |
+397 |         MainChainBalancer mainChainBalancer = MainChainBalancer(
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Note: The shadowed declaration is here:
+  --> test/ccip/CCIPDeployer.sol:92:5:
+   |
+92 |     MainChainBalancer public mainChainBalancer;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Warning (2519): This declaration shadows an existing declaration.
+   --> test/ccip/CCIPDeployer.sol:531:9:
+    |
+531 |         address priceOracleAddress = deployByteCode(priceOracleByteCode);
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^
+Note: The shadowed declaration is here:
+  --> test/ccip/CCIPDeployer.sol:78:5:
+   |
+78 |     address priceOracleAddress;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Warning (2519): This declaration shadows an existing declaration.
+   --> test/ccip/CCIPDeployer.sol:532:9:
+    |
+532 |         address factoryV3Address = deployByteCode(factoryByteCode);
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^
+Note: The shadowed declaration is here:
+  --> test/ccip/CCIPDeployer.sol:79:5:
+   |
+79 |     address factoryV3Address;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^
+
+Warning (2519): This declaration shadows an existing declaration.
+   --> test/ccip/CCIPDeployer.sol:533:9:
+    |
+533 |         address wethAddress = deployByteCode(WETHByteCode);
+    |         ^^^^^^^^^^^^^^^^^^^
+Note: The shadowed declaration is here:
+  --> test/ccip/CCIPDeployer.sol:81:5:
+   |
+81 |     address wethAddress;
+   |     ^^^^^^^^^^^^^^^^^^^
+
+Warning (2519): This declaration shadows an existing declaration.
+   --> test/ccip/CCIPDeployer.sol:604:9:
+    |
+604 |         address positionManager,
+    |         ^^^^^^^^^^^^^^^^^^^^^^^
+Note: The shadowed declaration is here:
+  --> test/ccip/CCIPDeployer.sol:83:5:
+   |
+83 |     address positionManager;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^
+
+Warning (2519): This declaration shadows an existing declaration.
+   --> test/ccip/CCIPDeployer.sol:605:9:
+    |
+605 |         address factory,
+    |         ^^^^^^^^^^^^^^^
+Note: The shadowed declaration is here:
+  --> test/ccip/CCIPDeployer.sol:89:5:
+   |
+89 |     IndexFactory public factory;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Warning (2519): This declaration shadows an existing declaration.
+   --> test/ccip/CCIPDeployer.sol:606:9:
+    |
+606 |         Token token0,
+    |         ^^^^^^^^^^^^
+Note: The shadowed declaration is here:
+  --> test/ccip/CCIPDeployer.sol:63:5:
+   |
+63 |     Token token0;
+   |     ^^^^^^^^^^^^
+
+Warning (2519): This declaration shadows an existing declaration.
+   --> test/ccip/CCIPDeployer.sol:607:9:
+    |
+607 |         Token token1,
+    |         ^^^^^^^^^^^^
+Note: The shadowed declaration is here:
+  --> test/ccip/CCIPDeployer.sol:64:5:
+   |
+64 |     Token token1;
+   |     ^^^^^^^^^^^^
+
+Warning (2519): This declaration shadows an existing declaration.
+   --> test/ccip/CCIPDeployer.sol:640:9:
+    |
+640 |         address positionManager,
+    |         ^^^^^^^^^^^^^^^^^^^^^^^
+Note: The shadowed declaration is here:
+  --> test/ccip/CCIPDeployer.sol:83:5:
+   |
+83 |     address positionManager;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^
+
+Warning (2519): This declaration shadows an existing declaration.
+   --> test/ccip/CCIPDeployer.sol:641:9:
+    |
+641 |         address factory,
+    |         ^^^^^^^^^^^^^^^
+Note: The shadowed declaration is here:
+  --> test/ccip/CCIPDeployer.sol:89:5:
+   |
+89 |     IndexFactory public factory;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Warning (2519): This declaration shadows an existing declaration.
+   --> test/ccip/CCIPDeployer.sol:642:9:
+    |
+642 |         Token token0,
+    |         ^^^^^^^^^^^^
+Note: The shadowed declaration is here:
+  --> test/ccip/CCIPDeployer.sol:63:5:
+   |
+63 |     Token token0;
+   |     ^^^^^^^^^^^^
+
+Warning (2519): This declaration shadows an existing declaration.
+   --> test/ccip/CCIPDeployer.sol:643:9:
+    |
+643 |         address weth,
+    |         ^^^^^^^^^^^^
+Note: The shadowed declaration is here:
+   --> test/ccip/CCIPDeployer.sol:121:5:
+    |
+121 |     IWETH public weth;
+    |     ^^^^^^^^^^^^^^^^^
+
+Warning (8417): Since the VM version paris, "difficulty" was replaced by "prevrandao", which now returns a random number based on the beacon chain.
+  --> src/test/MockApiOracle.sol:52:17:
+   |
+52 |                 block.difficulty, // Current block difficulty
+   |                 ^^^^^^^^^^^^^^^^
+
+Warning (5667): Unused function parameter. Remove or comment out the variable name to silence this warning.
+   --> src/oracle/FunctionsOracle.sol:208:9:
+    |
+208 |         bytes memory err
+    |         ^^^^^^^^^^^^^^^^
+
+Warning (5667): Unused function parameter. Remove or comment out the variable name to silence this warning.
+   --> src/backedfi/FunctionsOracle.sol:104:71:
+    |
+104 |     function fulfillRequest(bytes32 requestId, bytes memory response, bytes memory err) internal override {
+    |                                                                       ^^^^^^^^^^^^^^^^
+
+Warning (2072): Unused local variable.
+   --> src/ccip/CoreSender.sol:244:9:
+    |
+244 |         address crossChainIndexFactory = mainChainStorage.crossChainFactoryBySelector(_chainSelector);
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Warning (5667): Unused function parameter. Remove or comment out the variable name to silence this warning.
+   --> src/ccip/CoreSender.sol:306:9:
+    |
+306 |         uint256 totalCurrentList,
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^
+
+Warning (5667): Unused function parameter. Remove or comment out the variable name to silence this warning.
+   --> src/ccip/CoreSender.sol:307:9:
+    |
+307 |         bytes32 messageId
+    |         ^^^^^^^^^^^^^^^^^
+
+Warning (5667): Unused function parameter. Remove or comment out the variable name to silence this warning.
+   --> src/ccip/CoreSender.sol:442:9:
+    |
+442 |         uint64 sourceChainSelector,
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Warning (5667): Unused function parameter. Remove or comment out the variable name to silence this warning.
+   --> src/ccip/CoreSender.sol:443:9:
+    |
+443 |         bytes32 messageId
+    |         ^^^^^^^^^^^^^^^^^
+
+Warning (5667): Unused function parameter. Remove or comment out the variable name to silence this warning.
+   --> src/ccip/MainChainFactory.sol:211:9:
+    |
+211 |         address _indexToken,
+    |         ^^^^^^^^^^^^^^^^^^^
+
+Warning (5667): Unused function parameter. Remove or comment out the variable name to silence this warning.
+   --> src/ccip/MainChainFactory.sol:212:9:
+    |
+212 |         address _tokenIn,
+    |         ^^^^^^^^^^^^^^^^
+
+Warning (5667): Unused function parameter. Remove or comment out the variable name to silence this warning.
+   --> src/ccip/MainChainFactory.sol:213:9:
+    |
+213 |         address[] memory _tokenInPath,
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Warning (5667): Unused function parameter. Remove or comment out the variable name to silence this warning.
+   --> src/ccip/MainChainFactory.sol:214:9:
+    |
+214 |         uint24[] memory _tokenInFees,
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Warning (5667): Unused function parameter. Remove or comment out the variable name to silence this warning.
+   --> src/ccip/MainChainFactory.sol:215:9:
+    |
+215 |         uint256 _inputAmount
+    |         ^^^^^^^^^^^^^^^^^^^^
+
+Warning (2072): Unused local variable.
+   --> src/ccip/MainChainFactory.sol:218:9:
+    |
+218 |         uint256 wethAmount;
+    |         ^^^^^^^^^^^^^^^^^^
+
+Warning (2072): Unused local variable.
+   --> src/ccip/MainChainFactory.sol:267:9:
+    |
+267 |         uint256 burnPercent = (amountIn * 1e18) / indexToken.totalSupply();
+    |         ^^^^^^^^^^^^^^^^^^^
+
+Warning (2072): Unused local variable.
+   --> src/ccip/MainChainFactory.sol:308:9:
+    |
+308 |         IWETH weth = mainChainStorage.weth();
+    |         ^^^^^^^^^^
+
+Warning (2072): Unused local variable.
+   --> src/ccip/MainChainFactory.sol:309:9:
+    |
+309 |         Vault vault = mainChainStorage.vault();
+    |         ^^^^^^^^^^^
+
+Warning (5667): Unused function parameter. Remove or comment out the variable name to silence this warning.
+   --> src/ccip/MainChainFactory.sol:445:9:
+    |
+445 |         uint256 _latestCount
+    |         ^^^^^^^^^^^^^^^^^^^^
+
+Warning (2072): Unused local variable.
+   --> src/ccip/MainChainFactory.sol:518:9:
+    |
+518 |         uint256 totalChains = functionsOracle.currentChainSelectorsCount(_indexToken);
+    |         ^^^^^^^^^^^^^^^^^^^
+
+Warning (5667): Unused function parameter. Remove or comment out the variable name to silence this warning.
+   --> src/ccip/MainChainFactory.sol:565:9:
+    |
+565 |         uint256 _chainSelectorTokensCount
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Warning (2072): Unused local variable.
+   --> src/ccip/MainChainFactory.sol:568:9:
+    |
+568 |         Vault vault = mainChainStorage.vault();
+    |         ^^^^^^^^^^^
+
+Warning (2072): Unused local variable.
+   --> src/orderManager/OrderManager.sol:150:9:
+    |
+150 |         bool _ccipCalled = false;
+    |         ^^^^^^^^^^^^^^^^
+
+Warning (2072): Unused local variable.
+  --> src/factory/IndexFactory.sol:93:9:
+   |
+93 |         uint256 totalCurrentList = _requireUnderlyings(indexToken);
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^
+
+Warning (2072): Unused local variable.
+   --> src/factory/IndexFactory.sol:101:35:
+    |
+101 |             (uint256 totalShares, address[] memory tokens, uint256[] memory marketShares) =
+    |                                   ^^^^^^^^^^^^^^^^^^^^^^^
+
+Warning (2072): Unused local variable.
+   --> src/factory/IndexFactory.sol:101:60:
+    |
+101 |             (uint256 totalShares, address[] memory tokens, uint256[] memory marketShares) =
+    |                                                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Warning (2072): Unused local variable.
+   --> src/ccip/MainChainBalancer.sol:297:13:
+    |
+297 |             uint256 oracleChainSelectorTotalShares =
+    |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Warning (2072): Unused local variable.
+   --> src/ccip/MainChainBalancer.sol:417:13:
+    |
+417 |             uint256 wethAmount = _internalSwapsWETHToTokensForFirstRebalance(
+    |             ^^^^^^^^^^^^^^^^^^
+
+Warning (5667): Unused function parameter. Remove or comment out the variable name to silence this warning.
+   --> src/ccip/MainChainBalancer.sol:425:9:
+    |
+425 |         uint256 i,
+    |         ^^^^^^^^^
+
+Warning (5667): Unused function parameter. Remove or comment out the variable name to silence this warning.
+   --> src/ccip/MainChainBalancer.sol:534:9:
+    |
+534 |         Vault vault,
+    |         ^^^^^^^^^^^
+
+Warning (5667): Unused function parameter. Remove or comment out the variable name to silence this warning.
+   --> src/ccip/MainChainBalancer.sol:536:9:
+    |
+536 |         uint256 chainSelectorTokensCount,
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Warning (5667): Unused function parameter. Remove or comment out the variable name to silence this warning.
+   --> src/ccip/MainChainBalancer.sol:537:9:
+    |
+537 |         uint256 portfolioValue,
+    |         ^^^^^^^^^^^^^^^^^^^^^^
+
+Warning (5667): Unused function parameter. Remove or comment out the variable name to silence this warning.
+   --> src/ccip/MainChainBalancer.sol:538:9:
+    |
+538 |         uint256 chainValue
+    |         ^^^^^^^^^^^^^^^^^^
+
+Warning (5667): Unused function parameter. Remove or comment out the variable name to silence this warning.
+   --> src/ccip/MainChainBalancer.sol:604:9:
+    |
+604 |         uint256 i,
+    |         ^^^^^^^^^
+
+Warning (5667): Unused function parameter. Remove or comment out the variable name to silence this warning.
+   --> src/ccip/MainChainBalancer.sol:610:9:
+    |
+610 |         uint256 chainSelectorOracleTokensCount,
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Warning (2072): Unused local variable.
+   --> src/ccip/BalancerSender.sol:350:9:
+    |
+350 |         bytes32 messageId = any2EvmMessage.messageId; // fetch the messageId
+    |         ^^^^^^^^^^^^^^^^^
+
+Warning (2072): Unused local variable.
+   --> src/ccip/BalancerSender.sol:360:13:
+    |
+360 |             address[] memory tokenAddresses2,
+    |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Warning (2072): Unused local variable.
+   --> src/ccip/BalancerSender.sol:361:13:
+    |
+361 |             bytes[] memory tokenPaths,
+    |             ^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Warning (2072): Unused local variable.
+   --> src/ccip/BalancerSender.sol:362:13:
+    |
+362 |             bytes[] memory tokenPaths2,
+    |             ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Warning (2072): Unused local variable.
+   --> src/ccip/BalancerSender.sol:365:13:
+    |
+365 |             uint256[] memory value2
+    |             ^^^^^^^^^^^^^^^^^^^^^^^
+
+Warning (2072): Unused local variable.
+   --> src/ccip/CrossChainIndexFactory.sol:527:17:
+    |
+527 |                 uint256 wethAmount = swap(
+    |                 ^^^^^^^^^^^^^^^^^^
+
+Warning (5667): Unused function parameter. Remove or comment out the variable name to silence this warning.
+   --> src/ccip/CrossChainIndexFactory.sol:544:9:
+    |
+544 |         address sender,
+    |         ^^^^^^^^^^^^^^
+
+Warning (5667): Unused function parameter. Remove or comment out the variable name to silence this warning.
+   --> src/ccip/CrossChainIndexFactory.sol:545:9:
+    |
+545 |         uint256 nonce
+    |         ^^^^^^^^^^^^^
+
+Warning (2072): Unused local variable.
+   --> src/ccip/CrossChainIndexFactory.sol:672:17:
+    |
+672 |                 uint256 wethAmount = swap(
+    |                 ^^^^^^^^^^^^^^^^^^
+
+Warning (5667): Unused function parameter. Remove or comment out the variable name to silence this warning.
+  --> src/test/MockApiOracle.sol:19:9:
+   |
+19 |         uint64 subscriptionId,
+   |         ^^^^^^^^^^^^^^^^^^^^^
+
+Warning (5667): Unused function parameter. Remove or comment out the variable name to silence this warning.
+  --> src/test/MockApiOracle.sol:20:9:
+   |
+20 |         bytes calldata data,
+   |         ^^^^^^^^^^^^^^^^^^^
+
+Warning (5667): Unused function parameter. Remove or comment out the variable name to silence this warning.
+  --> src/test/MockApiOracle.sol:21:9:
+   |
+21 |         uint16 dataVersion,
+   |         ^^^^^^^^^^^^^^^^^^
+
+Warning (5667): Unused function parameter. Remove or comment out the variable name to silence this warning.
+  --> src/test/MockApiOracle.sol:22:9:
+   |
+22 |         uint32 callbackGasLimit,
+   |         ^^^^^^^^^^^^^^^^^^^^^^^
+
+Warning (5667): Unused function parameter. Remove or comment out the variable name to silence this warning.
+  --> src/test/MockApiOracle.sol:23:9:
+   |
+23 |         bytes32 donId
+   |         ^^^^^^^^^^^^^
+
+Warning (2072): Unused local variable.
+   --> test/OrderManager.t.sol:154:9:
+    |
+154 |         OrderManager.CreateOrderConfig memory cfg = OrderManager.CreateOrderConfig({
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Warning (2072): Unused local variable.
+   --> test/OrderManager.t.sol:166:9:
+    |
+166 |         uint256 balBefore = underlying.balanceOf(operator_);
+    |         ^^^^^^^^^^^^^^^^^
+
+Warning (2072): Unused local variable.
+   --> test/backedfi/BackedFiBalancer.t.sol:437:9:
+    |
+437 |         uint256 tokenBalance = 0;
+    |         ^^^^^^^^^^^^^^^^^^^^
+
+Warning (2072): Unused local variable.
+   --> test/ccip/CCIPDeployer.sol:620:9:
+    |
+620 |         address poolAddress = IUniswapV3Factory2(factory).getPool(address(tokens[0]), address(tokens[1]), 3000);
+    |         ^^^^^^^^^^^^^^^^^^^
+
+Warning (2072): Unused local variable.
+   --> test/ccip/CCIPDeployer.sol:656:9:
+    |
+656 |         address poolAddress = IUniswapV3Factory2(factory).getPool(address(tokens[0]), address(tokens[1]), 3000);
+    |         ^^^^^^^^^^^^^^^^^^^
+
+Warning (2072): Unused local variable.
+   --> test/ccip/MainChainFactory.t.sol:316:13:
+    |
+316 |             uint256[] memory currentProviderIndexTokenShares
+    |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Warning (2072): Unused local variable.
+   --> test/dinari/DinariBalancer.t.sol:528:9:
+    |
+528 |         uint256 nonce = balancer.firstRebalanceAction(indexToken);
+    |         ^^^^^^^^^^^^^
+
+Warning (2072): Unused local variable.
+   --> test/dinari/DinariBalancer.t.sol:536:10:
+    |
+536 |         (bool ok, bytes memory data) =
+    |          ^^^^^^^
+
+Warning (2072): Unused local variable.
+   --> test/dinari/DinariBalancer.t.sol:536:19:
+    |
+536 |         (bool ok, bytes memory data) =
+    |                   ^^^^^^^^^^^^^^^^^
+
+Warning (2018): Function state mutability can be restricted to view
+   --> test/OrderManager.t.sol:151:5:
+    |
+151 |     function testCreateOrder_Sell_SetsState_PullsFunds_Emits() public {
+    |     ^ (Relevant source part starts here and spans across multiple lines).
+
+Warning (2018): Function state mutability can be restricted to view
+  --> test/backedfi/BackedFiBalancer.t.sol:81:5:
+   |
+81 |     function testInitializeSetsDependencies() public {
+   |     ^ (Relevant source part starts here and spans across multiple lines).
+
+Warning (2018): Function state mutability can be restricted to view
+  --> test/ccip/MainChainFactory.t.sol:56:5:
+   |
+56 |     function testIndexTokenInitialized() public {
+   |     ^ (Relevant source part starts here and spans across multiple lines).
+
+Warning (2018): Function state mutability can be restricted to view
+   --> test/ccip/MainChainFactory.t.sol:340:5:
+    |
+340 |     function test_initialize_IndexFactory() public {
+    |     ^ (Relevant source part starts here and spans across multiple lines).
+
+Warning (2018): Function state mutability can be restricted to view
+  --> test/dinari/DinariBalancer.t.sol:84:5:
+   |
+84 |     function testInitializeSetsDependencies() public {
+   |     ^ (Relevant source part starts here and spans across multiple lines).
+
+
+Ran 5 tests for test/backedfi/BackedFiFactory.t.sol:BackedFiFactoryTest
+[PASS] testIssuance_RevertsOnZeroAmount() (gas: 48144)
+[PASS] testIssuance_Success_TransfersUSDC_Emits_IncrementsNonce() (gas: 325238)
+[PASS] testPauseAsOperatorWithoutOracleReverts() (gas: 39650)
+[PASS] testRedemption_RevertsOnZeroAmount() (gas: 48327)
+[PASS] testRedemption_Success_TransfersIDX_Emits_IncrementsNonce() (gas: 348763)
+Suite result: ok. 5 passed; 0 failed; 0 skipped; finished in 4.49s (1.52s CPU time)
+
+Ran 1 test for test/factory/BalancerIntegration.t.sol:BalancerIntegrationTest
+[PASS] testDinariSurplusBecomesAvailableForBackedFi() (gas: 325352)
+Suite result: ok. 1 passed; 0 failed; 0 skipped; finished in 6.92s (646.87ms CPU time)
+
+Ran 11 tests for test/OrderManager.t.sol:OrderManagerTest
+[PASS] testCompleteOrder_Revert_InvalidNonce() (gas: 41795)
+[PASS] testCreateOrder_Revert_ZeroAmount() (gas: 93682)
+[PASS] testCreateOrder_Revert_ZeroInputToken() (gas: 91364)
+[PASS] testCreateOrder_Sell_SetsState_PullsFunds_Emits() (gas: 14300)
+[PASS] testOnlyOperator_CreateOrder_RevertsForNonOperator() (gas: 49146)
+[PASS] testOwnerOnly_AdminSetters() (gas: 114320)
+[PASS] test_issuanceWithBackedFiFactory_HappyPath() (gas: 558866)
+[PASS] test_issuanceWithBackedFiFactory_Revert_InvalidAddress() (gas: 72553)
+[PASS] test_issuanceWithBackedFiFactory_Revert_InvalidAmount() (gas: 74755)
+[PASS] test_redemptionWithBackedFiFactory_zeroAmount_reverts() (gas: 201200)
+[PASS] test_redemptionWithBackedFiFactory_zeroIndexTokenAddress_reverts() (gas: 198987)
+Suite result: ok. 11 passed; 0 failed; 0 skipped; finished in 7.61s (4.66s CPU time)
+
+Ran 10 tests for test/dinari/DinariFactory.t.sol:DinariFactory_MainTest
+[PASS] testInitialize_RevertsOnZeroArgs() (gas: 3084388)
+[PASS] testIssuanceIndexTokens_RevertOnZeroAmount() (gas: 111892)
+[PASS] testIssuance_Smoke_MoveUSDC_ToOrderManager_AndNonce() (gas: 268684)
+[PASS] testPause_Unpause_Roles() (gas: 169786)
+[PASS] testRedemption_RevertOnZeroAmount() (gas: 112305)
+[PASS] testSetFunctionsOracle_OnlyOwner() (gas: 73439)
+[PASS] testSetFunctionsOracle_RevertOnZeroAddress() (gas: 39573)
+[FAIL: assertion failed: 0xfc14A3000713f07C3B16b1e22125a67949d67bd8 != 0x5991A2dF15A8F6A256D3Ec51E99254Cd3fb576A9] testSetIndexFactoryStorageUpdatesReference() (gas: 1195977)
+[PASS] testSetIndexFactoryStorage_ZeroArgumentReverts_opix_branch_coverage() (gas: 39639)
+[PASS] test_unpause_roles_opix_345_true_branch() (gas: 421851)
+Suite result: FAILED. 9 passed; 1 failed; 0 skipped; finished in 10.71s (6.44s CPU time)
+
+Ran 28 tests for test/dinari/DinariBalancer.t.sol:DinariBalancerTest
+[PASS] testAskValuesAllowsOperator() (gas: 129621)
+[PASS] testAskValuesRecordsPortfolioData() (gas: 205468)
+[PASS] testAskValuesRequiresOwnerOrOperator() (gas: 55971)
+[PASS] testAskValuesRevertsWhenPaused() (gas: 120849)
+[PASS] testCannotReinitialize() (gas: 47470)
+[PASS] testCheckFirstRebalanceOrdersStatusDetectsIncomplete() (gas: 70707)
+[PASS] testCheckMultical_ElseBranch_ActionTypeNot5Or6() (gas: 17880)
+[PASS] testCheckSecondRebalanceOrdersStatusDetectsIncomplete() (gas: 70792)
+[PASS] testFirstRebalanceActionOnlyOwnerOrOperator() (gas: 229619)
+[FAIL: assertion failed: 0 != 1] testFirstRebalanceAction_IfBranch_PortfolioValueIsZero() (gas: 106444)
+[PASS] testGetAmountAfterFee_PercentageFeePresent() (gas: 36554)
+[PASS] testInitializeRevertsOnZeroFactoryStorage() (gas: 5138921)
+[PASS] testInitializeRevertsOnZeroGlobalBalancer() (gas: 5138997)
+[PASS] testInitializeRevertsOnZeroGlobalStorage() (gas: 5138985)
+[PASS] testInitializeRevertsOnZeroOracle() (gas: 5138872)
+[PASS] testInitializeSetsDependencies() (gas: 37019)
+[PASS] testMulticalRevertsOnZeroRequestId() (gas: 35141)
+[PASS] testMultical_ElseBranch_ActionTypeNeither5Nor6() (gas: 41910)
+[PASS] testOperatorCanSetMinimumOrderAmount() (gas: 75040)
+[PASS] testPauseAndUnpauseOnlyOwner() (gas: 155937)
+[PASS] testSecondRebalanceActionForwardsSurplusToGlobal() (gas: 240863)
+[PASS] testSecondRebalanceActionRevertsWhenOrdersPending() (gas: 110197)
+[PASS] testSecondRebalanceAction_ElseBranch_SendableZero() (gas: 191892)
+[PASS] testSecondRebalanceAction_SendableExceedsCurrentBalance() (gas: 232945)
+[PASS] testSetFunctionsOracleOnlyOwner() (gas: 4673078)
+[PASS] testSetIndexFactoryStorageOnlyOwner() (gas: 81525)
+[PASS] testSetMinimumOrderAmountOwner() (gas: 62480)
+[PASS] testSetMinimumOrderAmountRequiresOwnerOrOperator() (gas: 52142)
+Suite result: FAILED. 27 passed; 1 failed; 0 skipped; finished in 12.73s (9.94s CPU time)
+
+Ran 5 tests for test/base-contracts/VaultTest.t.sol:VaultTest
+[PASS] testWithdrawFundsSuccessfully() (gas: 257024)
+[PASS] test_withdrawFunds_FailWhenCallerIsNotOperator() (gas: 71897)
+[PASS] test_withdrawFunds_RevertOnZeroAmount() (gas: 74406)
+[PASS] test_withdrawFunds_RevertOnZeroToAddress() (gas: 74378)
+[PASS] test_withdrawFunds_RevertOnZeroTokenAddress() (gas: 72079)
+Suite result: ok. 5 passed; 0 failed; 0 skipped; finished in 3.47s (2.20s CPU time)
+
+Ran 1 test for test/ccip/MainChainFactory.t.sol:CCIPFactoryTest
+[FAIL: EvmError: Revert] setUp() (gas: 0)
+Suite result: FAILED. 0 passed; 1 failed; 0 skipped; finished in 25.89s (0.00ns CPU time)
+
+Ran 75 tests for test/dinari/DinariStorage.t.sol:DinariStorage_MainTest
+[PASS] testCalculateBuyRequestFee_RevertsOnZeroAmount() (gas: 16327)
+[PASS] testCalculateIssuanceFee_RevertsOnZeroAmount() (gas: 15765)
+[PASS] testCalculateIssuanceFee_ZeroUnderlying_ReturnsZero() (gas: 37238)
+[PASS] testInitialize_RevertsOnInvalidArgs() (gas: 5250742)
+[PASS] testOnlyFactory_IncreaseNonces() (gas: 207509)
+[PASS] testOwnerOnly_Setters() (gas: 185769)
+[PASS] testSetFeeReceiver_RevertWhenZeroAddress() (gas: 39477)
+[PASS] test_calculateBuyRequestFee_branch651False_executes() (gas: 18653)
+[PASS] test_decreaseTokenPendingRebalanceAmount_opixTargetBranch256False_executesForFactoryProcessorBalancer() (gas: 519850)
+[PASS] test_decreaseTokenPendingRebalanceAmount_revertOnZeroToken_branch_263_True() (gas: 267360)
+[PASS] test_decreaseTokenPendingRebalanceAmount_revertsOnInsufficientRebalance_opixBranch265True() (gas: 659764)
+[PASS] test_decreaseTokenPendingRebalanceAmount_zeroAmount_reverts_branch_264_True() (gas: 267507)
+[PASS] test_getActionInfoById_branchFalse_returnsStruct() (gas: 142650)
+[PASS] test_getActionInfoById_reverts_on_id_zero() (gas: 17051)
+[PASS] test_getAmountAfterFee_returnsZeroWhenPctFeeRateIsZero_opixTargetBranch559True() (gas: 10894)
+[PASS] test_getOrderInstanceById_revertOnZeroId_branch_560_True() (gas: 17893)
+[PASS] test_getPortfolioValue_branch_opixTargetBranch592True() (gas: 293447)
+[PASS] test_getVaultDshareBalance_RevertsOnZeroAddress() (gas: 16106)
+[PASS] test_increaseRedemptionNonce_opixTargetBranch313True_allFactoryAddrs() (gas: 337653)
+[PASS] test_increaseTokenPendingRebalanceAmount_onlyFactoryRolesAllowed_branch239True() (gas: 384610)
+[PASS] test_increaseTokenPendingRebalanceAmount_zeroAmount_reverts_branch_247_True() (gas: 267329)
+[PASS] test_increaseTokenPendingRebalanceAmount_zeroToken_reverts_branch_246_True() (gas: 267087)
+[PASS] test_increaseUpdatePortfolioNonce_notBalancer_reverts_branch151True() (gas: 49528)
+[PASS] test_increaseUpdatePortfolioNonce_succeedsForBalancer_branch151False() (gas: 67750)
+[PASS] test_priceInWei_branch_opixTargetBranch606False_entersElseBranch() (gas: 62446)
+[PASS] test_priceInWei_reverts_on_ZeroTokenAddress() (gas: 13919)
+[PASS] test_resetAllTokenPendingRebalanceAmount_branch_284_False() (gas: 267948)
+[PASS] test_resetTokenPendingRebalanceAmount_onlyOwnerOrOperator_branch_272_False() (gas: 204177)
+[PASS] test_resetTokenPendingRebalanceAmount_zeroToken_branch_277_True() (gas: 42622)
+[PASS] test_setActionInfoById_onlyFactory_branchTrue() (gas: 442998)
+[PASS] test_setActionInfoById_revertOnZeroRequestId_branch_516_true() (gas: 268023)
+[PASS] test_setBurnedTokenAmountByNonce_invalidAmount_reverts() (gas: 96401)
+[PASS] test_setBurnedTokenAmountByNonce_onlyFactory_AllowsFactoryLikeAddresses() (gas: 336929)
+[PASS] test_setBurnedTokenAmountByNonce_zeroAmount_reverts() (gas: 96441)
+[PASS] test_setBuyRequestPayedAmountById_onlyFactory_branch_424_True() (gas: 441883)
+[PASS] test_setBuyRequestPayedAmountById_requestIdZero_reverts() (gas: 96455)
+[PASS] test_setBuyRequestPayedAmountById_revertsOnZeroAmount() (gas: 96468)
+[PASS] test_setFactoryBalancer_revertsOnZeroAddress() (gas: 39850)
+[PASS] test_setFactoryBalancer_setsValueWhenValid() (gas: 62660)
+[PASS] test_setFactoryProcessor_revertsOnZeroAddress() (gas: 39810)
+[PASS] test_setFactoryZeroAddress_reverts() (gas: 39754)
+[PASS] test_setFunctionsOracle_revertOnZeroAddress_opixTargetBranch160True() (gas: 39485)
+[PASS] test_setIssuanceIndexTokenPrimaryTotalSupply_access_control_branch_471_False() (gas: 372735)
+[PASS] test_setIssuanceInputAmount_invalid_zero_amount_reverts() (gas: 96413)
+[PASS] test_setIssuanceInputAmount_onlyFactory_branch_true() (gas: 342941)
+[PASS] test_setIssuanceInputAmount_revertsOnZeroAmount() (gas: 94302)
+[PASS] test_setIssuanceIsCompleted_onlyFactory_branch_true() (gas: 154513)
+[PASS] test_setIssuanceRequestId_onlyFactory_branch_true() (gas: 155250)
+[PASS] test_setIssuanceRequestId_requestIdZero_reverts() (gas: 96673)
+[PASS] test_setIssuanceRequestId_tokenIsZero_branch374True() (gas: 96797)
+[PASS] test_setIssuanceRequesterByNonce_onlyFactory_branch_true() (gas: 185626)
+[PASS] test_setIssuanceTokenPrimaryBalance_onlyFactory_branch_true() (gas: 376130)
+[PASS] test_setIssuanceTokenPrimaryBalance_revertOnZeroToken_branch_463_True() (gas: 269207)
+[PASS] test_setIssuer_allowsNonzeroAddress_opixTargetBranch201False() (gas: 46324)
+[PASS] test_setIssuer_revertOnIssuerZeroAddress_opixTargetBranch221True() (gas: 41099)
+[PASS] test_setLatestPriceDecimals_branch_204_false_setsValue() (gas: 45516)
+[PASS] test_setLatestPriceDecimals_revertsOnZeroInput_branch_204_true() (gas: 39767)
+[PASS] test_setOrderManager_branchTrue() (gas: 63325)
+[PASS] test_setOrderManager_revertsOnZero() (gas: 41075)
+[PASS] test_setRedemptionInputAmount_onlyFactory_branch_true() (gas: 371745)
+[PASS] test_setRedemptionInputAmount_zeroAmount_reverts_branch_503_True() (gas: 266530)
+[PASS] test_setRedemptionIsCompleted_onlyFactory_branch_true() (gas: 154656)
+[PASS] test_setRedemptionRequestId_onlyFactory_branch_false_executes() (gas: 340930)
+[PASS] test_setRedemptionRequestId_onlyFactory_branch_true() (gas: 375341)
+[PASS] test_setRedemptionRequestId_revertOnZeroRequestId_branch389True() (gas: 267190)
+[PASS] test_setRedemptionRequestId_zeroToken_reverts_branch390True() (gas: 267155)
+[PASS] test_setRedemptionRequesterByNonce_onlyFactory_branch_true() (gas: 374852)
+[PASS] test_setRedemptionRequesterByNonce_revert_on_zero_address() (gas: 266440)
+[PASS] test_setSellRequestAssetAmountById_amount_zero_reverts() (gas: 96388)
+[PASS] test_setSellRequestAssetAmountById_onlyFactory_access() (gas: 373656)
+[PASS] test_setUsdcAddress_revertsIfDecimalsZero_branch_175() (gas: 42237)
+[PASS] test_setUsdcAddress_revertsIfZeroAddress() (gas: 39952)
+[PASS] test_setWrappedDshareAndPriceFeedAddresses_arrayLengthMismatch_branchFalse() (gas: 142283)
+[PASS] test_setWrappedDshareAndPriceFeedAddresses_revertsOnPriceFeedsArrayLengthMismatch_branch213True() (gas: 44964)
+[PASS] test_setWrappedDshareArrayLengthMismatch_reverts() (gas: 45056)
+Suite result: ok. 75 passed; 0 failed; 0 skipped; finished in 55.40s (52.40s CPU time)
