@@ -117,6 +117,8 @@ contract MainChainStorage is Initializable, ProposableOwnableUpgradeable {
     mapping(address => uint256) public totalSentAmount;
     mapping(address => uint256) public totalReceivedAmount;
 
+    mapping(uint256 => uint256) public consumedExtraWethByNonce;
+
     modifier onlyIndexFactory() {
         require(msg.sender == mainChainFactory || msg.sender == coreSender, "Caller is not index factory contract.");
         _;
@@ -557,6 +559,10 @@ contract MainChainStorage is Initializable, ProposableOwnableUpgradeable {
         onlyMainChainBalancer
     {
         reweightExtraPercentage[_reweightNonce] += _extraPercentage;
+    }
+
+    function increaseConsumedExtraWethByNonce(uint256 _reweightNonce, uint256 _amount) public onlyMainChainBalancer {
+        consumedExtraWethByNonce[_reweightNonce] += _amount;
     }
 
     /**

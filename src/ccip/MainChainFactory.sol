@@ -213,52 +213,48 @@ contract MainChainFactory is
         address[] memory _tokenInPath,
         uint24[] memory _tokenInFees,
         uint256 _inputAmount
-    ) public pure returns (uint256) {
+    ) public view returns (uint256) {
         // get weth amount
-        uint256 wethAmount;
-        // if (_tokenIn == address(weth)) {
-        //     wethAmount = _inputAmount;
-        // } else {
-        //     wethAmount = mainChainStorage.getAmountOut(
-        //         _tokenInPath,
-        //         _tokenInFees,
-        //         _inputAmount
-        //     );
-        // }
+        uint256 wethAmount = mainChainStorage.getAmountOut(
+                _tokenInPath,
+                _tokenInFees,
+                _inputAmount
+            );
+        
 
         // get fee for other chains
-        // uint256 totalChains = functionsOracle.currentChainSelectorsCount(
-        //     _indexToken
-        // );
-        // uint256 latestCount = functionsOracle.currentFilledCount(_indexToken);
-        // (, , uint64[] memory chainSelectors) = functionsOracle.getCurrentData(
-        //     _indexToken,
-        //     latestCount
-        // );
+        uint256 totalChains = functionsOracle.currentChainSelectorsCount(
+            _indexToken
+        );
+        uint256 latestCount = functionsOracle.currentFilledCount(_indexToken);
+        (, , uint64[] memory chainSelectors) = functionsOracle.getCurrentData(
+            _indexToken,
+            latestCount
+        );
 
         uint256 totalCrossChainFee;
 
-        // for (uint256 i = 0; i < totalChains; i++) {
-        //     // uint64 chainSelector = chainSelectors[i];
-        //     uint256 chainSelectorTokensCount = functionsOracle
-        //         .currentChainSelectorTokensCount(_indexToken, chainSelectors[i]);
-        //     if (chainSelectors[i] != currentChainSelector) {
-        //         uint256 totalShares = functionsOracle
-        //             .getCurrentChainSelectorTotalShares(
-        //                 _indexToken,
-        //                 latestCount,
-        //                 chainSelectors[i]
-        //             );
-        //         uint256 chainWethAmount = (wethAmount * totalShares) / 100e18;
-        //         //get the fee
-        //         uint256 fee = coreSender.calculateIssuanceFee(
-        //             _indexToken,
-        //             chainSelectors[i],
-        //             chainWethAmount
-        //         );
-        //         totalCrossChainFee += fee;
-        //     }
-        // }
+        for (uint256 i = 0; i < totalChains; i++) {
+            // uint64 chainSelector = chainSelectors[i];
+            // uint256 chainSelectorTokensCount = functionsOracle
+            //     .currentChainSelectorTokensCount(_indexToken, chainSelectors[i]);
+            if (chainSelectors[i] != currentChainSelector) {
+                uint256 totalShares = functionsOracle
+                    .getCurrentChainSelectorTotalShares(
+                        _indexToken,
+                        latestCount,
+                        chainSelectors[i]
+                    );
+                // uint256 chainWethAmount = (wethAmount * totalShares) / 100e18;
+                //get the fee
+                uint256 fee = coreSender.calculateIssuanceFee(
+                    _indexToken,
+                    chainSelectors[i],
+                    (wethAmount * totalShares) / 100e18
+                );
+                totalCrossChainFee += fee;
+            }
+        }
 
         return (totalCrossChainFee * (100 + 20)) / 100;
     }

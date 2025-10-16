@@ -393,6 +393,7 @@ contract BalancerSender is Initializable, CCIPReceiver, ProposableOwnableUpgrade
             mainChainStorage.increaseExtraWethByNonce(nonce, wethAmount);
             mainChainStorage.increasePendingExtraWethByNonce(nonce, wethAmount);
             weth.transfer(mainChainStorage.mainChainBalancer(), wethAmount);
+            indexFactoryBalancer.completeFirstReweightAction(1, nonce, mainChainStorage.extraWethByNonce(nonce) - mainChainStorage.consumedExtraWethByNonce(nonce));
             emit FirstReweightActionCompleted(block.timestamp);
         } else if (actionType == 4) {
             // functionsOracle.updateCurrentList();

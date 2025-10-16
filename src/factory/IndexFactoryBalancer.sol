@@ -31,6 +31,7 @@ contract IndexFactoryBalancer is Initializable, OwnableUpgradeable, PausableUpgr
     mapping(uint256 => mapping(uint64 => uint256)) public providerTotalValueByNonce; // mapping of updatePortfolioNonce to total value
     mapping(uint64 => mapping(uint256 => uint256)) public providerNonceToGlobalNonce; // mapping of providerNonce to globalNonce
     mapping(uint256 => uint256) public extraUsdcAmountByNonce; // mapping of updatePortfolioNonce to extra usdc amount
+    mapping(uint256 => uint256) public reweightExtraPercentageByNonce; // mapping of updatePortfolioNonce to reweight extra percentage
 
     function initialize(
         address _functionsOracle,
@@ -63,6 +64,10 @@ contract IndexFactoryBalancer is Initializable, OwnableUpgradeable, PausableUpgr
 
     function increaseExtraUsdcAmountByNonce(uint256 _updatePortfolioNonce, uint256 _extraUsdcAmount) public {
         extraUsdcAmountByNonce[_updatePortfolioNonce] += _extraUsdcAmount;
+    }
+
+    function increaseReweightExtraPercentageByNonce(uint256 _updatePortfolioNonce, uint256 _extraPercentage) public {
+        reweightExtraPercentageByNonce[_updatePortfolioNonce] += _extraPercentage;
     }
 
 
@@ -110,12 +115,21 @@ contract IndexFactoryBalancer is Initializable, OwnableUpgradeable, PausableUpgr
             );
             
             if (realProviderMarketShare >= targetProviderMarketShare) {
+                reweightExtraPercentageByNonce[_updatePortfolioNonce] += realProviderMarketShare - targetProviderMarketShare;
                 if (currentProviderIndexes[i] == 1) {
                     uint256 targetPortfolioValue = (providerTotalValueByNonce[_updatePortfolioNonce][1] * SHARE_DENOMINATOR) / targetProviderMarketShare;
                     reweightCCIP(_indexToken, targetPortfolioValue, 0);
                 }
             }
         }
+    }
+
+    function completeFirstReweightAction(uint64 _providerIndex, uint256 _updateProviderNonce, uint256 _extraUsdcAmount)
+        external
+        whenNotPaused
+    {
+        uint256 updatePortfolioNonce = providerNonceToGlobalNonce[_providerIndex][_updateProviderNonce];
+        extraUsdcAmountByNonce[updatePortfolioNonce] += _extraUsdcAmount;
     }
 
     function secondReweightAction(address _indexToken, uint256 _updatePortfolioNonce)
@@ -135,9 +149,13 @@ contract IndexFactoryBalancer is Initializable, OwnableUpgradeable, PausableUpgr
                 _indexToken, oracleFilledCount, currentProviderIndexes[i]
             );
             if (realProviderMarketShare <= targetProviderMarketShare) {
+                uint256 negativePercentage = targetProviderMarketShare - realProviderMarketShare;
+                uint256 extraUSDCAmount = (extraUsdcAmountByNonce[_updatePortfolioNonce] * negativePercentage)
+                    / reweightExtraPercentageByNonce[_updatePortfolioNonce];
                 if (currentProviderIndexes[i] == 1) {
                     uint256 targetPortfolioValue = (portfolioTotalValueByNonce[_updatePortfolioNonce] * targetProviderMarketShare) / 100e18;
-                    reweightCCIP(_indexToken, targetPortfolioValue, extraUsdcAmountByNonce[_updatePortfolioNonce]);
+                    // reweightCalled = extraUSDCAmount;
+                    reweightCCIP(_indexToken, targetPortfolioValue, extraUSDCAmount);
                 }
             }
         }
@@ -198,7 +216,7 @@ contract IndexFactoryBalancer is Initializable, OwnableUpgradeable, PausableUpgr
         if(_extraUsdcAmount > 0) {
             IERC20(factoryStorage.usdcAddress()).approve(address(mainChainBalancer), _extraUsdcAmount);
         }
-        reweightCalled++;
+        // reweightCalled++;
         mainChainBalancer.requestRebalance(_indexToken, _targetPortfolioValue, address(factoryStorage.usdcAddress()), _extraUsdcAmount);
     }
 }
