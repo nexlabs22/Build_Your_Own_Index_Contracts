@@ -306,7 +306,7 @@ contract CCIPDeployer is
             payable(
                 address(
                     new ERC1967Proxy(
-                        address(orderManagerImpl), abi.encodeCall(OrderManager.initialize, (address(usdc), address(0)))
+                        address(orderManagerImpl), abi.encodeCall(OrderManager.initialize, (address(usdc), address(0), address(0)))
                     )
                 )
             )
@@ -494,6 +494,7 @@ contract CCIPDeployer is
         functionsOracle.setOperator(address(factoryBalancer), true);
         // functionsOracle.setBalancerSender(address(balancerSender));
         orderManager.setFactoryAddress(address(factory));
+        orderManager.setFactoryStorage(address(indexFactoryStorage));
         orderManager.setMainChainFactory(payable(address(mainChainFactory)));
         orderManager.setOperator(address(factory), true);
         orderManager.setOperator(address(coreSender), true);
@@ -501,6 +502,7 @@ contract CCIPDeployer is
         indexFactoryStorage.setOrderManager(address(orderManager));
         indexFactoryStorage.setIndexFactory(address(factory));
         indexFactoryStorage.setUsdcAddress(address(usdc));
+        indexFactoryStorage.setToUsdPriceFeed(address(ethPriceOracle));
         mainChainBalancer.setIndexFactoryBalancer(address(factoryBalancer));
         balancerSender.setIndexFactoryBalancer(address(factoryBalancer));
         mainChainStorage.setCrossChainToken(2, address(crossChainToken), path, feesData);

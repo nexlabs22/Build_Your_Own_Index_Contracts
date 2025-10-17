@@ -5,6 +5,8 @@ import {OrderManager} from "../orderManager/OrderManager.sol";
 import {FunctionsOracle} from "../oracle/FunctionsOracle.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "../utils/proposable/ProposableOwnableUpgradeable.sol";
+import "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
+
 
 // error ZeroAmount();
 // error ZeroAddress();
@@ -16,6 +18,8 @@ contract IndexFactoryStorage is Initializable, ProposableOwnableUpgradeable {
     address public orderManager;
     address public feeReceiver;
     address public usdcAddress;
+
+    AggregatorV3Interface public toUsdPriceFeed;
 
     uint8 public feeRate;
 
@@ -43,6 +47,46 @@ contract IndexFactoryStorage is Initializable, ProposableOwnableUpgradeable {
         _disableInitializers();
     }
 
+    /**
+     * @dev Converts ETH amount to USD.
+     * @param _ethAmount The amount of ETH.
+     * @return The equivalent amount in USD.
+     */
+    function convertEthToUsd(uint256 _ethAmount) public view returns (uint256) {
+        return (_ethAmount * priceInWei()) / 1e18;
+    }
+
+    /**
+     * @dev Returns the price in Wei.
+     * @return The price in Wei.
+     */
+    function priceInWei() public view returns (uint256) {
+        (uint80 roundId, int256 price,, uint256 _updatedAt,) = toUsdPriceFeed.latestRoundData();
+        require(roundId != 0, "invalid round id");
+        require(_updatedAt != 0 && _updatedAt <= block.timestamp, "invalid updated time");
+        require(price > 0, "invalid price");
+        require(block.timestamp - _updatedAt < 1 days, "invalid updated time");
+
+        uint8 priceFeedDecimals = toUsdPriceFeed.decimals();
+        price = _toWei(price, priceFeedDecimals, 18);
+        return uint256(price);
+    }
+
+        /**
+     * @dev Converts an amount to Wei.
+     * @param _amount The amount to convert.
+     * @param _amountDecimals The decimals of the amount.
+     * @param _chainDecimals The decimals of the chain.
+     * @return The amount in Wei.
+     */
+    function _toWei(int256 _amount, uint8 _amountDecimals, uint8 _chainDecimals) private pure returns (int256) {
+        if (_chainDecimals > _amountDecimals) {
+            return _amount * int256(10 ** (_chainDecimals - _amountDecimals));
+        } else {
+            return _amount * int256(10 ** (_amountDecimals - _chainDecimals));
+        }
+    }
+
     function setIndexFactory(address _indexFactory) external {
         // if (_indexFactory == address(0)) revert ZeroAddress();
         indexFactory = _indexFactory;
@@ -51,6 +95,11 @@ contract IndexFactoryStorage is Initializable, ProposableOwnableUpgradeable {
     function setUsdcAddress(address _usdcAddress) external {
         // if (_usdcAddress == address(0)) revert ZeroAddress();
         usdcAddress = _usdcAddress;
+    }
+
+    function setToUsdPriceFeed(address _toUsdPriceFeed) external {
+        // if (_toUsdPriceFeed == address(0)) revert ZeroAddress();
+        toUsdPriceFeed = AggregatorV3Interface(_toUsdPriceFeed);
     }
 
     function setMainChainBalancer(address _mainChainBalancer) external {

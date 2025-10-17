@@ -1217,10 +1217,26 @@ contract CCIPFactoryTest is Test, CCIPDeployer {
     function test_issuance() public {
         updateOracleList();
 
-        mockRouter.setFee(0);
-        usdc.approve(address(factory), 1001e16);
+        mockRouter.setFee(1e16);
+        // check issuance fee
+        uint256 crossChainFeeInWETH = mainChainFactory.getIssuanceFee(
+            address(indexToken),
+            address(usdc),
+            1000e16
+        );
+        // console.log("issuance fee", issuanceFee);
+        uint crossChainFee = factory.getCrossChainFee(address(indexToken), address(usdc), 1000e16);
+        
+        // transfer issuance fee to the core sender using call to forward all gas
+        (bool successCore, ) = payable(address(coreSender)).call{value: crossChainFeeInWETH}("");
+        require(successCore, "coreSender transfer failed");
+        // transfer issuance fee to crossChainIndexFactory using call to forward all gas
+        (bool successCross, ) = payable(address(crossChainIndexFactory)).call{value: crossChainFeeInWETH}("");
+        require(successCross, "crossChainIndexFactory transfer failed");
+        usdc.approve(address(factory), 1001e16 + crossChainFee);
         factory.issuanceIndexTokens(address(indexToken), 1000e16);
         mockRouter.executeAllMessages();
+        
         console.log("send count", coreSender.sentCount());
         console.log(
             "token0 balance after issuance",
@@ -1262,7 +1278,14 @@ contract CCIPFactoryTest is Test, CCIPDeployer {
         // console.log("token1", tokens[1]);
         // console.log("token1", tokens[2]);
         // console.log("token1", tokens[3]);
+         // transfer issuance fee to the core sender using call to forward all gas
+        (bool successCore2, ) = payable(address(coreSender)).call{value: crossChainFeeInWETH}("");
+        require(successCore2, "coreSender transfer failed");
+        // transfer issuance fee to crossChainIndexFactory using call to forward all gas
+        (bool successCross2, ) = payable(address(crossChainIndexFactory)).call{value: crossChainFeeInWETH}("");
+        require(successCross2, "crossChainIndexFactory transfer failed");
         uint256 burnAmount = indexToken.balanceOf(address(this));
+        usdc.approve(address(factory), crossChainFee);
         indexToken.approve(address(factory), burnAmount);
         // redeem all index tokens
         factory.redemption(
@@ -1272,6 +1295,7 @@ contract CCIPFactoryTest is Test, CCIPDeployer {
         address[] memory currentChainSelectorTokens = functionsOracle
             .allCurrentChainSelectorTokens(address(indexToken), 1);
         mockRouter.executeAllMessages();
+        
         assertEq(currentChainSelectorTokens.length, 4);
         console.log(
             "redemptionTokensCount",
@@ -1298,6 +1322,8 @@ contract CCIPFactoryTest is Test, CCIPDeployer {
             "token4 balance after redemption",
             IERC20(token4).balanceOf(address(crossChainVault))
         );
+        /**
+        */
     }
 
     function test_reweight() public {

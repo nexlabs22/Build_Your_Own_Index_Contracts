@@ -210,10 +210,9 @@ contract MainChainFactory is
     function getIssuanceFee(
         address _indexToken,
         address _tokenIn,
-        address[] memory _tokenInPath,
-        uint24[] memory _tokenInFees,
         uint256 _inputAmount
     ) public view returns (uint256) {
+        (address[] memory _tokenInPath, uint24[] memory _tokenInFees) = functionsOracle.getToETHPathData(_tokenIn);
         // get weth amount
         uint256 wethAmount = mainChainStorage.getAmountOut(
                 _tokenInPath,
@@ -276,13 +275,28 @@ contract MainChainFactory is
         return (totalCrossChainFee * (100 + 20)) / 100;
     }
 
+    function _swapCrossChainFee(
+        address _tokenIn,
+        uint256 _crossChainFee
+    ) internal {
+        // transfer cross chain fee
+        IERC20(_tokenIn).transferFrom(msg.sender, address(this), _crossChainFee);
+        (address[] memory _tokenInPath, uint24[] memory _tokenInFees) = functionsOracle.getToETHPathData(_tokenIn);
+        require(_tokenInPath[_tokenInPath.length - 1] == address(weth), "Invalid token path");
+
+        uint256 wethAmount = swap(_tokenInPath, _tokenInFees, _crossChainFee, address(this));
+        weth.withdraw(wethAmount);
+        (bool success,) = mainChainStorage.coreSender().call{value: wethAmount}("");
+        require(success, "Cross chain fee transfer failed");
+    }
+
     /**
      * @dev Issues index tokens.
      * @param _indexToken The address of the index token.
      * @param _tokenIn The address of the input token.
      * @param _inputAmount The amount of input token.
      */
-    function issuanceIndexTokens(address _indexToken, address _tokenIn, uint256 _inputAmount)
+    function issuanceIndexTokens(address _indexToken, address _tokenIn, uint256 _inputAmount, uint256 _crossChainFee)
         public
         payable
         whenNotPaused
@@ -293,14 +307,17 @@ contract MainChainFactory is
         require(_inputAmount > 0, "Input amount must be greater than zero");
         (address[] memory _tokenInPath, uint24[] memory _tokenInFees) = functionsOracle.getToETHPathData(_tokenIn);
         require(_tokenInPath[_tokenInPath.length - 1] == address(weth), "Invalid token path");
-        if (!mainChainStorage.isCrossChainFeeSponsered()) {
-            require(
-                getIssuanceFee(_indexToken, _tokenIn, _tokenInPath, _tokenInFees, _inputAmount) == msg.value,
-                "Insufficient ETH sent for cross chain fee"
-            );
-            (bool success,) = mainChainStorage.coreSender().call{value: msg.value}("");
-            require(success, "Cross chain fee transfer failed");
+        if(_crossChainFee > 0){
+            _swapCrossChainFee(_tokenIn, _crossChainFee);
         }
+        // if (!mainChainStorage.isCrossChainFeeSponsered()) {
+        //     require(
+        //         getIssuanceFee(_indexToken, _tokenIn, _tokenInPath, _tokenInFees, _inputAmount) == msg.value,
+        //         "Insufficient ETH sent for cross chain fee"
+        //     );
+        //     (bool success,) = mainChainStorage.coreSender().call{value: msg.value}("");
+        //     require(success, "Cross chain fee transfer failed");
+        // }
         IWETH weth = mainChainStorage.weth();
         Vault vault = mainChainStorage.vault();
 
@@ -322,42 +339,42 @@ contract MainChainFactory is
      * @param _indexToken The address of the index token.
      * @param _inputAmount The amount of input token.
      */
-    function issuanceIndexTokensWithEth(address _indexToken, uint256 _inputAmount)
-        external
-        payable
-        whenNotPaused
-        returns (uint256)
-    {
-        // Validate input parameters
-        require(_inputAmount > 0, "Input amount must be greater than zero");
-        require(msg.value >= _inputAmount, "Insufficient ETH sent");
+    // function issuanceIndexTokensWithEth(address _indexToken, uint256 _inputAmount)
+    //     external
+    //     payable
+    //     whenNotPaused
+    //     returns (uint256)
+    // {
+    //     // Validate input parameters
+    //     require(_inputAmount > 0, "Input amount must be greater than zero");
+    //     require(msg.value >= _inputAmount, "Insufficient ETH sent");
 
-        uint256 feeAmount = FeeCalculation.calculateFee(_inputAmount, 10);
-        uint256 crossChainFee =
-            getIssuanceFee(_indexToken, address(weth), new address[](0), new uint24[](0), _inputAmount);
-        if (!mainChainStorage.isCrossChainFeeSponsered()) {
-            uint256 finalAmount = _inputAmount + feeAmount + crossChainFee;
-            require(msg.value == finalAmount, "lower than required amount");
-            (bool success,) = mainChainStorage.coreSender().call{value: crossChainFee}("");
-            require(success, "Cross chain fee transfer failed");
-        } else {
-            uint256 finalAmount = _inputAmount + feeAmount;
-            require(msg.value == finalAmount, "lower than required amount");
-        }
-        //transfer fee to the owner
-        weth.deposit{value: _inputAmount + feeAmount}();
-        // Transfer fee to the fee receiver and check the result
-        require(weth.transfer(address(owner()), feeAmount), "Fee transfer failed");
+    //     uint256 feeAmount = FeeCalculation.calculateFee(_inputAmount, 10);
+    //     uint256 crossChainFee =
+    //         getIssuanceFee(_indexToken, address(weth), new address[](0), new uint24[](0), _inputAmount);
+    //     if (!mainChainStorage.isCrossChainFeeSponsered()) {
+    //         uint256 finalAmount = _inputAmount + feeAmount + crossChainFee;
+    //         require(msg.value == finalAmount, "lower than required amount");
+    //         (bool success,) = mainChainStorage.coreSender().call{value: crossChainFee}("");
+    //         require(success, "Cross chain fee transfer failed");
+    //     } else {
+    //         uint256 finalAmount = _inputAmount + feeAmount;
+    //         require(msg.value == finalAmount, "lower than required amount");
+    //     }
+    //     //transfer fee to the owner
+    //     weth.deposit{value: _inputAmount + feeAmount}();
+    //     // Transfer fee to the fee receiver and check the result
+    //     require(weth.transfer(address(owner()), feeAmount), "Fee transfer failed");
 
-        //set mappings
-        mainChainStorage.increaseIssuanceNonce();
-        mainChainStorage.setIssuanceData(
-            mainChainStorage.issuanceNonce(), msg.sender, address(weth), _inputAmount, bytes32(0)
-        );
-        //run issuance
-        _issuance(_indexToken, address(weth), _inputAmount);
-        return mainChainStorage.issuanceNonce();
-    }
+    //     //set mappings
+    //     mainChainStorage.increaseIssuanceNonce();
+    //     mainChainStorage.setIssuanceData(
+    //         mainChainStorage.issuanceNonce(), msg.sender, address(weth), _inputAmount, bytes32(0)
+    //     );
+    //     //run issuance
+    //     _issuance(_indexToken, address(weth), _inputAmount);
+    //     return mainChainStorage.issuanceNonce();
+    // }
 
     /**
      * @dev Internal function to handle issuance.
@@ -482,12 +499,15 @@ contract MainChainFactory is
      * @param _burnPercent The burn percentage.
      * @param _tokenOut The address of the output token.
      */
-    function redemption(address _indexToken, uint256 _burnPercent, address _tokenOut) public payable whenNotPaused {
+    function redemption(address _indexToken, uint256 _burnPercent, address _tokenOut, uint256 _crossChainFee) public payable whenNotPaused {
         // Validate input parameters
         // require(amountIn > 0, "Amount must be greater than zero");
         require(_tokenOut != address(0), "Invalid output token address");
         (address[] memory _tokenOutPath, uint24[] memory _tokenOutFees) = functionsOracle.getFromETHPathData(_tokenOut);
         require(_tokenOutPath[0] == address(weth), "Invalid token path");
+        if(_crossChainFee > 0){
+            _swapCrossChainFee(_tokenOut, _crossChainFee);
+        }
         // if (!mainChainStorage.isCrossChainFeeSponsered()) {
         //     // require(getRedemptionFee(_indexToken, amountIn) >= msg.value, "Insufficient ETH sent for cross chain fee");
         //     (bool success, ) = mainChainStorage.coreSender().call{

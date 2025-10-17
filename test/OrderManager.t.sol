@@ -96,7 +96,7 @@ contract OrderManagerTest is OlympixUnitTest("OrderManager") {
                     address(orderManagerImpl),
                     abi.encodeCall(
                         OrderManager.initialize,
-                        (address(usdc), address(indexFactory)) // pass the *proxy* of BackedFiFactory (or IndexFactory if you have it)
+                        (address(usdc), address(indexFactory), address(0)) // pass the *proxy* of BackedFiFactory (or IndexFactory if you have it)
                     )
                 )
             )
@@ -140,6 +140,7 @@ contract OrderManagerTest is OlympixUnitTest("OrderManager") {
             inputTokenAmount: 100e18,
             outputTokenAmount: 0,
             isBuyOrder: true,
+            crossChainFee: 0,
             burnPercent: 0
         });
 
@@ -160,6 +161,7 @@ contract OrderManagerTest is OlympixUnitTest("OrderManager") {
             inputTokenAmount: amt,
             outputTokenAmount: 0,
             isBuyOrder: false,
+            crossChainFee: 0,
             burnPercent: 1e18
         });
 
@@ -218,6 +220,7 @@ contract OrderManagerTest is OlympixUnitTest("OrderManager") {
             inputTokenAmount: 1e18,
             outputTokenAmount: 0,
             isBuyOrder: true,
+            crossChainFee: 0,
             burnPercent: 0
         });
 
@@ -236,6 +239,7 @@ contract OrderManagerTest is OlympixUnitTest("OrderManager") {
             inputTokenAmount: 0,
             outputTokenAmount: 0,
             isBuyOrder: true,
+            crossChainFee: 0,
             burnPercent: 0
         });
 
