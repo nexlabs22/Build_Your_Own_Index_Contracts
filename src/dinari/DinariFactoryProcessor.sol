@@ -172,7 +172,7 @@ contract DinariFactoryProcessor is
             uint256 balance = issuer.getReceivedAmount(tokenRequestId);
             uint256 feeTaken = issuer.getFeesTaken(tokenRequestId);
             dinariOrderManager.withdrawFunds(dinariStorage.usdc(), requester, totalBalance);
-            orderManager.completeRedemption(_redemptionNonce, _indexToken, tokenAddress, balance - feeTaken);
+            orderManager.completeRedemption(dinariStorage.providerIndex(), _redemptionNonce, _indexToken, tokenAddress, balance - feeTaken);
             totalBalance += balance - feeTaken;
         }
         dinariStorage.setRedemptionIsCompleted(_indexToken, _redemptionNonce, true);

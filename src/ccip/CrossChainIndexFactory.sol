@@ -34,6 +34,17 @@ contract CrossChainIndexFactory is
     ProposableOwnableUpgradeable,
     PausableUpgradeable
 {
+    struct DecodedMessage {
+        uint256 actionType;
+        address indexToken;
+        address[] targetAddresses;
+        address[] targetAddresses2;
+        bytes[] targetPaths;
+        bytes[] targetPaths2;
+        uint256 nonce;
+        uint256[] percentages;
+        uint256[] extraValues;
+    }
     struct Message {
         uint64 sourceChainSelector; // The chain selector of the source chain.
         address sender; // The address of the sender.
@@ -193,69 +204,92 @@ contract CrossChainIndexFactory is
             factoryStorage.verifiedFactory(sender, sourceChainSelector), "sender to the cross chain is not verified"
         );
         (
-            uint256 actionType,
-            address[] memory targetAddresses,
-            address[] memory targetAddresses2,
-            bytes[] memory targetPaths,
-            bytes[] memory targetPaths2,
-            uint256 nonce,
-            uint256[] memory percentages,
-            uint256[] memory extraValues
+            uint256 _actionType,
+            address _indexToken,
+            address[] memory _targetAddresses,
+            address[] memory _targetAddresses2,
+            bytes[] memory _targetPaths,
+            bytes[] memory _targetPaths2,
+            uint256 _nonce,
+            uint256[] memory _percentages,
+            uint256[] memory _extraValues
         ) = abi.decode(
-            any2EvmMessage.data, (uint256, address[], address[], bytes[], bytes[], uint256, uint256[], uint256[])
-        ); // abi-decoding of the sent string message
+            any2EvmMessage.data,
+            (uint256, address, address[], address[], bytes[], bytes[], uint256, uint256[], uint256[])
+        );
+        DecodedMessage memory m = DecodedMessage({
+            actionType: _actionType,
+            indexToken: _indexToken,
+            targetAddresses: _targetAddresses,
+            targetAddresses2: _targetAddresses2,
+            targetPaths: _targetPaths,
+            targetPaths2: _targetPaths2,
+            nonce: _nonce,
+            percentages: _percentages,
+            extraValues: _extraValues
+        });
+        // DecodedMessage memory m = abi.decode(any2EvmMessage.data, (uint256, address, address[], address[], bytes[], bytes[], uint256, uint256[], uint256)); // abi-decoding of the sent message
         if (any2EvmMessage.destTokenAmounts.length > 0) {
             factoryStorage.increaseTotalReceivedAmount(
                 any2EvmMessage.destTokenAmounts[0].token, any2EvmMessage.destTokenAmounts[0].amount
             );
         }
-        if (actionType == 0) {
+        if (m.actionType == 0) {
             Client.EVMTokenAmount[] memory tokenAmounts = any2EvmMessage.destTokenAmounts;
             _handleIssuance(
-                tokenAmounts, targetAddresses, targetPaths, nonce, sourceChainSelector, sender, percentages, extraValues
+                HandleIssuanceInputs({
+                    tokenAmounts: tokenAmounts,
+                    targetAddresses: m.targetAddresses,
+                    targetPaths: m.targetPaths,
+                    nonce: m.nonce,
+                    sourceChainSelector: sourceChainSelector,
+                    sender: sender,
+                    percentages: m.percentages,
+                    extraValues: m.extraValues
+                })
             );
-        } else if (actionType == 1) {
-            _handleRedemption(targetAddresses, targetPaths, nonce, sourceChainSelector, sender, extraValues);
-        } else if (actionType == 2) {
+        } else if (m.actionType == 1) {
+            _handleRedemption(m.targetAddresses, m.targetPaths, m.nonce, sourceChainSelector, sender, m.extraValues);
+        } else if (m.actionType == 2) {
             _handleAskValues(
-                targetAddresses,
-                targetPaths,
+                m.targetAddresses,
+                m.targetPaths,
                 // targetFees,
-                nonce,
+                m.nonce,
                 sourceChainSelector,
                 sender
             );
-        } else if (actionType == 3) {
+        } else if (m.actionType == 3) {
             //first reweight action
             _handleFirstReweightAction(
                 HandleFirstReweightActionInputs(
-                    targetAddresses,
-                    targetAddresses2,
-                    targetPaths,
-                    targetPaths2,
-                    percentages,
+                    m.targetAddresses,
+                    m.targetAddresses2,
+                    m.targetPaths,
+                    m.targetPaths2,
+                    m.percentages,
                     sourceChainSelector,
                     sender,
-                    nonce,
-                    extraValues
+                    m.nonce,
+                    m.extraValues
                 )
             );
-        } else if (actionType == 4) {
+        } else if (m.actionType == 4) {
             Client.EVMTokenAmount[] memory tokenAmounts = any2EvmMessage.destTokenAmounts;
 
             _handleSecondReweightAction(
                 HandleSecondReweightActionInputs(
-                    targetAddresses,
-                    targetAddresses2,
-                    targetPaths,
-                    targetPaths2,
-                    percentages,
+                    m.targetAddresses,
+                    m.targetAddresses2,
+                    m.targetPaths,
+                    m.targetPaths2,
+                    m.percentages,
                     tokenAmounts[0].token,
                     tokenAmounts[0].amount,
                     sourceChainSelector,
                     sender,
-                    nonce,
-                    extraValues
+                    m.nonce,
+                    m.extraValues
                 )
             );
         }
@@ -270,39 +304,41 @@ contract CrossChainIndexFactory is
         IWETH weth;
     }
     
-    function _handleIssuance(
-        Client.EVMTokenAmount[] memory tokenAmounts,
-        address[] memory targetAddresses,
-        bytes[] memory targetPaths,
-        uint256 nonce,
-        uint64 sourceChainSelector,
-        address sender,
-        uint256[] memory percentages,
-        uint256[] memory extraValues
-    ) private {
+    struct HandleIssuanceInputs {
+        Client.EVMTokenAmount[] tokenAmounts;
+        address[] targetAddresses;
+        bytes[] targetPaths;
+        uint256 nonce;
+        uint64 sourceChainSelector;
+        address sender;
+        uint256[] percentages;
+        uint256[] extraValues;
+    }
+
+    function _handleIssuance(HandleIssuanceInputs memory input) private {
         
         HandleIssuanceLocalVars memory vars;
         vars.vault = vault();
         vars.weth = weth();
 
         vars.wethAmount = swap(
-            toETHPath(tokenAmounts[0].token), toETHFees(tokenAmounts[0].token), tokenAmounts[0].amount, address(this)
+            toETHPath(input.tokenAmounts[0].token), toETHFees(input.tokenAmounts[0].token), input.tokenAmounts[0].amount, address(this)
         );
-        vars.oldTokenValues = new uint256[](targetAddresses.length);
-        vars.newTokenValues = new uint256[](targetAddresses.length);
-        for (uint256 i = 0; i < targetAddresses.length; i++) {
-            uint256 wethToSwap = (vars.wethAmount * percentages[i]) / extraValues[0];
-            (address[] memory fromETHPath, uint24[] memory fromETHFees) = PathHelpers.decodePathBytes(targetPaths[i]);
+        vars.oldTokenValues = new uint256[](input.targetAddresses.length);
+        vars.newTokenValues = new uint256[](input.targetAddresses.length);
+        for (uint256 i = 0; i < input.targetAddresses.length; i++) {
+            uint256 wethToSwap = (vars.wethAmount * input.percentages[i]) / input.extraValues[0];
+            (address[] memory fromETHPath, uint24[] memory fromETHFees) = PathHelpers.decodePathBytes(input.targetPaths[i]);
             uint256 oldTokenValue;
             uint256 newTokenValue;
-            if (targetAddresses[i] == address(vars.weth)) {
-                oldTokenValue = IERC20(targetAddresses[i]).balanceOf(address(vars.vault));
+            if (input.targetAddresses[i] == address(vars.weth)) {
+                oldTokenValue = IERC20(input.targetAddresses[i]).balanceOf(address(vars.vault));
                 vars.weth.transfer(address(vars.vault), wethToSwap);
-                newTokenValue = IERC20(targetAddresses[i]).balanceOf(address(vars.vault));
+                newTokenValue = IERC20(input.targetAddresses[i]).balanceOf(address(vars.vault));
             } else {
-                oldTokenValue = factoryStorage.getTokenCurrentValue(targetAddresses[i], fromETHPath, fromETHFees);
+                oldTokenValue = factoryStorage.getTokenCurrentValue(input.targetAddresses[i], fromETHPath, fromETHFees);
                 swap(fromETHPath, fromETHFees, wethToSwap, address(vars.vault));
-                newTokenValue = factoryStorage.getTokenCurrentValue(targetAddresses[i], fromETHPath, fromETHFees);
+                newTokenValue = factoryStorage.getTokenCurrentValue(input.targetAddresses[i], fromETHPath, fromETHFees);
             }
 
 
@@ -312,18 +348,18 @@ contract CrossChainIndexFactory is
 
         vars.data = abi.encode(
             0,
-            targetAddresses,
+            input.targetAddresses,
             new address[](0),
             new bytes[](0),
             new bytes[](0),
-            nonce,
+            input.nonce,
             vars.oldTokenValues,
             vars.newTokenValues
         );
 
-        bytes32 messageId = sendMessage(sourceChainSelector, address(sender), vars.data, MessageSender.PayFeesIn.Native);
-        factoryStorage.setIssuanceMessageIdByNonce(nonce, messageId);
-        emit Issuanced(messageId, nonce, block.timestamp);
+        bytes32 messageId = sendMessage(input.sourceChainSelector, address(input.sender), vars.data, MessageSender.PayFeesIn.Native);
+        factoryStorage.setIssuanceMessageIdByNonce(input.nonce, messageId);
+        emit Issuanced(messageId, input.nonce, block.timestamp);
     }
 
     uint256 public receivedCount;

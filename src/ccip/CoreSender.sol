@@ -33,6 +33,7 @@ contract CoreSender is Initializable, CCIPReceiver, ProposableOwnableUpgradeable
     OrderManager public orderManager;
 
     IWETH public weth;
+    address public usdcAddress;
 
     event Issuanced(
         bytes32 indexed messageId,
@@ -86,7 +87,8 @@ contract CoreSender is Initializable, CCIPReceiver, ProposableOwnableUpgradeable
         //ccip
         address _router,
         //addresses
-        address _weth
+        address _weth,
+        address _usdcAddress
     ) external initializer {
         // Validate input parameters
         require(_token != address(0), "Invalid token address");
@@ -106,6 +108,7 @@ contract CoreSender is Initializable, CCIPReceiver, ProposableOwnableUpgradeable
         IERC20(_chainlinkToken).approve(i_router, type(uint256).max);
         //set addresses
         weth = IWETH(_weth);
+        usdcAddress = _usdcAddress;
     }
 
     /// @custom:oz-upgrades-unsafe-allow constructor
@@ -127,6 +130,10 @@ contract CoreSender is Initializable, CCIPReceiver, ProposableOwnableUpgradeable
      */
     function setFunctionsOracle(address _functionsOracle) public onlyOwner {
         functionsOracle = FunctionsOracle(_functionsOracle);
+    }
+
+    function setUsdcAddress(address _usdcAddress) public onlyOwner {
+        usdcAddress = _usdcAddress;
     }
 
     function withdrawLink() external onlyOwnerOrOperator {
@@ -174,6 +181,7 @@ contract CoreSender is Initializable, CCIPReceiver, ProposableOwnableUpgradeable
     ) internal view returns (bytes memory) {
         return abi.encode(
             0,
+            address(0),
             _tokenAddresses,
             new address[](0),
             functionsOracle.getFromETHPathBytesForTokens(_tokenAddresses),
@@ -315,7 +323,7 @@ contract CoreSender is Initializable, CCIPReceiver, ProposableOwnableUpgradeable
             mainChainStorage.issuanceIncreaseCompletedTokensCount(requestIssuanceNonce);
             // call the order manager here
             orderManager.completeIssuance(
-                2, // provider index
+                1, // provider index
                 requestIssuanceNonce,
                 address(indexToken),
                 tokenAddresses[i],
@@ -343,6 +351,7 @@ contract CoreSender is Initializable, CCIPReceiver, ProposableOwnableUpgradeable
         //encode data
         bytes memory data = abi.encode(
             1,
+            address(0),
             tokenAddresses,
             new address[](0),
             functionsOracle.getFromETHPathBytesForTokens(tokenAddresses),
@@ -366,6 +375,7 @@ contract CoreSender is Initializable, CCIPReceiver, ProposableOwnableUpgradeable
         //encode data
         bytes memory data = abi.encode(
             1,
+            address(0),
             tokenAddresses,
             new address[](0),
             functionsOracle.getFromETHPathBytesForTokens(tokenAddresses),
@@ -433,6 +443,35 @@ contract CoreSender is Initializable, CCIPReceiver, ProposableOwnableUpgradeable
         }
     }
 
+    function _completeRedemption(uint256 _redemptionNonce, address _indexToken, uint256 _wethAmount, address _underlyingAddress) internal {
+        // swap to usdc
+        (address[] memory toTokenPath, uint24[] memory toTokenFees) =
+            functionsOracle.getFromETHPathData(usdcAddress);
+        uint256 outputAmount = swap(toTokenPath, toTokenFees, _wethAmount, address(this));
+        // approve to order manager
+        IERC20(usdcAddress).approve(address(orderManager), outputAmount);
+        // call order manager
+        orderManager.completeRedemption(
+            1,
+            _redemptionNonce,
+            _indexToken,
+            _underlyingAddress,
+            outputAmount
+        );
+    }
+
+    function _updateRedemptionCompleteData(
+        uint256 requestRedemptionNonce,
+        address[] memory tokenAddresses,
+        uint256 wethAmount,
+        uint256 crossChainPortfolioValue
+    ) internal {
+        mainChainStorage.increaseRedemptionTotalValue(requestRedemptionNonce, wethAmount);
+
+        mainChainStorage.increaseRedemptionTotalPortfolioValues(requestRedemptionNonce, crossChainPortfolioValue);
+        mainChainStorage.increaseRedemptionCompletedTokensCount(requestRedemptionNonce, tokenAddresses.length);
+    }
+
     function _handleReceivedRedemption(
         uint256 nonce,
         Client.Any2EVMMessage memory any2EvmMessage,
@@ -444,21 +483,34 @@ contract CoreSender is Initializable, CCIPReceiver, ProposableOwnableUpgradeable
     ) internal {
         uint256 requestRedemptionNonce = nonce;
         Client.EVMTokenAmount[] memory tokenAmounts = any2EvmMessage.destTokenAmounts;
-        address token = tokenAmounts[0].token;
-        uint256 amount = tokenAmounts[0].amount;
-        (address[] memory toETHPath, uint24[] memory toETHFees) = mainChainStorage.getToETHPathData(token);
-        uint256 wethAmount = swap(toETHPath, toETHFees, amount, address(this));
+        // address token = tokenAmounts[0].token;
+        // uint256 amount = tokenAmounts[0].amount;
+        (address[] memory toETHPath, uint24[] memory toETHFees) = mainChainStorage.getToETHPathData(tokenAmounts[0].token);
+        uint256 wethAmount = swap(toETHPath, toETHFees, tokenAmounts[0].amount, address(this));
 
-        mainChainStorage.increaseRedemptionTotalValue(requestRedemptionNonce, wethAmount);
+        _updateRedemptionCompleteData(
+            requestRedemptionNonce,
+            tokenAddresses,
+            wethAmount,
+            crossChainPortfolioValue
+        );
+        // mainChainStorage.increaseRedemptionTotalValue(requestRedemptionNonce, wethAmount);
 
-        mainChainStorage.increaseRedemptionTotalPortfolioValues(requestRedemptionNonce, crossChainPortfolioValue);
-        mainChainStorage.increaseRedemptionCompletedTokensCount(requestRedemptionNonce, tokenAddresses.length);
-        if (mainChainStorage.getRedemptionCompletedTokensCount(requestRedemptionNonce) == totalCurrentList) {
-            // completeRedemptionRequest(requestRedemptionNonce, messageId);
-        }
+        // mainChainStorage.increaseRedemptionTotalPortfolioValues(requestRedemptionNonce, crossChainPortfolioValue);
+        // mainChainStorage.increaseRedemptionCompletedTokensCount(requestRedemptionNonce, tokenAddresses.length);
+        // if (mainChainStorage.getRedemptionCompletedTokensCount(requestRedemptionNonce) == totalCurrentList) {
+        //     // completeRedemptionRequest(requestRedemptionNonce, messageId);
+        // }
 
         // call the order manager here
-        // ....
+        for(uint256 i; i < tokenAddresses.length; i++) {
+            _completeRedemption(
+                requestRedemptionNonce,
+                address(indexToken),
+                wethAmount / tokenAddresses.length,
+                tokenAddresses[i]
+            );
+        }
     }
 
     /**

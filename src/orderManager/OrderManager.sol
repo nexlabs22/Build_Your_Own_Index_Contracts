@@ -55,7 +55,10 @@ contract OrderManager is Initializable, OwnableUpgradeable {
     mapping(address => bool) public isOperator;
     mapping(uint256 => OrderInfo) public orderInfo; // mapping of orderNonce to OrderInfo
     mapping(address => mapping(uint64 => mapping(uint256 => bool))) public providerToNonceCount; // is cross chain 
-    mapping(address => mapping(uint64 => mapping(uint256 => uint256))) public providerNonceToOrderNonce; // mapping of providerNonce to orderNonce
+    mapping(address => mapping(uint64 => mapping(uint256 => uint256))) public providerNonceToBuyOrderNonce; // mapping of providerNonce to orderNonce
+    mapping(address => mapping(uint64 => mapping(uint256 => uint256))) public providerNonceToSellOrderNonce; // mapping of providerNonce to orderNonce
+    mapping(uint256 => uint256) public orderNonceToIssuanceNonce; // mapping of orderNonce to issuanceNonce
+    mapping(uint256 => uint256) public orderNonceToRedemptionNonce; // mapping of orderNonce to redemptionNonce
 
     event FundsWithdrawn(address token, address to, uint256 amount);
     event OrderCreated(
@@ -86,6 +89,9 @@ contract OrderManager is Initializable, OwnableUpgradeable {
         _disableInitializers();
     }
 
+    function getOrderNonce() external view returns (uint256) {
+        return orderNonceInfo.orderNonce;
+    }
     function getCCIPFeeInUsdc(address indexToken, address usdc, uint256 amount)
         external
         view
@@ -167,7 +173,7 @@ contract OrderManager is Initializable, OwnableUpgradeable {
             });
         }
     }
-
+    uint public issuanceCalled;
     function createOrder(CreateOrderConfig memory _config) external onlyOperator returns (uint256 orderNonce) {
         bool _ccipCalled = false;
         // increasing order nonce
@@ -182,18 +188,21 @@ contract OrderManager is Initializable, OwnableUpgradeable {
         _initializeOrder(_config);
         //call the provider function
         if(_config.isBuyOrder) {
-            if(_config.providerIndex == 1 || _config.providerIndex == 2) {
+            if(_config.providerIndex == 1) {
                 uint256 ccipNonce = issuanceWithCCIPFactory(
                     _config.indexTokenAddress, 
                     _config.inputTokenAddress,
                     _config.inputTokenAmount,
                     _config.crossChainFee
                 );
-                providerNonceToOrderNonce[_config.indexTokenAddress][_config.providerIndex][ccipNonce] = orderNonceInfo.orderNonce;
+                providerNonceToBuyOrderNonce[_config.indexTokenAddress][_config.providerIndex][ccipNonce] = orderNonceInfo.orderNonce;
+                orderNonceToIssuanceNonce[orderNonceInfo.orderNonce] = _config.requestNonce;
             }
         } else{
-            if((_config.providerIndex == 1 || _config.providerIndex == 2)) {
-                    redemptionWithCCIPFactory(_config.indexTokenAddress, _config.burnPercent, _config.outputTokenAddress, _config.crossChainFee);
+            if((_config.providerIndex == 1)) {
+                    uint256 ccipNonce = redemptionWithCCIPFactory(_config.indexTokenAddress, _config.burnPercent, _config.outputTokenAddress, _config.crossChainFee);
+                    providerNonceToSellOrderNonce[_config.indexTokenAddress][_config.providerIndex][ccipNonce] = orderNonceInfo.orderNonce;
+                    orderNonceToRedemptionNonce[orderNonceInfo.orderNonce] = _config.requestNonce;
             }
         }
         // emit the event
@@ -226,19 +235,25 @@ contract OrderManager is Initializable, OwnableUpgradeable {
         uint256 _oldTokenValue,
         uint256 _newTokenValue
     ) external onlyOperator {
-        uint256 issuanceNonce = providerNonceToOrderNonce[_indexToken][_providerIndex][_providerIssuanceNonce];
+        uint256 orderNonce = providerNonceToBuyOrderNonce[_indexToken][_providerIndex][_providerIssuanceNonce];
+        issuanceCalled += _oldTokenValue;
         factory.handleCompleteIssuance(
-            issuanceNonce, _indexToken, _underlyingTokenAddress, _oldTokenValue, _newTokenValue
+            orderNonceToIssuanceNonce[orderNonce], _indexToken, _underlyingTokenAddress, _oldTokenValue, _newTokenValue
         );
     }
 
     function completeRedemption(
+        uint64 providerIndex,
         uint256 _redemptionNonce,
         address _indexToken,
         address _underlyingTokenAddress,
         uint256 _outputValue
     ) external onlyOperator {
-        factory.handleCompleteRedemption(_redemptionNonce, _indexToken, _underlyingTokenAddress, _outputValue);
+        // transfer output usdc
+        IERC20(usdcAddress).safeTransferFrom(msg.sender, address(this), _outputValue);
+        uint256 orderNonce = providerNonceToSellOrderNonce[_indexToken][providerIndex][_redemptionNonce];
+        IERC20(usdcAddress).approve(address(factory), _outputValue);
+        factory.handleCompleteRedemption(orderNonceToRedemptionNonce[orderNonce], _indexToken, _underlyingTokenAddress, _outputValue);
     }
 
     function issuanceWithCCIPFactory(address _indexToken, address _tokenIn, uint256 _inputAmount, uint256 _crossChainFee) internal returns (uint256) {
@@ -265,11 +280,11 @@ contract OrderManager is Initializable, OwnableUpgradeable {
         backedFiFactory.redemption(_indexToken, _inputAmount, _burnPercent);
     }
 
-    function redemptionWithCCIPFactory(address _indexToken,uint256 _burnPercent, address _tokenOut, uint256 _crossChainFee) internal {
+    function redemptionWithCCIPFactory(address _indexToken,uint256 _burnPercent, address _tokenOut, uint256 _crossChainFee) internal returns (uint256) {
         require(_indexToken != address(0), "Invalid address!");
         require(_burnPercent > 0, "Invalid burn percent!");
         require(_tokenOut != address(0), "Invalid address!");
         IERC20(_tokenOut).approve(address(mainChainFactory), _crossChainFee);
-        mainChainFactory.redemption(_indexToken, _burnPercent, _tokenOut, _crossChainFee);
+        return mainChainFactory.redemption(_indexToken, _burnPercent, _tokenOut, _crossChainFee);
     }
 }

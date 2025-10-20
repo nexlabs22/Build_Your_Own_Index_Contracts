@@ -1266,18 +1266,19 @@ contract CCIPFactoryTest is Test, CCIPDeployer {
             "index token balance after issuance",
             indexToken.balanceOf(address(this))
         );
-        // console.log("token0", address(token0));
-        // console.log("token0", address(token1));
-        // console.log("token0", address(token2));
-        // console.log("token0", address(token3));
-        // address[] memory tokens = functionsOracle.allCurrentChainSelectorTokens(
-        //     address(indexToken),
-        //     1
-        // );
-        // console.log("token1", tokens[0]);
-        // console.log("token1", tokens[1]);
-        // console.log("token1", tokens[2]);
-        // console.log("token1", tokens[3]);
+
+        uint64[] memory currentProviderIndexes =
+            functionsOracle.getCurrentProviderIndexes(address(indexToken), 1);
+        console.log(
+            "currentProviderIndexes length",
+            currentProviderIndexes.length
+        );
+        console.log("issuance called", factory.issuanceCalled());
+        console.log("issuance called", orderManager.issuanceCalled());
+        console.log("order nonce", orderManager.getOrderNonce());
+        console.log("order nonce mapping", orderManager.providerNonceToBuyOrderNonce(address(token3), 1, 1));
+        console.log("issuance nonce", orderManager.orderNonceToIssuanceNonce(1));
+        
          // transfer issuance fee to the core sender using call to forward all gas
         (bool successCore2, ) = payable(address(coreSender)).call{value: crossChainFeeInWETH}("");
         require(successCore2, "coreSender transfer failed");
@@ -1322,11 +1323,14 @@ contract CCIPFactoryTest is Test, CCIPDeployer {
             "token4 balance after redemption",
             IERC20(token4).balanceOf(address(crossChainVault))
         );
+        console.log("redemptionCompletedAssetsCount", indexFactoryStorage.redemptionCompletedAssetsCount(address(indexToken), 0));
+        console.log("issuanceCalled", factory.issuanceCalled());
+
         /**
         */
     }
 
-    function test_reweight() public {
+    function test_reweight1() public {
         updateOracleList();
 
         mockRouter.setFee(0);
@@ -1361,6 +1365,7 @@ contract CCIPFactoryTest is Test, CCIPDeployer {
         console.log(indexToken.totalSupply());
         factoryBalancer.askValues(address(indexToken));
         mockRouter.executeAllMessages();
+        
         assertEq(mainChainStorage.updatePortfolioNonce(), 1);
         assertEq(factoryBalancer.updatePortfolioNonce(), 1);
         assertEq(factoryBalancer.providerNonceToGlobalNonce(1, 1), 1);
@@ -1406,10 +1411,12 @@ contract CCIPFactoryTest is Test, CCIPDeployer {
         console.log("token2 value", token2.balanceOf(address(vault)));
         console.log("token3 value", token3.balanceOf(address(vault)));
         console.log("token4 value", token4.balanceOf(address(crossChainVault)));
-        // console.log("updateAskValuesCount", factoryBalancer.updateAskValuesCount());
+        console.log("reweightCalled", factoryBalancer.reweightCalled());
+        console.log("reweightCalled", mainChainBalancer.reweightCalled());
         // usdc.approve(address(factory), 1001e16);
         // factory.issuanceIndexTokens(address(indexToken), 1000e16);
         // mockRouter.executeAllMessages();
+        
     }
 
     function test_reweight2() public {

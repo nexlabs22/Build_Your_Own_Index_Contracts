@@ -327,7 +327,8 @@ contract CCIPDeployer is
                                 address(functionsOracle),
                                 address(link),
                                 address(mockRouter), // ccip router
-                                wethAddress
+                                wethAddress,
+                                address(usdc)
                             )
                         )
                     )
@@ -365,7 +366,8 @@ contract CCIPDeployer is
                                 address(mainChainStorage),
                                 address(functionsOracle),
                                 payable(address(coreSender)),
-                                wethAddress
+                                wethAddress,
+                                address(usdc)
                             )
                         )
                     )
@@ -408,7 +410,8 @@ contract CCIPDeployer is
                                 address(mainChainStorage),
                                 address(functionsOracle),
                                 payable(address(balancerSender)),
-                                wethAddress
+                                wethAddress,
+                                address(usdc)
                             )
                         )
                     )
@@ -492,6 +495,7 @@ contract CCIPDeployer is
 
         functionsOracle.setFactoryBalancer(address(mainChainBalancer));
         functionsOracle.setOperator(address(factoryBalancer), true);
+        functionsOracle.setOperator(address(balancerSender), true);
         // functionsOracle.setBalancerSender(address(balancerSender));
         orderManager.setFactoryAddress(address(factory));
         orderManager.setFactoryStorage(address(indexFactoryStorage));
@@ -503,12 +507,16 @@ contract CCIPDeployer is
         indexFactoryStorage.setIndexFactory(address(factory));
         indexFactoryStorage.setUsdcAddress(address(usdc));
         indexFactoryStorage.setToUsdPriceFeed(address(ethPriceOracle));
+        indexFactoryStorage.setIndexTokenToVault(address(indexToken), address(vault));
         mainChainBalancer.setIndexFactoryBalancer(address(factoryBalancer));
+        mainChainBalancer.setIndexFactoryStorage(address(indexFactoryStorage));
         balancerSender.setIndexFactoryBalancer(address(factoryBalancer));
+        mainChainFactory.setIndexFactoryStorage(address(indexFactoryStorage));
         mainChainStorage.setCrossChainToken(2, address(crossChainToken), path, feesData);
         // indexFactoryStorage.setCrossChainToken(1, address(crossChainToken), path, feesData);
         mainChainStorage.setCrossChainFactory(address(crossChainIndexFactory), 2);
-        mainChainStorage.setIndexFactory(address(mainChainFactory));
+        mainChainStorage.setMainChainFactory(address(mainChainFactory));
+        mainChainStorage.setIndexFactoryStorage(address(indexFactoryStorage));
         mainChainStorage.setCoreSender(address(coreSender));
         mainChainStorage.setPriceOracle(address(priceOracleAddress));
         mainChainStorage.setVault(address(vault));

@@ -128,6 +128,9 @@ contract IndexFactoryBalancer is Initializable, OwnableUpgradeable, PausableUpgr
         external
         whenNotPaused
     {
+        if(_extraUsdcAmount > 0){
+            IERC20(factoryStorage.usdcAddress()).transferFrom(msg.sender, address(this), _extraUsdcAmount);
+        }
         uint256 updatePortfolioNonce = providerNonceToGlobalNonce[_providerIndex][_updateProviderNonce];
         extraUsdcAmountByNonce[updatePortfolioNonce] += _extraUsdcAmount;
     }

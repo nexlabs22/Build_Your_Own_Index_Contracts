@@ -107,6 +107,11 @@ contract IndexFactoryStorage is Initializable, ProposableOwnableUpgradeable {
         mainChainBalancer = _mainChainBalancer;
     }
 
+    function setIndexTokenToVault(address _indexToken, address _vault) external {
+        // if (_indexToken == address(0) || _vault == address(0)) revert ZeroAddress();
+        indexTokenToVault[_indexToken] = _vault;
+    }
+
     function setOrderManager(address _orderManager) external {
         // if (_orderManager == address(0)) revert ZeroAddress();
         orderManager = _orderManager;

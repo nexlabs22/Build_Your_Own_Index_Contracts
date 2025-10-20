@@ -15,6 +15,7 @@ import "../interfaces/IWETH.sol";
 import "../libraries/MessageSender.sol";
 import "./MainChainFactory.sol";
 import "../factory/IndexFactoryBalancer.sol";
+import "./MainChainBalancer.sol";
 
 /// @title Index Token
 /// @author NEX Labs Protocol
@@ -167,13 +168,15 @@ contract BalancerSender is Initializable, CCIPReceiver, ProposableOwnableUpgrade
         address crossChainIndexFactory = mainChainStorage.crossChainFactoryBySelector(chainSelector);
 
         address[] memory tokenAddresses = functionsOracle.allCurrentChainSelectorTokens(_indexToken, chainSelector);
-
+        
         bytes memory data = abi.encode(
             2,
+            address(0),
             tokenAddresses,
             new address[](0),
             functionsOracle.getFromETHPathBytesForTokens(tokenAddresses),
-            new bytes[](0),
+            functionsOracle.getFromETHPathBytesForTokens(new address[](0)),
+            // new bytes[](0),
             mainChainStorage.updatePortfolioNonce(),
             new uint256[](0),
             new uint256[](0)
@@ -194,6 +197,7 @@ contract BalancerSender is Initializable, CCIPReceiver, ProposableOwnableUpgrade
 
         return abi.encode(
             3,
+            address(0),
             currentTokenAddresses,
             newTokenAddresses,
             functionsOracle.getFromETHPathBytesForTokens(currentTokenAddresses),
@@ -245,6 +249,7 @@ contract BalancerSender is Initializable, CCIPReceiver, ProposableOwnableUpgrade
 
         return abi.encode(
             4,
+            address(0),
             currentTokenAddresses,
             newTokenAddresses,
             functionsOracle.getFromETHPathBytesForTokens(currentTokenAddresses),
@@ -346,6 +351,31 @@ contract BalancerSender is Initializable, CCIPReceiver, ProposableOwnableUpgrade
         );
     }
 
+    function _handleCompleteFirstReweight(uint256 nonce) internal {
+        // get total chainSelectors
+        mainChainStorage.increaseReweightTotalExtraCompletedChains(nonce, 1);
+        if(
+            mainChainStorage.totalReweightExtraCompletedChains(nonce) ==
+            mainChainStorage.totalReweightExtraPendingChains(nonce)
+        ) {
+            // MainChainBalancer(mainChainStorage.mainChainBalancer()).completeFirstReweightAction(nonce);
+            emit FirstReweightActionCompleted(block.timestamp);
+        }
+    }
+
+    function _handleCompleteSecondReweight(uint256 nonce) internal {
+        // get total chainSelectors
+        mainChainStorage.increaseReweightTotalLowerCompletedChains(nonce, 1);
+        if(
+            mainChainStorage.totalReweightLowerCompletedChains(nonce) ==
+            mainChainStorage.totalReweightLowerPendingChains(nonce)
+        ) {
+            MainChainBalancer(mainChainStorage.mainChainBalancer()).completeSecondReweightAction(nonce);
+            unpauseMainChainFactory();
+            emit SecondReweightActionCompleted(block.timestamp);
+        }
+    }
+
     /**
      * @dev Handles received messages.
      * @param any2EvmMessage The received message.
@@ -393,12 +423,10 @@ contract BalancerSender is Initializable, CCIPReceiver, ProposableOwnableUpgrade
             mainChainStorage.increaseExtraWethByNonce(nonce, wethAmount);
             mainChainStorage.increasePendingExtraWethByNonce(nonce, wethAmount);
             weth.transfer(mainChainStorage.mainChainBalancer(), wethAmount);
-            indexFactoryBalancer.completeFirstReweightAction(1, nonce, mainChainStorage.extraWethByNonce(nonce) - mainChainStorage.consumedExtraWethByNonce(nonce));
-            emit FirstReweightActionCompleted(block.timestamp);
+            _handleCompleteFirstReweight(nonce);
         } else if (actionType == 4) {
+            _handleCompleteSecondReweight(nonce);
             // functionsOracle.updateCurrentList();
-            unpauseMainChainFactory();
-            emit SecondReweightActionCompleted(block.timestamp);
         }
     }
 }
