@@ -6,7 +6,16 @@ import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.s
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
 
-import {DinariBalancer} from "../../src/dinari/DinariBalancer.sol";
+import {
+    DinariBalancer,
+    ZeroFactoryStorageAddress,
+    ZeroFunctionsOracleAddress,
+    UnauthorizedCaller,
+    PrevActionNotCompleted,
+    ZeroGlobalStorageAddress,
+    ZeroGlobalBalancerAddress,
+    InvalidRequestId
+} from "../../src/dinari/DinariBalancer.sol";
 import {DinariStorage} from "../../src/dinari/DinariStorage.sol";
 import {FunctionsOracle} from "../../src/oracle/FunctionsOracle.sol";
 import {IndexFactoryStorage} from "../../src/factory/IndexFactoryStorage.sol";
@@ -93,7 +102,7 @@ contract DinariBalancerTest is OlympixUnitTest("DinariBalancer") {
         DinariBalancer impl = new DinariBalancer();
         DinariBalancer fresh = DinariBalancer(address(new ERC1967Proxy(address(impl), "")));
 
-        vm.expectRevert("invalid _factoryStorage address");
+        vm.expectRevert(ZeroFactoryStorageAddress.selector);
         fresh.initialize(address(0), address(oracle), address(globalStorage), address(globalBalancer));
     }
 
@@ -101,7 +110,7 @@ contract DinariBalancerTest is OlympixUnitTest("DinariBalancer") {
         DinariBalancer impl = new DinariBalancer();
         DinariBalancer fresh = DinariBalancer(address(new ERC1967Proxy(address(impl), "")));
 
-        vm.expectRevert("invalid _functionsOracle address");
+        vm.expectRevert(ZeroFunctionsOracleAddress.selector);
         fresh.initialize(address(dinariStorage), address(0), address(globalStorage), address(globalBalancer));
     }
 
@@ -121,7 +130,7 @@ contract DinariBalancerTest is OlympixUnitTest("DinariBalancer") {
 
     function testSetMinimumOrderAmountRequiresOwnerOrOperator() public {
         vm.prank(stranger);
-        vm.expectRevert("Only owner or operator can call this function");
+        vm.expectRevert(UnauthorizedCaller.selector);
         balancer.setMinimumOrderAmount(5);
     }
 
@@ -258,7 +267,7 @@ contract DinariBalancerTest is OlympixUnitTest("DinariBalancer") {
         address indexToken = makeAddr("ask-index");
 
         vm.prank(stranger);
-        vm.expectRevert("Only owner or operator can call this function");
+        vm.expectRevert(UnauthorizedCaller.selector);
         balancer.askValues(indexToken);
     }
 
@@ -448,7 +457,7 @@ contract DinariBalancerTest is OlympixUnitTest("DinariBalancer") {
         );
 
         vm.prank(owner);
-        vm.expectRevert(bytes("Rebalance orders are not completed"));
+        vm.expectRevert(PrevActionNotCompleted.selector);
         balancer.secondRebalanceAction(indexToken, 1, 0);
 
         vm.clearMockedCalls();
@@ -458,7 +467,7 @@ contract DinariBalancerTest is OlympixUnitTest("DinariBalancer") {
         DinariBalancer impl = new DinariBalancer();
         DinariBalancer fresh = DinariBalancer(address(new ERC1967Proxy(address(impl), "")));
 
-        vm.expectRevert("invalid _globalStorage address");
+        vm.expectRevert(ZeroGlobalStorageAddress.selector);
         fresh.initialize(address(dinariStorage), address(oracle), address(0), address(globalBalancer));
     }
 
@@ -466,7 +475,7 @@ contract DinariBalancerTest is OlympixUnitTest("DinariBalancer") {
         DinariBalancer impl = new DinariBalancer();
         DinariBalancer fresh = DinariBalancer(address(new ERC1967Proxy(address(impl), "")));
 
-        vm.expectRevert("invalid _globalBalancer address");
+        vm.expectRevert(ZeroGlobalBalancerAddress.selector);
         fresh.initialize(address(dinariStorage), address(oracle), address(globalStorage), address(0));
     }
 
@@ -535,7 +544,7 @@ contract DinariBalancerTest is OlympixUnitTest("DinariBalancer") {
         //    assertTrue(ok, "Operator should be able to call firstRebalanceAction");
         // 3. Stranger reverts
         vm.prank(stranger);
-        vm.expectRevert("Only owner or operator can call this function");
+        vm.expectRevert(UnauthorizedCaller.selector);
         balancer.firstRebalanceAction(indexToken);
     }
 
@@ -682,7 +691,7 @@ contract DinariBalancerTest is OlympixUnitTest("DinariBalancer") {
 
         // Act
         // Expect a revert with the correct error
-        vm.expectRevert("Invalid request id");
+        vm.expectRevert(InvalidRequestId.selector);
         balancer.multical(indexToken, zeroRequestId, arbitraryMaxUsdcFromGlobal);
     }
 

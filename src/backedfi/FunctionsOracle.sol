@@ -8,6 +8,14 @@ import {FunctionsRequest} from "@chainlink/contracts/src/v0.8/functions/v1_0_0/l
 import {ConfirmedOwner} from "../../src/utils/chainlink/ConfirmedOwner.sol";
 import {FunctionsClient} from "../../src/utils/chainlink/FunctionsClient.sol";
 
+error NotOwnerOrOperator();
+error ZeroRouterAddress();
+error InvalidDonId();
+error InvalidRequestId();
+error InvalidTokenArray();
+error InvalidMarketShares();
+error ZeroFactoryBalancerAddress();
+
 contract FunctionsOracle is Initializable, FunctionsClient, ConfirmedOwner {
     using FunctionsRequest for FunctionsRequest.Request;
 
@@ -36,7 +44,8 @@ contract FunctionsOracle is Initializable, FunctionsClient, ConfirmedOwner {
     event RequestFulFilled(bytes32 indexed requestId, uint256 time);
 
     modifier onlyOwnerOrOperator() {
-        require(msg.sender == owner() || isOperator[msg.sender], "Caller is not the owner or operator.");
+        // require(msg.sender == owner() || isOperator[msg.sender], "Caller is not the owner or operator.");
+        if (msg.sender != owner() && !isOperator[msg.sender]) revert NotOwnerOrOperator();
         _;
     }
 
@@ -44,8 +53,10 @@ contract FunctionsOracle is Initializable, FunctionsClient, ConfirmedOwner {
     /// @param _functionsRouterAddress The address of the functions router
     /// @param _newDonId The don ID for the oracle
     function initialize(address _functionsRouterAddress, bytes32 _newDonId) external initializer {
-        require(_functionsRouterAddress != address(0), "invalid functions router address");
-        require(_newDonId.length > 0, "invalid don id");
+        // require(_functionsRouterAddress != address(0), "invalid functions router address");
+        if (_functionsRouterAddress == address(0)) revert ZeroRouterAddress();
+        // require(_newDonId.length > 0, "invalid don id");
+        if (_newDonId.length == 0) revert InvalidDonId();
         __FunctionsClient_init(_functionsRouterAddress);
         __ConfirmedOwner_init(msg.sender);
         donId = _newDonId;
@@ -75,12 +86,14 @@ contract FunctionsOracle is Initializable, FunctionsClient, ConfirmedOwner {
      * @param _functionsRouterAddress New Functions Router address
      */
     function setFunctionsRouterAddress(address _functionsRouterAddress) external onlyOwner {
-        require(_functionsRouterAddress != address(0), "invalid functions router address");
+        // require(_functionsRouterAddress != address(0), "invalid functions router address");
+        if (_functionsRouterAddress == address(0)) revert ZeroRouterAddress();
         functionsRouterAddress = _functionsRouterAddress;
     }
 
     function setFactoryBalancer(address _factoryBalancerAddress) public onlyOwner {
-        require(_factoryBalancerAddress != address(0), "invalid factory balancer address");
+        // require(_factoryBalancerAddress != address(0), "invalid factory balancer address");
+        if (_factoryBalancerAddress == address(0)) revert ZeroFactoryBalancerAddress();
         factoryBalancerAddress = _factoryBalancerAddress;
     }
 
@@ -104,9 +117,12 @@ contract FunctionsOracle is Initializable, FunctionsClient, ConfirmedOwner {
     function fulfillRequest(bytes32 requestId, bytes memory response, bytes memory err) internal override {
         (uint8[] memory assetType, address[] memory _tokens, uint256[] memory _marketShares) =
             abi.decode(response, (uint8[], address[], uint256[]));
-        require(requestId.length > 0, "invalid request id");
-        require(_tokens.length > 0, "invalid tokens");
-        require(_marketShares.length > 0, "invalid market shares");
+        // require(requestId.length > 0, "invalid request id");
+        if (requestId.length == 0) revert InvalidRequestId();
+        // require(_tokens.length > 0, "invalid tokens");
+        if (_tokens.length == 0) revert InvalidTokenArray();
+        // require(_marketShares.length > 0, "invalid market shares");
+        if (_marketShares.length == 0) revert InvalidMarketShares();
         _initData(assetType, _tokens, _marketShares);
     }
 
@@ -146,7 +162,8 @@ contract FunctionsOracle is Initializable, FunctionsClient, ConfirmedOwner {
     }
 
     function updateCurrentList() external {
-        require(msg.sender == factoryBalancerAddress || msg.sender == owner(), "caller must be factory balancer");
+        // require(msg.sender == factoryBalancerAddress || msg.sender == owner(), "caller must be factory balancer");
+        if (msg.sender != factoryBalancerAddress && msg.sender != owner()) revert NotOwnerOrOperator();
         // require(msg.sender == factoryBalancerAddress, "caller must be factory balancer");
         totalCurrentList = totalOracleList;
         for (uint256 i = 0; i < totalOracleList; i++) {

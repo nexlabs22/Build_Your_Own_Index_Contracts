@@ -5,7 +5,19 @@ import "forge-std/Test.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
 // real contracts from your repo
-import {StagingCustodyAccount} from "../../src/backedfi/StagingCustodyAccount.sol";
+import {
+    StagingCustodyAccount,
+    InsufficientRoundBalance,
+    RoundInactive,
+    NotNexBot,
+    LengthMismatch,
+    NoAssetsProvided,
+    RoundAlreadyCompleted,
+    PreviousRoundActive,
+    PreviousRoundNotCompleted,
+    RoundStillActive,
+    InsufficientTokenBalance
+} from "../../src/backedfi/StagingCustodyAccount.sol";
 // import {IndexFactoryStorage} from "../../src/backedfi/IndexFactoryStorage.sol";
 import {BackedFiStorage} from "../../src/backedfi/BackedFiStorage.sol";
 import {FunctionsOracle} from "../../src/oracle/FunctionsOracle.sol";
@@ -111,7 +123,7 @@ contract StagingCustodyAccountTest is Test {
 
     function testWithdrawForPurchase_RevertsIfNoUSDCForRound() public {
         // Round has zero totalIssuanceByRound by default -> must revert
-        vm.expectRevert(bytes("Insufficient USDC balance"));
+        vm.expectRevert(InsufficientRoundBalance.selector);
         vm.prank(owner_); // owner passes onlyOwnerOrOperator
         sca.withdrawForPurchase(idxToken, 1);
     }
@@ -130,7 +142,7 @@ contract StagingCustodyAccountTest is Test {
         vm.prank(address(sca)); // onlyFactory allows sca
         storage_.increaseIssuanceRoundId(idxToken); // set to 1
 
-        vm.expectRevert(bytes("Round is not active"));
+        vm.expectRevert(RoundInactive.selector);
         vm.prank(owner_);
         sca.requestIssuance(idxToken, 1);
     }
@@ -143,7 +155,7 @@ contract StagingCustodyAccountTest is Test {
         uint256[] memory prices = new uint256[](1);
         prices[0] = 1e18;
 
-        vm.expectRevert(bytes("Caller is not the NEX bot"));
+        vm.expectRevert(NotNexBot.selector);
         sca.completeIssuance(idxToken, 1, assets, prices);
     }
 
@@ -153,7 +165,7 @@ contract StagingCustodyAccountTest is Test {
         uint256[] memory outs = new uint256[](1);
         outs[0] = 100e6; // arbitrary
 
-        vm.expectRevert(bytes("Caller is not the NEX bot"));
+        vm.expectRevert(NotNexBot.selector);
         sca.completeRedemption(idxToken, 1, assets, outs);
     }
 
@@ -195,7 +207,7 @@ contract StagingCustodyAccountTest is Test {
         storage_.setRedemptionRoundActive(idxToken, 1, false);
         vm.stopPrank();
 
-        vm.expectRevert(bytes("length mismatch"));
+        vm.expectRevert(LengthMismatch.selector);
         vm.startPrank(nexBot);
         sca.completeRedemption(idxToken, 1, assets, outs);
         vm.stopPrank();
@@ -227,7 +239,7 @@ contract StagingCustodyAccountTest is Test {
         vm.prank(address(sca));
         storage_.setRedemptionRoundActive(idxToken, 1, false);
 
-        vm.expectRevert(bytes("no assets"));
+        vm.expectRevert(NoAssetsProvided.selector);
         vm.prank(nexBot);
         sca.completeRedemption(idxToken, 1, assets, outs);
     }
@@ -332,7 +344,7 @@ contract StagingCustodyAccountTest is Test {
         storage_.setIssuanceCompleted(idxToken, 1, true); // round is completed
 
         // Try to request issuance; should revert on 'Round already completed', hitting the 'True' branch at line 124
-        vm.expectRevert(bytes("Round already completed"));
+        vm.expectRevert(RoundAlreadyCompleted.selector);
         vm.prank(owner_);
         sca.requestIssuance(idxToken, 1);
     }
@@ -483,7 +495,7 @@ contract StagingCustodyAccountTest is Test {
         // Prank as nexBot; expect revert at require(!factoryStorage.redemptionRoundActive(_indexToken, prev), ...)
         vm.startPrank(nexBot);
         // The revert string from SCA is "Prev redemption round active"
-        vm.expectRevert(bytes("Prev redemption round active"));
+        vm.expectRevert(PreviousRoundActive.selector);
         sca.completeRedemption(idxToken, 2, assets, outs); // this must hit the opix-target-branch-271-True branch
         vm.stopPrank();
     }
@@ -519,7 +531,7 @@ contract StagingCustodyAccountTest is Test {
 
         // 4. Call completeRedemption as nexBot; expect revert on 'Prev redemption not completed'
         vm.startPrank(nexBot);
-        vm.expectRevert(bytes("Prev redemption not completed"));
+        vm.expectRevert(PreviousRoundNotCompleted.selector);
         sca.completeRedemption(idxToken, round2, assets, outs);
         vm.stopPrank();
     }
@@ -548,7 +560,7 @@ contract StagingCustodyAccountTest is Test {
 
         // Prank as nexBot, expect revert with message "Round still active"
         vm.startPrank(nexBot);
-        vm.expectRevert(bytes("Round still active")); // Expect revert at require(!active,...)
+        vm.expectRevert(RoundStillActive.selector); // Expect revert at require(!active,...)
         sca.completeRedemption(idxToken, round1, assets, outs);
         vm.stopPrank();
     }
@@ -559,7 +571,7 @@ contract StagingCustodyAccountTest is Test {
 
         // Attempt to withdraw 25 tokens (over balance, should revert and enter require branch)
         vm.prank(owner_); // pass onlyOwner
-        vm.expectRevert(bytes("Not enought balance"));
+        vm.expectRevert(InsufficientTokenBalance.selector);
         sca.withRiskAsset(address(underlyingA), user, 25e18);
         // branch at line with: require(amount <= balance, ...); // should revert, hitting opix-target-branch-318-True
     }

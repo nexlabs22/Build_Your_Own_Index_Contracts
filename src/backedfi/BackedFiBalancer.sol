@@ -19,6 +19,18 @@ import "../factory/IndexFactoryStorage.sol";
 
 error WrongETHAmount();
 error ZeroAddress();
+error UnauthorizedOperator();
+error ZeroBackedFiStorage();
+error ZeroOracleAddress();
+error ZeroGlobalStorage();
+error ZeroIndexToken();
+error ArrayLengthMismatch();
+// error VaultNotSet();
+error ZeroTokenAddress();
+error FirstPhaseAlreadyCompleted();
+error InvalidRebalancePhase();
+error NoUsdcBalance();
+error RebalanceNotReady();
 
 contract BackedFiBalancer is Initializable, OwnableUpgradeable, PausableUpgradeable, ReentrancyGuardUpgradeable {
     using SafeERC20 for IERC20;
@@ -65,11 +77,15 @@ contract BackedFiBalancer is Initializable, OwnableUpgradeable, PausableUpgradea
     event CompleteRebalanceActions(uint256 batchId, uint256 time);
 
     modifier onlyOwnerOrOperator() {
-        require(
-            msg.sender == owner() || backedfiStorage.functionsOracle().isOperator(msg.sender)
-                || msg.sender == backedfiStorage.nexBot(),
-            "balancer: only owner / operator / bot"
-        );
+        // require(
+        //     msg.sender == owner() || backedfiStorage.functionsOracle().isOperator(msg.sender)
+        //         || msg.sender == backedfiStorage.nexBot(),
+        //     "balancer: only owner / operator / bot"
+        // );
+        if (
+            msg.sender != owner() && !backedfiStorage.functionsOracle().isOperator(msg.sender)
+                && msg.sender != backedfiStorage.nexBot()
+        ) revert UnauthorizedOperator();
         _;
     }
 
@@ -79,9 +95,12 @@ contract BackedFiBalancer is Initializable, OwnableUpgradeable, PausableUpgradea
     }
 
     function initialize(address _backedfiStorage, address _oracle, address _globalStorage) external initializer {
-        require(_backedfiStorage != address(0), "balancer: zero _backedfiStorage");
-        require(_oracle != address(0), "balancer: zero _oracle");
-        require(_globalStorage != address(0), "balancer: zero _globalStorage");
+        // require(_backedfiStorage != address(0), "balancer: zero _backedfiStorage");
+        if (_backedfiStorage == address(0)) revert ZeroBackedFiStorage();
+        // require(_oracle != address(0), "balancer: zero _oracle");
+        if (_oracle == address(0)) revert ZeroOracleAddress();
+        // require(_globalStorage != address(0), "balancer: zero _globalStorage");
+        if (_globalStorage == address(0)) revert ZeroGlobalStorage();
 
         backedfiStorage = BackedFiStorage(_backedfiStorage);
         functionsOracle = FunctionsOracle(_oracle);
@@ -97,8 +116,10 @@ contract BackedFiBalancer is Initializable, OwnableUpgradeable, PausableUpgradea
         view
         returns (uint256 totalProviderValue, uint256[] memory assetValues)
     {
-        require(_indexToken != address(0), "askValues: indexToken=0");
-        require(underlyings.length == prices.length, "askValues: length mismatch");
+        // require(_indexToken != address(0), "askValues: indexToken=0");
+        if (_indexToken == address(0)) revert ZeroIndexToken();
+        // require(underlyings.length == prices.length, "askValues: length mismatch");
+        if (underlyings.length != prices.length) revert ArrayLengthMismatch();
 
         // (uint256 _totalShares, address[] memory _tokens, uint256[] memory _marketShares) = functionsOracle
         //     .getCurrentProviderIndexData(
@@ -107,13 +128,15 @@ contract BackedFiBalancer is Initializable, OwnableUpgradeable, PausableUpgradea
 
         address vaultAddr = globalStorage.indexTokenToVault(_indexToken);
         require(vaultAddr != address(0), "askValues: vault not set");
+        // if (vaultAddr == address(0)) revert VaultNotSet();
 
         assetValues = new uint256[](underlyings.length);
 
         for (uint256 i = 0; i < underlyings.length; ++i) {
             address token = underlyings[i];
             uint256 price = prices[i];
-            require(token != address(0), "askValues: ");
+            // require(token != address(0), "askValues: ");
+            if (token == address(0)) revert ZeroTokenAddress();
 
             uint256 balance = IERC20(token).balanceOf(vaultAddr);
             if (balance == 0 || price == 0) {
@@ -135,6 +158,7 @@ contract BackedFiBalancer is Initializable, OwnableUpgradeable, PausableUpgradea
     {
         address vaultAddr = globalStorage.indexTokenToVault(_indexToken);
         require(vaultAddr != address(0), "rebalance: vault not set");
+        // if (vaultAddr == address(0)) revert VaultNotSet();
         // if (vaultAddr == address(0)) revert ZeroAddress();
 
         (, address[] memory tokens,) = functionsOracle.getCurrentProviderIndexData(
@@ -143,13 +167,15 @@ contract BackedFiBalancer is Initializable, OwnableUpgradeable, PausableUpgradea
 
         uint256 totalTokens = tokens.length;
         // require(totalTokens == targetShares1e18.length, "rebalance: bad oracle data");
-        require(prices.length == totalTokens, "rebalance: price length mismatch");
+        // require(prices.length == totalTokens, "rebalance: price length mismatch");
+        if (prices.length != totalTokens) revert ArrayLengthMismatch();
 
         Ctx memory ctx = Ctx({vault: Vault(vaultAddr), usdc: backedfiStorage.usdc()});
 
         nonce = ++rebalanceNonce;
         RebalanceBatch storage batch = rebalanceBatches[nonce];
-        require(!batch.firstDone, "rebalance: phase-1 done");
+        // require(!batch.firstDone, "rebalance: phase-1 done");
+        if (batch.firstDone) revert FirstPhaseAlreadyCompleted();
 
         address[] memory soldToken = new address[](totalTokens);
         uint256[] memory soldQty = new uint256[](totalTokens);
@@ -193,18 +219,21 @@ contract BackedFiBalancer is Initializable, OwnableUpgradeable, PausableUpgradea
         onlyOwnerOrOperator
     {
         RebalanceBatch storage batch = rebalanceBatches[batchId];
-        require(batch.firstDone && !batch.secondDone, "rebalance: bad phase");
+        // require(batch.firstDone && !batch.secondDone, "rebalance: bad phase");
+        if (!batch.firstDone || batch.secondDone) revert InvalidRebalancePhase();
 
         IERC20 usdc = backedfiStorage.usdc();
         uint256 usdcBalance = usdc.balanceOf(address(this));
-        require(usdcBalance > 0, "balancer: no USDC");
+        // require(usdcBalance > 0, "balancer: no USDC");
+        if (usdcBalance == 0) revert NoUsdcBalance();
 
         (, address[] memory tokens,) = functionsOracle.getCurrentProviderIndexData(
             _indexToken, functionsOracle.currentFilledCount(_indexToken), backedfiStorage.providerIndex()
         );
 
         uint256 totalTokens = tokens.length;
-        require(prices.length == totalTokens, "rebalance: price length mismatch");
+        // require(prices.length == totalTokens, "rebalance: price length mismatch");
+        if (prices.length != totalTokens) revert ArrayLengthMismatch();
 
         uint256[] memory shortages = new uint256[](totalTokens);
         uint256 totalShortage;
@@ -259,10 +288,12 @@ contract BackedFiBalancer is Initializable, OwnableUpgradeable, PausableUpgradea
 
     function completeRebalanceActions(address _indexToken, uint256 batchId) external nonReentrant onlyOwnerOrOperator {
         RebalanceBatch storage batch = rebalanceBatches[batchId];
-        require(batch.firstDone && batch.secondDone, "rebalance: wrong phase");
+        // require(batch.firstDone && batch.secondDone, "rebalance: wrong phase");
+        if (!batch.firstDone || !batch.secondDone) revert RebalanceNotReady();
 
         address vault = globalStorage.indexTokenToVault(_indexToken);
         require(vault != address(0), "vault not set");
+        // if (vault == address(0)) revert VaultNotSet();
 
         (, address[] memory tokens,) = functionsOracle.getCurrentProviderIndexData(
             _indexToken, functionsOracle.currentFilledCount(_indexToken), backedfiStorage.providerIndex()

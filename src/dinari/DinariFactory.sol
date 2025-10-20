@@ -18,6 +18,13 @@ import {DinariOrderManager} from "./DinariOrderManager.sol";
 import {FunctionsOracle} from "../oracle/FunctionsOracle.sol";
 import {IndexFactoryStorage} from "../factory/IndexFactoryStorage.sol";
 
+error InvalidAmount();
+error UnauthorizedCaller();
+error ZeroIndexFactoryStorageAddress();
+error ZeroDinariStorageAddress();
+error ZeroFunctionsOracleAddress();
+error ZeroFactoryStorageAddress();
+
 /// @title Dinari Factory
 /// @author NEX Labs Protocol
 /// @notice Allows User to initiate burn/mint requests and allows issuers to approve or deny them
@@ -54,11 +61,15 @@ contract DinariFactory is Initializable, OwnableUpgradeable, PausableUpgradeable
     );
 
     modifier onlyOwnerOrOperatorOrBalancer() {
-        require(
-            msg.sender == owner() || functionsOracle.isOperator(msg.sender)
-                || msg.sender == dinariStorage.factoryBalancerAddress(),
-            "Caller is not the owner or operator or balancer."
-        );
+        // require(
+        //     msg.sender == owner() || functionsOracle.isOperator(msg.sender)
+        //         || msg.sender == dinariStorage.factoryBalancerAddress(),
+        //     "Caller is not the owner or operator or balancer."
+        // );
+        if (
+            msg.sender != owner() && !functionsOracle.isOperator(msg.sender)
+                && msg.sender != dinariStorage.factoryBalancerAddress()
+        ) revert UnauthorizedCaller();
         _;
     }
 
@@ -66,9 +77,12 @@ contract DinariFactory is Initializable, OwnableUpgradeable, PausableUpgradeable
         external
         initializer
     {
-        require(_indexFactoryStorage != address(0), "invalid _indexFactoryStorage address");
-        require(_dinariStorage != address(0), "invalid _dinariStorage address");
-        require(_functionsOracle != address(0), "invalid _functionsOracle address");
+        // require(_indexFactoryStorage != address(0), "invalid _indexFactoryStorage address");
+        if (_indexFactoryStorage == address(0)) revert ZeroIndexFactoryStorageAddress();
+        // require(_dinariStorage != address(0), "invalid _dinariStorage address");
+        if (_dinariStorage == address(0)) revert ZeroDinariStorageAddress();
+        // require(_functionsOracle != address(0), "invalid _functionsOracle address");
+        if (_functionsOracle == address(0)) revert ZeroFunctionsOracleAddress();
         dinariStorage = DinariStorage(_dinariStorage);
         functionsOracle = FunctionsOracle(_functionsOracle);
         factoryStorage = IndexFactoryStorage(_indexFactoryStorage);
@@ -87,7 +101,8 @@ contract DinariFactory is Initializable, OwnableUpgradeable, PausableUpgradeable
      * @param _functionsOracle The address of the new functions oracle contract.
      */
     function setFunctionsOracle(address _functionsOracle) external onlyOwner {
-        require(_functionsOracle != address(0), "invalid functions oracle address");
+        // require(_functionsOracle != address(0), "invalid functions oracle address");
+        if (_functionsOracle == address(0)) revert ZeroFunctionsOracleAddress();
         functionsOracle = FunctionsOracle(_functionsOracle);
     }
 
@@ -97,7 +112,8 @@ contract DinariFactory is Initializable, OwnableUpgradeable, PausableUpgradeable
      * @return bool indicating success.
      */
     function setIndexFactoryStorage(address _factoryStorage) external onlyOwner returns (bool) {
-        require(_factoryStorage != address(0), "invalid factory storage address");
+        // require(_factoryStorage != address(0), "invalid factory storage address");
+        if (_factoryStorage == address(0)) revert ZeroFactoryStorageAddress();
         dinariStorage = DinariStorage(_factoryStorage);
         return true;
     }
@@ -241,7 +257,9 @@ contract DinariFactory is Initializable, OwnableUpgradeable, PausableUpgradeable
         whenNotPaused
         returns (uint256)
     {
-        require(_inputAmount > 0, "Invalid input amount");
+        if (_inputAmount <= 0) revert InvalidAmount();
+
+        // require(_inputAmount > 0, "Invalid input amount");
         uint256 orderProcessorFee = dinariStorage.calculateIssuanceFee(_indexToken, _inputAmount);
         uint256 quantityIn = orderProcessorFee + _inputAmount;
         IERC20(dinariStorage.usdc()).safeTransferFrom(
@@ -282,7 +300,8 @@ contract DinariFactory is Initializable, OwnableUpgradeable, PausableUpgradeable
         whenNotPaused
         returns (uint256)
     {
-        require(_inputAmount > 0, "Invalid input amount");
+        if (_inputAmount <= 0) revert InvalidAmount();
+        // require(_inputAmount > 0, "Invalid input amount");
         dinariStorage.increaseRedemptionNonce(_indexToken);
         uint256 redemptionNonce = dinariStorage.redemptionNonce(_indexToken);
         dinariStorage.setRedemptionInputAmount(_indexToken, redemptionNonce, _inputAmount);

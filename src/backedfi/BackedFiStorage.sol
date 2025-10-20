@@ -16,6 +16,19 @@ import {IRiskAssetFactory} from "./interfaces/IRiskAssetFactory.sol";
 error InvalidAddress();
 error ZeroAmount();
 error UnsettledRound(uint256 previousRoundId);
+error NotFactoryContract();
+error NotOwnerOperator();
+error ZeroIndexFactoryAddress();
+error ZeroFunctionsOracleAddress();
+error ZeroStagingCustodyAccountAddress();
+error ZeroNexBotAddress();
+error ZeroUsdcAddress();
+error InvalidProviderIndex();
+error FeeUpdateTooSoon();
+error FeeOutOfRange();
+error VaultNotSet();
+error InvalidIndexTokenAddress();
+error PricesArrayTooShort();
 
 contract BackedFiStorage is Initializable, OwnableUpgradeable {
     IndexToken public indexToken;
@@ -70,20 +83,26 @@ contract BackedFiStorage is Initializable, OwnableUpgradeable {
     event RedemptionNonceRecorded(address indexed indexToken, uint256 indexed roundId, uint256 indexed nonce);
 
     modifier onlyFactory() {
-        require(
-            msg.sender == address(indexFactory) || msg.sender == nexBot || msg.sender == address(sca),
-            // || msg.sender == address(factoryBalancer),
-            "Caller is not a factory contract"
-        );
+        // require(
+        //     msg.sender == address(indexFactory) || msg.sender == nexBot || msg.sender == address(sca),
+        //     // || msg.sender == address(factoryBalancer),
+        //     "Caller is not a factory contract"
+        // );
+        if (
+            msg.sender != address(indexFactory) && msg.sender != nexBot && msg.sender != address(sca)
+        ) revert NotFactoryContract();
         _;
     }
 
     modifier onlyOwnerOrOperator() {
-        require(
-            msg.sender == owner() || functionsOracle.isOperator(msg.sender) || msg.sender == nexBot,
-            // || msg.sender == address(factoryBalancer),
-            "Caller is not the owner or operator"
-        );
+        // require(
+        //     msg.sender == owner() || functionsOracle.isOperator(msg.sender) || msg.sender == nexBot,
+        //     // || msg.sender == address(factoryBalancer),
+        //     "Caller is not the owner or operator"
+        // );
+        if (msg.sender != owner() && !functionsOracle.isOperator(msg.sender) && msg.sender != nexBot) {
+            revert NotOwnerOperator();
+        }
         _;
     }
 
@@ -95,12 +114,18 @@ contract BackedFiStorage is Initializable, OwnableUpgradeable {
         address _usdc,
         uint8 _providerIndex
     ) external initializer {
-        require(_indexFactory != address(0), "Invalid _indexFactory address");
-        require(_functionsOracle != address(0), "Invalid _functionsOracle address");
-        require(_stagingCustodyAccount != address(0), "Invalid _stagingCustodyAccount address");
-        require(_nexBot != address(0), "Invalid _nexBot address");
-        require(_usdc != address(0), "Invalid _usdc address");
-        require(_providerIndex > 0, "Invalid _providerIndex address");
+        // require(_indexFactory != address(0), "Invalid _indexFactory address");
+        if (_indexFactory == address(0)) revert ZeroIndexFactoryAddress();
+        // require(_functionsOracle != address(0), "Invalid _functionsOracle address");
+        if (_functionsOracle == address(0)) revert ZeroFunctionsOracleAddress();
+        // require(_stagingCustodyAccount != address(0), "Invalid _stagingCustodyAccount address");
+        if (_stagingCustodyAccount == address(0)) revert ZeroStagingCustodyAccountAddress();
+        // require(_nexBot != address(0), "Invalid _nexBot address");
+        if (_nexBot == address(0)) revert ZeroNexBotAddress();
+        // require(_usdc != address(0), "Invalid _usdc address");
+        if (_usdc == address(0)) revert ZeroUsdcAddress();
+        // require(_providerIndex > 0, "Invalid _providerIndex address");
+        if (_providerIndex == 0) revert InvalidProviderIndex();
 
         __Ownable_init(msg.sender);
 
@@ -122,8 +147,10 @@ contract BackedFiStorage is Initializable, OwnableUpgradeable {
 
     function setFeeRate(uint8 _newFee) public onlyOwner {
         uint256 distance = block.timestamp - latestFeeUpdate;
-        require(distance / 60 / 60 >= 12, "You should wait at least 12 hours after the latest update");
-        require(_newFee <= 10000 && _newFee >= 1, "The newFee should be between 1 and 100 (0.01% - 1%)");
+        // require(distance / 60 / 60 >= 12, "You should wait at least 12 hours after the latest update");
+        if (distance / 60 / 60 < 12) revert FeeUpdateTooSoon();
+        // require(_newFee <= 10000 && _newFee >= 1, "The newFee should be between 1 and 100 (0.01% - 1%)");
+        if (_newFee > 10000 || _newFee < 1) revert FeeOutOfRange();
         feeRate = _newFee;
         latestFeeUpdate = block.timestamp;
     }
@@ -444,14 +471,16 @@ contract BackedFiStorage is Initializable, OwnableUpgradeable {
         returns (uint256 totalValue)
     {
         address vaultAddr = indexTokenToVault[_indexToken];
-        require(vaultAddr != address(0), "vault not set");
+        // require(vaultAddr != address(0), "vault not set");
+        if (vaultAddr == address(0)) revert VaultNotSet();
 
         (, address[] memory underlyingAssets,) = functionsOracle.getCurrentProviderIndexData(
             _indexToken, functionsOracle.currentFilledCount(_indexToken), providerIndex
         );
 
         uint256 tokens = underlyingAssets.length;
-        require(_prices.length >= tokens, "prices length too small");
+        // require(_prices.length >= tokens, "prices length too small");
+        if (_prices.length < tokens) revert PricesArrayTooShort();
 
         for (uint256 i = 0; i < tokens;) {
             address token = underlyingAssets[i];
@@ -476,9 +505,11 @@ contract BackedFiStorage is Initializable, OwnableUpgradeable {
         address _underlyingAsset,
         uint256 _price // 1e18-scaled
     ) public view returns (uint256 totalValue) {
-        require(_indexToken != address(0), "invalid index token");
+        // require(_indexToken != address(0), "invalid index token");
+        if (_indexToken == address(0)) revert InvalidIndexTokenAddress();
         address vaultAddr = indexTokenToVault[_indexToken];
-        require(vaultAddr != address(0), "vault not set");
+        // require(vaultAddr != address(0), "vault not set");
+        if (vaultAddr == address(0)) revert VaultNotSet();
         if (_price == 0) return 0;
 
         uint256 balance = IERC20(_underlyingAsset).balanceOf(vaultAddr);

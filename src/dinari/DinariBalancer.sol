@@ -22,6 +22,16 @@ import "../libraries/Commen.sol" as PrbMath2;
 import "../factory/IndexFactoryStorage.sol";
 import "../factory/IndexFactoryBalancer.sol";
 
+error WrongRebalanceNonce();
+error PrevActionNotCompleted();
+// error UnauthorizedCaller();
+// error ZeroFactoryStorageAddress();
+// error ZeroFunctionsOracleAddress();
+error ZeroGlobalStorageAddress();
+error ZeroGlobalBalancerAddress();
+error VaultNotSet();
+error InvalidRequestId();
+
 /// @title DinariBalancer
 /// @author NEX Labs Protocol
 contract DinariBalancer is Initializable, OwnableUpgradeable, PausableUpgradeable, ReentrancyGuardUpgradeable {
@@ -70,10 +80,11 @@ contract DinariBalancer is Initializable, OwnableUpgradeable, PausableUpgradeabl
     uint256 public minimumOrderAmount;
 
     modifier onlyOwnerOrOperator() {
-        require(
-            msg.sender == owner() || functionsOracle.isOperator(msg.sender),
-            "Only owner or operator can call this function"
-        );
+        // require(
+        //     msg.sender == owner() || functionsOracle.isOperator(msg.sender),
+        //     "Only owner or operator can call this function"
+        // );
+        if (msg.sender != owner() && !functionsOracle.isOperator(msg.sender)) revert UnauthorizedCaller();
         _;
     }
 
@@ -83,10 +94,14 @@ contract DinariBalancer is Initializable, OwnableUpgradeable, PausableUpgradeabl
         address _globalStorage,
         address _globalBalancer
     ) external initializer {
-        require(_factoryStorage != address(0), "invalid _factoryStorage address");
-        require(_functionsOracle != address(0), "invalid _functionsOracle address");
-        require(_globalStorage != address(0), "invalid _globalStorage address");
-        require(_globalBalancer != address(0), "invalid _globalBalancer address");
+        // require(_factoryStorage != address(0), "invalid _factoryStorage address");
+        if (_factoryStorage == address(0)) revert ZeroFactoryStorageAddress();
+        // require(_functionsOracle != address(0), "invalid _functionsOracle address");
+        if (_functionsOracle == address(0)) revert ZeroFunctionsOracleAddress();
+        // require(_globalStorage != address(0), "invalid _globalStorage address");
+        if (_globalStorage == address(0)) revert ZeroGlobalStorageAddress();
+        // require(_globalBalancer != address(0), "invalid _globalBalancer address");
+        if (_globalBalancer == address(0)) revert ZeroGlobalBalancerAddress();
 
         dinariStorage = DinariStorage(_factoryStorage);
         functionsOracle = FunctionsOracle(_functionsOracle);
@@ -391,7 +406,8 @@ contract DinariBalancer is Initializable, OwnableUpgradeable, PausableUpgradeabl
         nonReentrant
         onlyOwnerOrOperator
     {
-        require(checkFirstRebalanceOrdersStatus(_indexToken, _rebalanceNonce), "Rebalance orders are not completed");
+        if (!checkFirstRebalanceOrdersStatus(_indexToken, _rebalanceNonce)) revert PrevActionNotCompleted();
+        // require(checkFirstRebalanceOrdersStatus(_indexToken, _rebalanceNonce), "Rebalance orders are not completed");
 
         uint8 providerIndex = dinariStorage.providerIndex();
 
@@ -477,7 +493,8 @@ contract DinariBalancer is Initializable, OwnableUpgradeable, PausableUpgradeabl
         nonReentrant
         onlyOwnerOrOperator
     {
-        require(checkSecondRebalanceOrdersStatus(_indexToken, _rebalanceNonce), "Rebalance orders are not completed");
+        if (!checkSecondRebalanceOrdersStatus(_indexToken, _rebalanceNonce)) revert PrevActionNotCompleted();
+        // require(checkSecondRebalanceOrdersStatus(_indexToken, _rebalanceNonce), "Rebalance orders are not completed");
 
         IOrderProcessor issuer = dinariStorage.issuer();
         uint8 providerIndex = dinariStorage.providerIndex();
@@ -487,7 +504,8 @@ contract DinariBalancer is Initializable, OwnableUpgradeable, PausableUpgradeabl
         );
 
         address vault = globalStorage.indexTokenToVault(_indexToken);
-        require(vault != address(0), "vault not set");
+        // require(vault != address(0), "vault not set");
+        if (vault == address(0)) revert VaultNotSet();
 
         address orderManager = address(dinariStorage.dinariOrderManager());
 
@@ -541,7 +559,8 @@ contract DinariBalancer is Initializable, OwnableUpgradeable, PausableUpgradeabl
     }
 
     function checkFirstRebalanceOrdersStatus(address _indexToken, uint256 _rebalanceNonce) public view returns (bool) {
-        require(_rebalanceNonce <= rebalanceNonce[_indexToken], "Wrong rebalance nonce!");
+        if (_rebalanceNonce > rebalanceNonce[_indexToken]) revert WrongRebalanceNonce();
+        // require(_rebalanceNonce <= rebalanceNonce[_indexToken], "Wrong rebalance nonce!");
         // uint256 completedOrdersCount;
         (, address[] memory underlyingAssets,) = functionsOracle.getCurrentProviderIndexData(
             _indexToken, functionsOracle.currentFilledCount(_indexToken), dinariStorage.providerIndex()
@@ -567,7 +586,9 @@ contract DinariBalancer is Initializable, OwnableUpgradeable, PausableUpgradeabl
         view
         returns (bool)
     {
-        require(_rebalanceNonce <= rebalanceNonce[_indexToken], "Wrong rebalance nonce!");
+        if (_rebalanceNonce > rebalanceNonce[_indexToken]) revert WrongRebalanceNonce();
+
+        // require(_rebalanceNonce <= rebalanceNonce[_indexToken], "Wrong rebalance nonce!");
         // uint256 completedOrdersCount;
         IOrderProcessor issuer = dinariStorage.issuer();
         (, address[] memory underlyingAssets,) = functionsOracle.getCurrentProviderIndexData(
@@ -599,7 +620,8 @@ contract DinariBalancer is Initializable, OwnableUpgradeable, PausableUpgradeabl
     }
 
     function multical(address _indexToken, uint256 _requestId, uint256 _maxUsdcFromGlobal) public {
-        require(_requestId > 0, "Invalid request id");
+        // require(_requestId > 0, "Invalid request id");
+        if (_requestId == 0) revert InvalidRequestId();
         ActionInfo memory actionInfo = actionInfoById[_indexToken][_requestId];
         if (actionInfo.actionType == 5) {
             secondRebalanceAction(_indexToken, actionInfo.nonce, _maxUsdcFromGlobal);

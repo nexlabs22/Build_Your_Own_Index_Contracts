@@ -19,6 +19,16 @@ import {FunctionsOracle} from "../oracle/FunctionsOracle.sol";
 import {IndexFactoryStorage} from "../factory/IndexFactoryStorage.sol";
 import "../orderManager/OrderManager.sol";
 
+error ZeroIndexFactoryStorageAddress();
+error ZeroDinariStorageAddress();
+error ZeroFunctionsOracleAddress();
+error ZeroOrderManagerAddress();
+error ZeroFactoryStorageAddress();
+error IssuanceOrdersIncomplete();
+error IssuanceAlreadyCompleted();
+error RedemptionOrdersIncomplete();
+error RedemptionAlreadyCompleted();
+
 /// @title Index Token Factory
 /// @author NEX Labs Protocol
 /// @notice Allows User to initiate burn/mint requests and allows issuers to approve or deny them
@@ -58,10 +68,14 @@ contract DinariFactoryProcessor is
         address _functionsOracle,
         address _orderManager
     ) external initializer {
-        require(_indexFactoryStorage != address(0), "invalid _indexFactoryStorage address");
-        require(_dinariStorage != address(0), "invalid _dinariStorage address");
-        require(_functionsOracle != address(0), "invalid _functionsOracle address");
-        require(_orderManager != address(0), "invalid _orderManager address");
+        // require(_indexFactoryStorage != address(0), "invalid _indexFactoryStorage address");
+        if (_indexFactoryStorage == address(0)) revert ZeroIndexFactoryStorageAddress();
+        // require(_dinariStorage != address(0), "invalid _dinariStorage address");
+        if (_dinariStorage == address(0)) revert ZeroDinariStorageAddress();
+        // require(_functionsOracle != address(0), "invalid _functionsOracle address");
+        if (_functionsOracle == address(0)) revert ZeroFunctionsOracleAddress();
+        // require(_orderManager != address(0), "invalid _orderManager address");
+        if (_orderManager == address(0)) revert ZeroOrderManagerAddress();
         factoryStorage = IndexFactoryStorage(_indexFactoryStorage);
         dinariStorage = DinariStorage(_dinariStorage);
         functionsOracle = FunctionsOracle(_functionsOracle);
@@ -78,20 +92,26 @@ contract DinariFactoryProcessor is
     }
 
     function setFunctionsOracle(address _functionsOracle) external onlyOwner returns (bool) {
-        require(_functionsOracle != address(0), "invalid functions oracle address");
+        // require(_functionsOracle != address(0), "invalid functions oracle address");
+        if (_functionsOracle == address(0)) revert ZeroFunctionsOracleAddress();
         functionsOracle = FunctionsOracle(_functionsOracle);
         return true;
     }
 
     function setIndexFactoryStorage(address _factoryStorage) external onlyOwner returns (bool) {
-        require(_factoryStorage != address(0), "invalid factory storage address");
+        // require(_factoryStorage != address(0), "invalid factory storage address");
+        if (_factoryStorage == address(0)) revert ZeroFactoryStorageAddress();
         dinariStorage = DinariStorage(_factoryStorage);
         return true;
     }
 
     function completeIssuance(address _indexToken, uint256 _issuanceNonce) public nonReentrant whenNotPaused {
-        require(dinariStorage.checkIssuanceOrdersStatus(_indexToken, _issuanceNonce), "Orders are not completed");
-        require(!dinariStorage.issuanceIsCompleted(_indexToken, _issuanceNonce), "Issuance is completed");
+        // require(dinariStorage.checkIssuanceOrdersStatus(_indexToken, _issuanceNonce), "Orders are not completed");
+        if (!dinariStorage.checkIssuanceOrdersStatus(_indexToken, _issuanceNonce)) {
+            revert IssuanceOrdersIncomplete();
+        }
+        // require(!dinariStorage.issuanceIsCompleted(_indexToken, _issuanceNonce), "Issuance is completed");
+        if (dinariStorage.issuanceIsCompleted(_indexToken, _issuanceNonce)) revert IssuanceAlreadyCompleted();
         address requester = dinariStorage.issuanceRequesterByNonce(_indexToken, _issuanceNonce);
         // IOrderProcessor issuer = dinariStorage.issuer();
         uint256 primaryPortfolioValue;
@@ -152,11 +172,15 @@ contract DinariFactoryProcessor is
     }
 
     function completeRedemption(address _indexToken, uint256 _redemptionNonce) public nonReentrant whenNotPaused {
-        require(
-            dinariStorage.checkRedemptionOrdersStatus(_indexToken, _redemptionNonce),
-            "Redemption orders are not completed"
-        );
-        require(!dinariStorage.redemptionIsCompleted(_indexToken, _redemptionNonce), "Redemption is completed");
+        // require(
+        //     dinariStorage.checkRedemptionOrdersStatus(_indexToken, _redemptionNonce),
+        //     "Redemption orders are not completed"
+        // );
+        if (!dinariStorage.checkRedemptionOrdersStatus(_indexToken, _redemptionNonce)) {
+            revert RedemptionOrdersIncomplete();
+        }
+        // require(!dinariStorage.redemptionIsCompleted(_indexToken, _redemptionNonce), "Redemption is completed");
+        if (dinariStorage.redemptionIsCompleted(_indexToken, _redemptionNonce)) revert RedemptionAlreadyCompleted();
         address requester = dinariStorage.redemptionRequesterByNonce(_indexToken, _redemptionNonce);
         IOrderProcessor issuer = dinariStorage.issuer();
         uint256 totalBalance;

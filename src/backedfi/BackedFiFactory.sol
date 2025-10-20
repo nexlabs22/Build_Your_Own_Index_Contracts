@@ -17,6 +17,8 @@ import {FeeCalculation} from "../libraries/FeeCalculation.sol";
 
 error ZeroAmount();
 error WrongETHAmount();
+error UnauthorizedCaller();
+error ZeroBackedFiStorageAddress();
 
 contract BackedFiFactory is Initializable, OwnableUpgradeable, PausableUpgradeable, ReentrancyGuardUpgradeable {
     using SafeERC20 for IERC20;
@@ -48,16 +50,18 @@ contract BackedFiFactory is Initializable, OwnableUpgradeable, PausableUpgradeab
     );
 
     modifier onlyOwnerOrOperator() {
-        require(
-            msg.sender == owner() || functionsOracle.isOperator(msg.sender),
-            // || msg.sender == address(factoryStorage.factoryBalancer()),
-            "Caller is not the owner or operator"
-        );
+        // require(
+        //     msg.sender == owner() || functionsOracle.isOperator(msg.sender),
+        //     // || msg.sender == address(factoryStorage.factoryBalancer()),
+        //     "Caller is not the owner or operator"
+        // );
+        if (msg.sender != owner() && !functionsOracle.isOperator(msg.sender)) revert UnauthorizedCaller();
         _;
     }
 
     function initialize(address _backedFiStorage) external initializer {
-        require(_backedFiStorage != address(0), "Invalid _backedFiStorage Address");
+        // require(_backedFiStorage != address(0), "Invalid _backedFiStorage Address");
+        if (_backedFiStorage == address(0)) revert ZeroBackedFiStorageAddress();
 
         backedFiStorage = BackedFiStorage(_backedFiStorage);
 

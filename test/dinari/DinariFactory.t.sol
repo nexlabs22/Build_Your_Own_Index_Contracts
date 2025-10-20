@@ -4,7 +4,15 @@ pragma solidity 0.8.25;
 import "forge-std/Test.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
-import {DinariFactory} from "../../src/dinari/DinariFactory.sol";
+import {
+    DinariFactory,
+    ZeroIndexFactoryStorageAddress,
+    ZeroDinariStorageAddress,
+    ZeroFunctionsOracleAddress,
+    UnauthorizedCaller,
+    InvalidAmount,
+    ZeroFactoryStorageAddress
+} from "../../src/dinari/DinariFactory.sol";
 import {DinariStorage} from "../../src/dinari/DinariStorage.sol";
 import {FunctionsOracle} from "../../src/oracle/FunctionsOracle.sol";
 import {IndexFactoryStorage} from "../../src/factory/IndexFactoryStorage.sol";
@@ -177,13 +185,13 @@ contract DinariFactory_MainTest is OlympixUnitTest("DinariFactory") {
         DinariFactory impl = new DinariFactory();
         DinariFactory fresh = DinariFactory(address(new ERC1967Proxy(address(impl), "")));
 
-        vm.expectRevert(bytes("invalid _indexFactoryStorage address"));
+        vm.expectRevert(ZeroIndexFactoryStorageAddress.selector);
         fresh.initialize(address(0), address(dinariStorage), address(oracle));
 
-        vm.expectRevert(bytes("invalid _dinariStorage address"));
+        vm.expectRevert(ZeroDinariStorageAddress.selector);
         fresh.initialize(address(gFactory), address(0), address(oracle));
 
-        vm.expectRevert(bytes("invalid _functionsOracle address"));
+        vm.expectRevert(ZeroFunctionsOracleAddress.selector);
         fresh.initialize(address(gFactory), address(dinariStorage), address(0));
     }
 
@@ -191,7 +199,7 @@ contract DinariFactory_MainTest is OlympixUnitTest("DinariFactory") {
 
     function testPause_Unpause_Roles() public {
         // non authorized
-        vm.expectRevert(bytes("Caller is not the owner or operator or balancer."));
+        vm.expectRevert(UnauthorizedCaller.selector);
         factory.pause();
 
         // owner
@@ -248,7 +256,7 @@ contract DinariFactory_MainTest is OlympixUnitTest("DinariFactory") {
         // Arrange: Only owner can call
         vm.prank(owner);
         // Act/Assert: should revert with 'invalid functions oracle address' if argument is zero
-        vm.expectRevert(bytes("invalid functions oracle address"));
+        vm.expectRevert(ZeroFunctionsOracleAddress.selector);
         factory.setFunctionsOracle(address(0));
     }
 
@@ -260,7 +268,7 @@ contract DinariFactory_MainTest is OlympixUnitTest("DinariFactory") {
 
         // When: user invokes issuanceIndexTokens with _inputAmount = 0, should revert with message
         vm.prank(user);
-        vm.expectRevert("Invalid input amount");
+        vm.expectRevert(InvalidAmount.selector);
         factory.issuanceIndexTokens(idxToken, 0);
     }
 
@@ -272,7 +280,7 @@ contract DinariFactory_MainTest is OlympixUnitTest("DinariFactory") {
 
         // Try with _inputAmount = 0, expect revert
         vm.prank(user);
-        vm.expectRevert(bytes("Invalid input amount"));
+        vm.expectRevert(InvalidAmount.selector);
         factory.redemption(idxToken, 0, 1e18);
     }
 
@@ -314,13 +322,13 @@ contract DinariFactory_MainTest is OlympixUnitTest("DinariFactory") {
 
         // 4. As unauthorized: expect revert
         address bad = address(0xDEAD);
-        vm.expectRevert(bytes("Caller is not the owner or operator or balancer."));
+        vm.expectRevert(UnauthorizedCaller.selector);
         vm.prank(bad);
         factory.unpause();
     }
 
     function testSetIndexFactoryStorage_ZeroArgumentReverts_opix_branch_coverage() public {
-        vm.expectRevert(bytes("invalid factory storage address"));
+        vm.expectRevert(ZeroFactoryStorageAddress.selector);
         vm.prank(owner);
         factory.setIndexFactoryStorage(address(0));
     }

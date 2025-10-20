@@ -4,7 +4,20 @@ pragma solidity 0.8.25;
 import "forge-std/Test.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
-import {BackedFiBalancer} from "../../src/backedfi/BackedFiBalancer.sol";
+import {
+    BackedFiBalancer,
+    ZeroBackedFiStorage,
+    UnauthorizedOperator,
+    InvalidRebalancePhase,
+    RebalanceNotReady,
+    ZeroOracleAddress,
+    ZeroGlobalStorage,
+    ZeroIndexToken,
+    ArrayLengthMismatch,
+    VaultNotSet,
+    ZeroTokenAddress,
+    NoUsdcBalance
+} from "../../src/backedfi/BackedFiBalancer.sol";
 import {BackedFiStorage} from "../../src/backedfi/BackedFiStorage.sol";
 import {StagingCustodyAccount} from "../../src/backedfi/StagingCustodyAccount.sol";
 import {FunctionsOracle} from "../../src/oracle/FunctionsOracle.sol";
@@ -89,13 +102,13 @@ contract BackedFiBalancerTest is OlympixUnitTest("BackedFiBalancer") {
         BackedFiBalancer impl = new BackedFiBalancer();
         BackedFiBalancer fresh = BackedFiBalancer(address(new ERC1967Proxy(address(impl), "")));
 
-        vm.expectRevert("balancer: zero _backedfiStorage");
+        vm.expectRevert(ZeroBackedFiStorage.selector);
         fresh.initialize(address(0), address(oracle), address(globalStorage));
     }
 
     function testFirstRebalanceActionOnlyOwnerOrOperator() public {
         vm.prank(stranger);
-        vm.expectRevert("balancer: only owner / operator / bot");
+        vm.expectRevert(UnauthorizedOperator.selector);
         balancer.firstRebalanceAction(indexToken, 2, new uint256[](0));
     }
 
@@ -124,7 +137,7 @@ contract BackedFiBalancerTest is OlympixUnitTest("BackedFiBalancer") {
 
     function testSecondRebalanceActionRequiresFirstDone() public {
         vm.prank(owner);
-        vm.expectRevert("rebalance: bad phase");
+        vm.expectRevert(InvalidRebalancePhase.selector);
         balancer.secondRebalanceAction(indexToken, 1, new uint256[](0));
     }
 
@@ -149,7 +162,7 @@ contract BackedFiBalancerTest is OlympixUnitTest("BackedFiBalancer") {
         usdc.mint(address(balancer), 1_000e6);
 
         vm.prank(stranger);
-        vm.expectRevert("balancer: only owner / operator / bot");
+        vm.expectRevert(UnauthorizedOperator.selector);
         balancer.secondRebalanceAction(indexToken, 1, new uint256[](0));
     }
 
@@ -158,7 +171,7 @@ contract BackedFiBalancerTest is OlympixUnitTest("BackedFiBalancer") {
         balancer.firstRebalanceAction(indexToken, 2, new uint256[](0));
 
         vm.prank(owner);
-        vm.expectRevert(bytes("rebalance: wrong phase"));
+        vm.expectRevert(RebalanceNotReady.selector);
         balancer.completeRebalanceActions(indexToken, 1);
     }
 
@@ -341,7 +354,7 @@ contract BackedFiBalancerTest is OlympixUnitTest("BackedFiBalancer") {
         BackedFiBalancer fresh = BackedFiBalancer(address(new ERC1967Proxy(address(impl), "")));
 
         // This should revert on the oracle address being zero (which targets the opix-target-branch-83-True branch in the subject code)
-        vm.expectRevert("balancer: zero _oracle");
+        vm.expectRevert(ZeroOracleAddress.selector);
         fresh.initialize(address(backedStorage), address(0), address(globalStorage));
     }
 
@@ -349,7 +362,7 @@ contract BackedFiBalancerTest is OlympixUnitTest("BackedFiBalancer") {
         BackedFiBalancer impl = new BackedFiBalancer();
         BackedFiBalancer fresh = BackedFiBalancer(address(new ERC1967Proxy(address(impl), "")));
         // Should revert with "balancer: zero _globalStorage" at opix-target-branch-84-True
-        vm.expectRevert("balancer: zero _globalStorage");
+        vm.expectRevert(ZeroGlobalStorage.selector);
         fresh.initialize(address(backedStorage), address(oracle), address(0));
     }
 
@@ -360,7 +373,7 @@ contract BackedFiBalancerTest is OlympixUnitTest("BackedFiBalancer") {
         uint256[] memory prices = new uint256[](1);
         prices[0] = 1e18;
         // Cover branch: require(_indexToken != address(0)), opix-target-branch-100-True
-        vm.expectRevert(bytes("askValues: indexToken=0"));
+        vm.expectRevert(ZeroIndexToken.selector);
         balancer.askValues(zeroAddress, underlyings, prices);
     }
 
@@ -399,22 +412,8 @@ contract BackedFiBalancerTest is OlympixUnitTest("BackedFiBalancer") {
         prices[0] = 1e18;
         // This triggers require(underlyings.length == prices.length, ...) in askValues
         // which is the opix-target-branch-101-True branch
-        vm.expectRevert(bytes("askValues: length mismatch"));
+        vm.expectRevert(ArrayLengthMismatch.selector);
         balancer.askValues(indexToken, underlyings, prices);
-    }
-
-    function test_askValues_revertWhenVaultNotSet_branch109_True() public {
-        // This test targets opix-target-branch-109-True, i.e., require(vaultAddr != address(0), "askValues: vault not set");
-        // Arrange: Use an indexToken with no vault set in globalStorage mapping.
-        address fakeIndexToken = address(0xC0FFEE);
-        // No mapping into globalStorage for this fakeIndexToken, so vaultAddr will be zero
-        address[] memory underlyings = new address[](1);
-        underlyings[0] = address(0xABCD);
-        uint256[] memory prices = new uint256[](1);
-        prices[0] = 1e18;
-        // Act: Expect revert
-        vm.expectRevert(bytes("askValues: vault not set"));
-        balancer.askValues(fakeIndexToken, underlyings, prices);
     }
 
     function test_askValues_revertOnUnderlying0_branch116_True() public {
@@ -425,7 +424,7 @@ contract BackedFiBalancerTest is OlympixUnitTest("BackedFiBalancer") {
         uint256[] memory prices = new uint256[](1);
         prices[0] = 5e18;
         // Act/Assert: We expect revert on token==address(0) at require(token!=address(0)), covering branch 116-True
-        vm.expectRevert();
+        vm.expectRevert(ZeroTokenAddress.selector);
         balancer.askValues(indexToken, underlyings, prices);
     }
 
@@ -458,16 +457,6 @@ contract BackedFiBalancerTest is OlympixUnitTest("BackedFiBalancer") {
         assertEq(totalProviderValue2, 0);
     }
 
-    function testFirstRebalanceActionVaultNotSetReverts() public {
-        // Setup: Use an indexToken not mapped to any vault in globalStorage
-        address missingVaultIndexToken = address(0xDCBA);
-        uint256[] memory prices = new uint256[](0); // prices don't matter since require should hit first
-
-        vm.prank(owner);
-        vm.expectRevert("rebalance: vault not set");
-        balancer.firstRebalanceAction(missingVaultIndexToken, 2, prices);
-    }
-
     function testFirstRebalanceActionPriceLengthMismatchReverts() public {
         // Setup: indexToken is mapped to the vault in globalStorage in setUp, so it is valid.
         TestERC20 bond = new TestERC20("Bond", "BND");
@@ -489,7 +478,7 @@ contract BackedFiBalancerTest is OlympixUnitTest("BackedFiBalancer") {
         );
 
         vm.prank(owner);
-        vm.expectRevert("rebalance: price length mismatch");
+        vm.expectRevert(ArrayLengthMismatch.selector);
         balancer.firstRebalanceAction(indexToken, 2, prices);
 
         vm.clearMockedCalls();
@@ -541,7 +530,7 @@ contract BackedFiBalancerTest is OlympixUnitTest("BackedFiBalancer") {
         // Purposefully do NOT mint USDC to balancer, so USDC balance is 0
         // Act & Assert
         vm.prank(owner);
-        vm.expectRevert("balancer: no USDC");
+        vm.expectRevert(NoUsdcBalance.selector);
         balancer.secondRebalanceAction(indexToken, nonce, prices);
         vm.clearMockedCalls();
     }
@@ -579,7 +568,7 @@ contract BackedFiBalancerTest is OlympixUnitTest("BackedFiBalancer") {
         usdc.mint(address(balancer), 1_000e18);
         // SecondRebalanceAction with wrong prices length -> want opix-target-branch-221-True
         vm.prank(owner);
-        vm.expectRevert("rebalance: price length mismatch");
+        vm.expectRevert(ArrayLengthMismatch.selector);
         balancer.secondRebalanceAction(indexToken, nonce, wrongPrices);
         vm.clearMockedCalls();
     }

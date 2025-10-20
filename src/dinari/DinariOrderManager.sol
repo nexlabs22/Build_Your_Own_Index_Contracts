@@ -45,10 +45,23 @@ contract DinariOrderManager is Initializable, OwnableUpgradeable, PausableUpgrad
     event BuyRequest(address indexed indexToken, uint256 indexed id, uint256 time, uint256 inutAmount);
     event SellRequest(address indexed indexToken, uint256 indexed id, uint256 time, uint256 inutAmount);
 
+    error ZeroUsdcAddress();
+    error ZeroIssuerAddress();
+    error InvalidUsdcDecimals();
+    error UnauthorizedSender();
+    error ZeroTokenAddress();
+    error ZeroReceiverAddress();
+    error AmountMustBeGreaterThanZero();
+    error TransferFailed();
+    error InvalidRequestId();
+
     function initialize(address _usdc, uint8 _usdcDecimals, address _issuer) external initializer {
-        require(_usdc != address(0), "invalid token address");
-        require(_issuer != address(0), "invalid issuer address");
-        require(_usdcDecimals > 0, "invalid decimals");
+        // require(_usdc != address(0), "invalid token address");
+        if (_usdc == address(0)) revert ZeroUsdcAddress();
+        // require(_issuer != address(0), "invalid issuer address");
+        if (_issuer == address(0)) revert ZeroIssuerAddress();
+        // require(_usdcDecimals > 0, "invalid decimals");
+        if (_usdcDecimals == 0) revert InvalidUsdcDecimals();
         usdc = _usdc;
         usdcDecimals = _usdcDecimals;
         issuer = IOrderProcessor(_issuer);
@@ -63,12 +76,14 @@ contract DinariOrderManager is Initializable, OwnableUpgradeable, PausableUpgrad
     }
 
     function setIssuer(address _issuer) external onlyOwner {
-        require(_issuer != address(0), "invalid issuer address");
+        // require(_issuer != address(0), "invalid issuer address");
+        if (_issuer == address(0)) revert ZeroIssuerAddress();
         issuer = IOrderProcessor(_issuer);
     }
 
     function setUsdcAddress(address _usdc, uint8 _usdcDecimals) public onlyOwner returns (bool) {
-        require(_usdc != address(0), "invalid token address");
+        // require(_usdc != address(0), "invalid token address");
+        if (_usdc == address(0)) revert ZeroUsdcAddress();
         usdc = _usdc;
         usdcDecimals = _usdcDecimals;
         return true;
@@ -105,10 +120,14 @@ contract DinariOrderManager is Initializable, OwnableUpgradeable, PausableUpgrad
         whenNotPaused
         returns (uint256)
     {
-        require(_token != address(0), "invalid token address");
-        require(_receiver != address(0), "invalid address");
-        require(_orderAmount > 0, "amount must be greater than 0");
-        require(isOperator[msg.sender] || msg.sender == owner(), "Not authorized Sender For Buy And Sell");
+        // require(_token != address(0), "invalid token address");
+        if (_token == address(0)) revert ZeroTokenAddress();
+        // require(_receiver != address(0), "invalid address");
+        if (_receiver == address(0)) revert ZeroReceiverAddress();
+        // require(_orderAmount > 0, "amount must be greater than 0");
+        if (_orderAmount == 0) revert AmountMustBeGreaterThanZero();
+        // require(isOperator[msg.sender] || msg.sender == owner(), "Not authorized Sender For Buy And Sell");
+        if (!isOperator[msg.sender] && msg.sender != owner()) revert UnauthorizedSender();
         uint256 fees = calculateFees(_orderAmount);
 
         IOrderProcessor.Order memory order = getPrimaryOrder(false);
@@ -117,7 +136,8 @@ contract DinariOrderManager is Initializable, OwnableUpgradeable, PausableUpgrad
         order.paymentTokenQuantity = _orderAmount;
         uint256 quantityIn = order.paymentTokenQuantity + fees;
 
-        require(IERC20(usdc).transferFrom(msg.sender, address(this), quantityIn), "Transfer failed");
+        // require(IERC20(usdc).transferFrom(msg.sender, address(this), quantityIn), "Transfer failed");
+        if (!IERC20(usdc).transferFrom(msg.sender, address(this), quantityIn)) revert TransferFailed();
         IERC20(usdc).approve(address(issuer), quantityIn);
 
         uint256 id = issuer.createOrderStandardFees(order);
@@ -133,10 +153,14 @@ contract DinariOrderManager is Initializable, OwnableUpgradeable, PausableUpgrad
         uint256 _orderAmount,
         address _receiver
     ) external nonReentrant whenNotPaused returns (uint256) {
-        require(_token != address(0), "invalid token address");
-        require(_receiver != address(0), "invalid address");
-        require(_orderAmount > 0, "amount must be greater than 0");
-        require(isOperator[msg.sender] || msg.sender == owner(), "Not authorized Sender For Buy And Sell");
+        // require(_token != address(0), "invalid token address");
+        if (_token == address(0)) revert ZeroTokenAddress();
+        // require(_receiver != address(0), "invalid address");
+        if (_receiver == address(0)) revert ZeroReceiverAddress();
+        // require(_orderAmount > 0, "amount must be greater than 0");
+        if (_orderAmount == 0) revert AmountMustBeGreaterThanZero();
+        // require(isOperator[msg.sender] || msg.sender == owner(), "Not authorized Sender For Buy And Sell");
+        if (!isOperator[msg.sender] && msg.sender != owner()) revert UnauthorizedSender();
         uint256 fees = calculateFees(_orderAmount);
 
         IOrderProcessor.Order memory order = getPrimaryOrder(false);
@@ -160,17 +184,22 @@ contract DinariOrderManager is Initializable, OwnableUpgradeable, PausableUpgrad
         whenNotPaused
         returns (uint256)
     {
-        require(_token != address(0), "invalid token address");
-        require(_receiver != address(0), "invalid address");
-        require(_amount > 0, "amount must be greater than 0");
-        require(isOperator[msg.sender] || msg.sender == owner(), "Not authorized Sender For Buy And Sell");
+        // require(_token != address(0), "invalid token address");
+        if (_token == address(0)) revert ZeroTokenAddress();
+        // require(_receiver != address(0), "invalid address");
+        if (_receiver == address(0)) revert ZeroReceiverAddress();
+        // require(_amount > 0, "amount must be greater than 0");
+        if (_amount == 0) revert AmountMustBeGreaterThanZero();
+        // require(isOperator[msg.sender] || msg.sender == owner(), "Not authorized Sender For Buy And Sell");
+        if (!isOperator[msg.sender] && msg.sender != owner()) revert UnauthorizedSender();
 
         IOrderProcessor.Order memory order = getPrimaryOrder(true);
         order.assetToken = _token;
         order.assetTokenQuantity = _amount;
         order.recipient = _receiver;
 
-        require(IERC20(_token).transferFrom(msg.sender, address(this), _amount), "Transfer failed");
+        // require(IERC20(_token).transferFrom(msg.sender, address(this), _amount), "Transfer failed");
+        if (!IERC20(_token).transferFrom(msg.sender, address(this), _amount)) revert TransferFailed();
 
         IERC20(_token).approve(address(issuer), _amount);
         uint256 id = issuer.createOrderStandardFees(order);
@@ -184,10 +213,14 @@ contract DinariOrderManager is Initializable, OwnableUpgradeable, PausableUpgrad
         whenNotPaused
         returns (uint256)
     {
-        require(_token != address(0), "invalid token address");
-        require(_receiver != address(0), "invalid address");
-        require(_amount > 0, "amount must be greater than 0");
-        require(isOperator[msg.sender] || msg.sender == owner(), "Not authorized Sender For Buy And Sell");
+        // require(_token != address(0), "invalid token address");
+        if (_token == address(0)) revert ZeroTokenAddress();
+        // require(_receiver != address(0), "invalid address");
+        if (_receiver == address(0)) revert ZeroReceiverAddress();
+        // require(_amount > 0, "amount must be greater than 0");
+        if (_amount == 0) revert AmountMustBeGreaterThanZero();
+        // require(isOperator[msg.sender] || msg.sender == owner(), "Not authorized Sender For Buy And Sell");
+        if (!isOperator[msg.sender] && msg.sender != owner()) revert UnauthorizedSender();
 
         IOrderProcessor.Order memory order = getPrimaryOrder(true);
         order.assetToken = _token;
@@ -202,17 +235,24 @@ contract DinariOrderManager is Initializable, OwnableUpgradeable, PausableUpgrad
     }
 
     function withdrawFunds(address _token, address _to, uint256 _amount) external {
-        require(_token != address(0), "invalid token address");
-        require(_to != address(0), "invalid address");
-        require(_amount > 0, "amount must be greater than 0");
-        require(isOperator[msg.sender] || msg.sender == owner(), "Not authorized Sender For Buy And Sell");
+        // require(_token != address(0), "invalid token address");
+        if (_token == address(0)) revert ZeroTokenAddress();
+        // require(_to != address(0), "invalid address");
+        if (_to == address(0)) revert ZeroReceiverAddress();
+        // require(_amount > 0, "amount must be greater than 0");
+        if (_amount == 0) revert AmountMustBeGreaterThanZero();
+        // require(isOperator[msg.sender] || msg.sender == owner(), "Not authorized Sender For Buy And Sell");
+        if (!isOperator[msg.sender] && msg.sender != owner()) revert UnauthorizedSender();
         emit FundsWithdrawn(_token, _to, _amount);
-        require(IERC20(_token).transfer(_to, _amount), "Transfer failed");
+        // require(IERC20(_token).transfer(_to, _amount), "Transfer failed");
+        if (!IERC20(_token).transfer(_to, _amount)) revert TransferFailed();
     }
 
     function cancelOrder(uint256 _requestId) external whenNotPaused {
-        require(_requestId > 0, "Invalid Request Id");
-        require(isOperator[msg.sender] || msg.sender == owner(), "Not authorized Sender For Buy And Sell");
+        // require(_requestId > 0, "Invalid Request Id");
+        if (_requestId == 0) revert InvalidRequestId();
+        // require(isOperator[msg.sender] || msg.sender == owner(), "Not authorized Sender For Buy And Sell");
+        if (!isOperator[msg.sender] && msg.sender != owner()) revert UnauthorizedSender();
         issuer.requestCancel(_requestId);
     }
 }

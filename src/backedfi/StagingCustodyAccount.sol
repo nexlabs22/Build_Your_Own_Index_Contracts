@@ -21,6 +21,22 @@ error ZeroAddress();
 error InvalidRoundId();
 error WrongETHAmount();
 error RedemptionAmountIsZero();
+error UnauthorizedCaller();
+error NotNexBot();
+error InsufficientRoundBalance();
+error PreviousRoundActive();
+error PreviousRoundNotCompleted();
+error RoundInactive();
+error RoundAlreadyCompleted();
+error NoIssuanceBalance();
+error NoAssetsProvided();
+error LengthMismatch();
+error NothingToDistribute();
+error RoundStillActive();
+error IndexSupplyTooLow();
+error NoTokensToRedeem();
+error InsufficientTokenBalance();
+error BatchNotStarted();
 
 contract StagingCustodyAccount is Initializable, ReentrancyGuardUpgradeable, OwnableUpgradeable {
     using SafeERC20 for IERC20;
@@ -54,15 +70,19 @@ contract StagingCustodyAccount is Initializable, ReentrancyGuardUpgradeable, Own
     );
 
     modifier onlyOwnerOrOperator() {
-        require(
-            msg.sender == owner() || functionsOracle.isOperator(msg.sender) || msg.sender == nexBot,
-            "Caller is not the owner or operator"
-        );
+        // require(
+        //     msg.sender == owner() || functionsOracle.isOperator(msg.sender) || msg.sender == nexBot,
+        //     "Caller is not the owner or operator"
+        // );
+        if (msg.sender != owner() && !functionsOracle.isOperator(msg.sender) && msg.sender != nexBot) {
+            revert UnauthorizedCaller();
+        }
         _;
     }
 
     modifier onlyNexBot() {
-        require(msg.sender == nexBot, "Caller is not the NEX bot");
+        // require(msg.sender == nexBot, "Caller is not the NEX bot");
+        if (msg.sender != nexBot) revert NotNexBot();
         _;
     }
 
@@ -94,7 +114,8 @@ contract StagingCustodyAccount is Initializable, ReentrancyGuardUpgradeable, Own
     /// @notice Withdraw USDC for bond purchase; only active, unsettled rounds
     function withdrawForPurchase(address _indexToken, uint256 _roundId) public onlyOwnerOrOperator nonReentrant {
         uint256 roundIdBalance = backedFiStorage.totalIssuanceByRound(_indexToken, _roundId);
-        require(roundIdBalance > 0, "Insufficient USDC balance");
+        // require(roundIdBalance > 0, "Insufficient USDC balance");
+        if (roundIdBalance == 0) revert InsufficientRoundBalance();
         IERC20(backedFiStorage.usdc()).safeTransfer(nexBot, roundIdBalance);
         emit WithdrawnForPurchase(_indexToken, _roundId, roundIdBalance, block.timestamp);
     }
@@ -103,14 +124,19 @@ contract StagingCustodyAccount is Initializable, ReentrancyGuardUpgradeable, Own
         if (_roundId < 1 || _roundId > backedFiStorage.issuanceRoundId(_indexToken)) revert InvalidRoundId();
         uint256 prev = _roundId - 1;
         if (_roundId > 1) {
-            require(!backedFiStorage.issuanceRoundActive(_indexToken, prev), "Prev round still active");
-            require(backedFiStorage.issuanceIsCompleted(_indexToken, prev), "Prev round not completed");
+            // require(!backedFiStorage.issuanceRoundActive(_indexToken, prev), "Prev round still active");
+            if (backedFiStorage.issuanceRoundActive(_indexToken, prev)) revert PreviousRoundActive();
+            // require(backedFiStorage.issuanceIsCompleted(_indexToken, prev), "Prev round not completed");
+            if (!backedFiStorage.issuanceIsCompleted(_indexToken, prev)) revert PreviousRoundNotCompleted();
         }
-        require(backedFiStorage.issuanceRoundActive(_indexToken, _roundId), "Round is not active");
-        require(!backedFiStorage.issuanceIsCompleted(_indexToken, _roundId), "Round already completed");
+        // require(backedFiStorage.issuanceRoundActive(_indexToken, _roundId), "Round is not active");
+        if (!backedFiStorage.issuanceRoundActive(_indexToken, _roundId)) revert RoundInactive();
+        // require(!backedFiStorage.issuanceIsCompleted(_indexToken, _roundId), "Round already completed");
+        if (backedFiStorage.issuanceIsCompleted(_indexToken, _roundId)) revert RoundAlreadyCompleted();
 
         uint256 roundIdBalance = backedFiStorage.totalIssuanceByRound(_indexToken, _roundId);
-        require(roundIdBalance > 0, "Total issuance in this round is Zero!");
+        // require(roundIdBalance > 0, "Total issuance in this round is Zero!");
+        if (roundIdBalance == 0) revert NoIssuanceBalance();
 
         if (roundIdBalance > 0) {
             withdrawForPurchase(_indexToken, _roundId);
@@ -135,15 +161,21 @@ contract StagingCustodyAccount is Initializable, ReentrancyGuardUpgradeable, Own
         if (_roundId < 1 || _roundId > backedFiStorage.issuanceRoundId(_indexToken)) revert InvalidRoundId();
         uint256 prev = _roundId - 1;
         if (_roundId > 1) {
-            require(!backedFiStorage.issuanceRoundActive(_indexToken, prev), "Prev round still active");
-            require(backedFiStorage.issuanceIsCompleted(_indexToken, prev), "Prev round not completed");
+            // require(!backedFiStorage.issuanceRoundActive(_indexToken, prev), "Prev round still active");
+            if (backedFiStorage.issuanceRoundActive(_indexToken, prev)) revert PreviousRoundActive();
+            // require(backedFiStorage.issuanceIsCompleted(_indexToken, prev), "Prev round not completed");
+            if (!backedFiStorage.issuanceIsCompleted(_indexToken, prev)) revert PreviousRoundNotCompleted();
         }
-        require(!backedFiStorage.issuanceRoundActive(_indexToken, _roundId), "Round is active");
-        require(!backedFiStorage.issuanceIsCompleted(_indexToken, _roundId), "Round already completed");
+        // require(!backedFiStorage.issuanceRoundActive(_indexToken, _roundId), "Round is active");
+        if (backedFiStorage.issuanceRoundActive(_indexToken, _roundId)) revert RoundStillActive();
+        // require(!backedFiStorage.issuanceIsCompleted(_indexToken, _roundId), "Round already completed");
+        if (backedFiStorage.issuanceIsCompleted(_indexToken, _roundId)) revert RoundAlreadyCompleted();
 
         uint256 assetsCount = _underlyingAssets.length;
-        require(assetsCount > 0, "no assets");
-        require(_prices.length == assetsCount, "length mismatch");
+        // require(assetsCount > 0, "no assets");
+        if (assetsCount == 0) revert NoAssetsProvided();
+        // require(_prices.length == assetsCount, "length mismatch");
+        if (_prices.length != assetsCount) revert LengthMismatch();
 
         for (uint256 i = 0; i < assetsCount;) {
             address tokenAddress = _underlyingAssets[i];
@@ -165,7 +197,8 @@ contract StagingCustodyAccount is Initializable, ReentrancyGuardUpgradeable, Own
         }
 
         uint256 total = backedFiStorage.totalIssuanceByRound(_indexToken, _roundId);
-        require(total > 0, "Nothing to distribute");
+        // require(total > 0, "Nothing to distribute");
+        if (total == 0) revert NothingToDistribute();
 
         backedFiStorage.settleIssuance(_indexToken, _roundId);
         emit IssuanceSettled(_indexToken, _roundId, total, block.timestamp);
@@ -180,11 +213,15 @@ contract StagingCustodyAccount is Initializable, ReentrancyGuardUpgradeable, Own
         if (_roundId < 1 || _roundId > backedFiStorage.redemptionRoundId(_indexToken)) revert InvalidRoundId();
         uint256 prev = _roundId - 1;
         if (_roundId > 1) {
-            require(!backedFiStorage.redemptionRoundActive(_indexToken, prev), "Prev redemption round active");
-            require(backedFiStorage.redemptionIsCompleted(_indexToken, prev), "Prev redemption not completed");
+            // require(!backedFiStorage.redemptionRoundActive(_indexToken, prev), "Prev redemption round active");
+            if (backedFiStorage.redemptionRoundActive(_indexToken, prev)) revert PreviousRoundActive();
+            // require(backedFiStorage.redemptionIsCompleted(_indexToken, prev), "Prev redemption not completed");
+            if (!backedFiStorage.redemptionIsCompleted(_indexToken, prev)) revert PreviousRoundNotCompleted();
         }
-        require(backedFiStorage.redemptionRoundActive(_indexToken, _roundId), "Round not active");
-        require(!backedFiStorage.redemptionIsCompleted(_indexToken, _roundId), "Round already completed");
+        // require(backedFiStorage.redemptionRoundActive(_indexToken, _roundId), "Round not active");
+        if (!backedFiStorage.redemptionRoundActive(_indexToken, _roundId)) revert RoundInactive();
+        // require(!backedFiStorage.redemptionIsCompleted(_indexToken, _roundId), "Round already completed");
+        if (backedFiStorage.redemptionIsCompleted(_indexToken, _roundId)) revert RoundAlreadyCompleted();
 
         address vault = backedFiStorage.indexTokenToVault(_indexToken);
 
@@ -192,12 +229,13 @@ contract StagingCustodyAccount is Initializable, ReentrancyGuardUpgradeable, Own
         uint256 totalIdxThisRound = backedFiStorage.totalRedemptionByRound(_indexToken, _roundId);
         if (totalIdxThisRound == 0) revert RedemptionAmountIsZero();
         if (!backedFiStorage.redemptionRoundActive(_indexToken, _roundId)) {
-            revert("batch not started");
+            revert BatchNotStarted();
         }
         backedFiStorage.setRedemptionRoundActive(_indexToken, _roundId, false);
 
         uint256 supplyBefore = IERC20(_indexToken).totalSupply();
-        require(supplyBefore > totalIdxThisRound, "IDX supply is zero");
+        // require(supplyBefore > totalIdxThisRound, "IDX supply is zero");
+        if (supplyBefore <= totalIdxThisRound) revert IndexSupplyTooLow();
 
         uint256 burnPercent = backedFiStorage.ordersBurnPercent(_indexToken, _roundId);
 
@@ -232,22 +270,29 @@ contract StagingCustodyAccount is Initializable, ReentrancyGuardUpgradeable, Own
         if (_roundId > backedFiStorage.redemptionRoundId(_indexToken)) revert InvalidRoundId();
         uint256 prev = _roundId - 1;
         if (_roundId > 1) {
-            require(!backedFiStorage.redemptionRoundActive(_indexToken, prev), "Prev redemption round active");
-            require(backedFiStorage.redemptionIsCompleted(_indexToken, prev), "Prev redemption not completed");
+            // require(!backedFiStorage.redemptionRoundActive(_indexToken, prev), "Prev redemption round active");
+            if (backedFiStorage.redemptionRoundActive(_indexToken, prev)) revert PreviousRoundActive();
+            // require(backedFiStorage.redemptionIsCompleted(_indexToken, prev), "Prev redemption not completed");
+            if (!backedFiStorage.redemptionIsCompleted(_indexToken, prev)) revert PreviousRoundNotCompleted();
         }
-        require(!backedFiStorage.redemptionRoundActive(_indexToken, _roundId), "Round still active");
-        require(!backedFiStorage.redemptionIsCompleted(_indexToken, _roundId), "Round already completed");
+        // require(!backedFiStorage.redemptionRoundActive(_indexToken, _roundId), "Round still active");
+        if (backedFiStorage.redemptionRoundActive(_indexToken, _roundId)) revert RoundStillActive();
+        // require(!backedFiStorage.redemptionIsCompleted(_indexToken, _roundId), "Round already completed");
+        if (backedFiStorage.redemptionIsCompleted(_indexToken, _roundId)) revert RoundAlreadyCompleted();
 
         uint256 totalIDX = backedFiStorage.totalRedemptionByRound(_indexToken, _roundId);
-        require(totalIDX > 0, "No tokens to redeem");
+        // require(totalIDX > 0, "No tokens to redeem");
+        if (totalIDX == 0) revert NoTokensToRedeem();
 
         // if (usdcFromBond > 0) {
         //     backedFiStorage.usdc().safeTransferFrom(msg.sender, address(this), usdcFromBond);
         // }
 
         uint256 assetsCount = _underlyingAssets.length;
-        require(assetsCount > 0, "no assets");
-        require(_usdcOutputs.length == assetsCount, "length mismatch");
+        // require(assetsCount > 0, "no assets");
+        if (assetsCount == 0) revert NoAssetsProvided();
+        // require(_usdcOutputs.length == assetsCount, "length mismatch");
+        if (_usdcOutputs.length != assetsCount) revert LengthMismatch();
 
         uint256 totalUSDC = 0;
         IERC20 usdc = IERC20(backedFiStorage.usdc());
@@ -277,7 +322,8 @@ contract StagingCustodyAccount is Initializable, ReentrancyGuardUpgradeable, Own
 
     function withRiskAsset(address token, address to, uint256 amount) public onlyOwner {
         uint256 balance = IERC20(token).balanceOf(address(this));
-        require(amount <= balance, "Not enought balance");
+        // require(amount <= balance, "Not enought balance");
+        if (amount > balance) revert InsufficientTokenBalance();
         IERC20(token).safeTransfer(to, amount);
     }
 }
