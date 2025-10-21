@@ -25,6 +25,7 @@ contract DeployMainChainFactory is Script {
         address functionsOracle;
         address coreSender;
         address weth;
+        address usdc;
 
         if (keccak256(bytes(targetChain)) == keccak256("sepolia")) {
             chainSelector = uint64(vm.envUint("SEPOLIA_CCIP_CHAIN_SELECTOR"));
@@ -34,6 +35,7 @@ contract DeployMainChainFactory is Script {
             functionsOracle = vm.envAddress("SEPOLIA_FUNCTIONS_ORACLE_PROXY_ADDRESS");
             coreSender = vm.envAddress("SEPOLIA_CORE_SENDER_PROXY_ADDRESS");
             weth = vm.envAddress("SEPOLIA_WETH_ADDRESS");
+            usdc = vm.envAddress("SEPOLIA_USDC_ADDRESS");
         } else if (keccak256(bytes(targetChain)) == keccak256("arbitrum_mainnet")) {
             chainSelector = uint64(vm.envUint("ARBITRUM_CCIP_CHAIN_SELECTOR"));
             indexToken = vm.envAddress("ARBITRUM_INDEX_TOKEN_PROXY_ADDRESS");
@@ -42,6 +44,7 @@ contract DeployMainChainFactory is Script {
             functionsOracle = vm.envAddress("ARBITRUM_FUNCTIONS_ORACLE_PROXY_ADDRESS");
             coreSender = vm.envAddress("ARBITRUM_CORE_SENDER_PROXY_ADDRESS");
             weth = vm.envAddress("ARBITRUM_WETH_ADDRESS");
+            usdc = vm.envAddress("ARBITRUM_USDC_ADDRESS");
         } else {
             revert("Unsupported target chain");
         }
@@ -60,7 +63,8 @@ contract DeployMainChainFactory is Script {
                     mainChainStorage,
                     functionsOracle,
                     payable(coreSender),
-                    weth
+                    weth,
+                    usdc
                 )
             )
         );

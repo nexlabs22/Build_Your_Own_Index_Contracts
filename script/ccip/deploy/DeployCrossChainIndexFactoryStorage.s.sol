@@ -19,7 +19,6 @@ contract DeployCrossChainIndexFactoryStorage is Script {
         address owner = vm.addr(deployerPrivateKey);
 
         uint64 chainSelector;
-        address vaultAddress;
         address linkToken;
         address ccipRouter;
         address weth;
@@ -30,7 +29,6 @@ contract DeployCrossChainIndexFactoryStorage is Script {
 
         if (keccak256(bytes(targetChain)) == keccak256("sepolia")) {
             chainSelector = uint64(vm.envUint("SEPOLIA_CCIP_CHAIN_SELECTOR"));
-            vaultAddress = vm.envAddress("SEPOLIA_VAULT_PROXY_ADDRESS");
             linkToken = vm.envAddress("SEPOLIA_LINK_TOKEN_ADDRESS");
             ccipRouter = vm.envAddress("SEPOLIA_CCIP_ROUTER_ADDRESS");
             weth = vm.envAddress("SEPOLIA_WETH_ADDRESS");
@@ -40,7 +38,6 @@ contract DeployCrossChainIndexFactoryStorage is Script {
             priceFeed = vm.envAddress("SEPOLIA_TO_USD_PRICE_FEED_ADDRESS");
         } else if (keccak256(bytes(targetChain)) == keccak256("arbitrum_mainnet")) {
             chainSelector = uint64(vm.envUint("ARBITRUM_CCIP_CHAIN_SELECTOR"));
-            vaultAddress = vm.envAddress("ARBITRUM_VAULT_PROXY_ADDRESS");
             linkToken = vm.envAddress("ARBITRUM_LINK_TOKEN_ADDRESS");
             ccipRouter = vm.envAddress("ARBITRUM_CCIP_ROUTER_ADDRESS");
             weth = vm.envAddress("ARBITRUM_WETH_ADDRESS");
@@ -61,7 +58,6 @@ contract DeployCrossChainIndexFactoryStorage is Script {
                 CrossChainIndexFactoryStorage.initialize,
                 (
                     chainSelector,
-                    payable(vaultAddress),
                     linkToken,
                     ccipRouter,
                     weth,
@@ -83,4 +79,3 @@ contract DeployCrossChainIndexFactoryStorage is Script {
         vm.stopBroadcast();
     }
 }
-

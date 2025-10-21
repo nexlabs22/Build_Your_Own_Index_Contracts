@@ -7,7 +7,6 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "../utils/proposable/ProposableOwnableUpgradeable.sol";
 import "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
 
-
 // error ZeroAmount();
 // error ZeroAddress();
 // error WrongETHAmount();
@@ -72,7 +71,7 @@ contract IndexFactoryStorage is Initializable, ProposableOwnableUpgradeable {
         return uint256(price);
     }
 
-        /**
+    /**
      * @dev Converts an amount to Wei.
      * @param _amount The amount to convert.
      * @param _amountDecimals The decimals of the amount.
@@ -105,11 +104,6 @@ contract IndexFactoryStorage is Initializable, ProposableOwnableUpgradeable {
     function setMainChainBalancer(address _mainChainBalancer) external {
         // if (_mainChainBalancer == address(0)) revert ZeroAddress();
         mainChainBalancer = _mainChainBalancer;
-    }
-
-    function setIndexTokenToVault(address _indexToken, address _vault) external {
-        // if (_indexToken == address(0) || _vault == address(0)) revert ZeroAddress();
-        indexTokenToVault[_indexToken] = _vault;
     }
 
     function setOrderManager(address _orderManager) external {
@@ -159,8 +153,8 @@ contract IndexFactoryStorage is Initializable, ProposableOwnableUpgradeable {
     }
 
     function setIndexTokenToVault(address _indexToken, address _vault) public onlyOwner {
-        require(_indexToken == address(0), "Invalid _indexToken address!");
-        require(_vault == address(0), "Invalid _vault address!");
+        // require(_indexToken == address(0), "Invalid _indexToken address!");
+        // require(_vault == address(0), "Invalid _vault address!");
         indexTokenToVault[_indexToken] = _vault;
     }
 }

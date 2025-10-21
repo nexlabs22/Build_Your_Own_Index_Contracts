@@ -36,6 +36,7 @@ contract DeployCCIPAll is Script {
         address ccipRouter;
         address indexToken;
         address orderManager;
+        address usdc;
     }
 
     function run() external {
@@ -48,6 +49,9 @@ contract DeployCCIPAll is Script {
         vm.startBroadcast(deployerPrivateKey);
 
         address mainChainStorageProxy = _deployMainChainStorage(owner, cfg);
+        if (cfg.vaultAddress != address(0)) {
+            mainChainStorage.setVault(cfg.vaultAddress);
+        }
         address ccStorageProxy = _deployCrossChainIndexFactoryStorage(owner, cfg);
         address ccFactoryProxy = _deployCrossChainIndexFactory(owner, cfg, ccStorageProxy);
         address balancerSenderProxy = _deployBalancerSender(owner, cfg, mainChainStorageProxy);
@@ -95,6 +99,7 @@ contract DeployCCIPAll is Script {
             cfg.ccipRouter = vm.envAddress("SEPOLIA_CCIP_ROUTER_ADDRESS");
             cfg.indexToken = vm.envAddress("SEPOLIA_INDEX_TOKEN_PROXY_ADDRESS");
             cfg.orderManager = vm.envAddress("SEPOLIA_ORDER_MANAGER_PROXY_ADDRESS");
+            cfg.usdc = vm.envAddress("SEPOLIA_USDC_ADDRESS");
         } else if (keccak256(bytes(targetChain)) == keccak256("arbitrum_mainnet")) {
             cfg.chainSelector = uint64(vm.envUint("ARBITRUM_CCIP_CHAIN_SELECTOR"));
             cfg.functionsOracle = vm.envAddress("ARBITRUM_FUNCTIONS_ORACLE_PROXY_ADDRESS");
@@ -109,6 +114,7 @@ contract DeployCCIPAll is Script {
             cfg.ccipRouter = vm.envAddress("ARBITRUM_CCIP_ROUTER_ADDRESS");
             cfg.indexToken = vm.envAddress("ARBITRUM_INDEX_TOKEN_PROXY_ADDRESS");
             cfg.orderManager = vm.envAddress("ARBITRUM_ORDER_MANAGER_PROXY_ADDRESS");
+            cfg.usdc = vm.envAddress("ARBITRUM_USDC_ADDRESS");
         } else {
             revert("Unsupported target chain");
         }
@@ -147,7 +153,6 @@ contract DeployCCIPAll is Script {
                 CrossChainIndexFactoryStorage.initialize,
                 (
                     cfg.chainSelector,
-                    payable(cfg.vaultAddress),
                     cfg.linkToken,
                     cfg.ccipRouter,
                     cfg.weth,
@@ -204,7 +209,8 @@ contract DeployCCIPAll is Script {
                     cfg.functionsOracle,
                     cfg.linkToken,
                     cfg.ccipRouter,
-                    cfg.weth
+                    cfg.weth,
+                    cfg.usdc
                 )
             )
         );
@@ -222,7 +228,14 @@ contract DeployCCIPAll is Script {
             owner,
             abi.encodeCall(
                 MainChainBalancer.initialize,
-                (cfg.chainSelector, mainChainStorageProxy, cfg.functionsOracle, payable(balancerSenderProxy), cfg.weth)
+                (
+                    cfg.chainSelector,
+                    mainChainStorageProxy,
+                    cfg.functionsOracle,
+                    payable(balancerSenderProxy),
+                    cfg.weth,
+                    cfg.usdc
+                )
             )
         );
         mainChainBalancer = MainChainBalancer(proxy);
@@ -246,7 +259,8 @@ contract DeployCCIPAll is Script {
                     mainChainStorageProxy,
                     cfg.functionsOracle,
                     payable(coreSenderProxy),
-                    cfg.weth
+                    cfg.weth,
+                    cfg.usdc
                 )
             )
         );

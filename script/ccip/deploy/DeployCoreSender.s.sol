@@ -25,6 +25,7 @@ contract DeployCoreSender is Script {
         address linkToken;
         address ccipRouter;
         address weth;
+        address usdc;
 
         if (keccak256(bytes(targetChain)) == keccak256("sepolia")) {
             indexToken = vm.envAddress("SEPOLIA_INDEX_TOKEN_PROXY_ADDRESS");
@@ -34,6 +35,7 @@ contract DeployCoreSender is Script {
             linkToken = vm.envAddress("SEPOLIA_LINK_TOKEN_ADDRESS");
             ccipRouter = vm.envAddress("SEPOLIA_CCIP_ROUTER_ADDRESS");
             weth = vm.envAddress("SEPOLIA_WETH_ADDRESS");
+            usdc = vm.envAddress("SEPOLIA_USDC_ADDRESS");
         } else if (keccak256(bytes(targetChain)) == keccak256("arbitrum_mainnet")) {
             indexToken = vm.envAddress("ARBITRUM_INDEX_TOKEN_PROXY_ADDRESS");
             mainChainStorage = vm.envAddress("ARBITRUM_MAIN_CHAIN_STORAGE_PROXY_ADDRESS");
@@ -42,6 +44,7 @@ contract DeployCoreSender is Script {
             linkToken = vm.envAddress("ARBITRUM_LINK_TOKEN_ADDRESS");
             ccipRouter = vm.envAddress("ARBITRUM_CCIP_ROUTER_ADDRESS");
             weth = vm.envAddress("ARBITRUM_WETH_ADDRESS");
+            usdc = vm.envAddress("ARBITRUM_USDC_ADDRESS");
         } else {
             revert("Unsupported target chain");
         }
@@ -53,7 +56,7 @@ contract DeployCoreSender is Script {
             owner,
             abi.encodeCall(
                 CoreSender.initialize,
-                (payable(indexToken), mainChainStorage, orderManager, functionsOracle, linkToken, ccipRouter, weth)
+                (payable(indexToken), mainChainStorage, orderManager, functionsOracle, linkToken, ccipRouter, weth, usdc)
             )
         );
 
