@@ -92,15 +92,7 @@ contract IndexFactory is Initializable, OwnableUpgradeable, PausableUpgradeable,
         _disableInitializers();
     }
 
-    function getCrossChainFee(
-        address _indexToken,
-        address _usdc,
-        uint256 _amount
-    )
-        public
-        view
-        returns (uint256)
-    {
+    function getCrossChainFee(address _indexToken, address _usdc, uint256 _amount) public view returns (uint256) {
         return orderManager.getCCIPFeeInUsdc(_indexToken, _usdc, _amount);
     }
 
@@ -118,7 +110,7 @@ contract IndexFactory is Initializable, OwnableUpgradeable, PausableUpgradeable,
         _validateIssuanceInputs(indexToken, amount);
 
         address usdc = orderManager.usdcAddress();
-        
+
         uint256 usdcFee = FeeCalculation.calculateFee(amount, factoryStorage.feeRate());
         uint256 crossChainFee = getCrossChainFee(indexToken, usdc, amount);
         _collectUsdcAndFee(usdc, amount, usdcFee, crossChainFee);
@@ -135,25 +127,21 @@ contract IndexFactory is Initializable, OwnableUpgradeable, PausableUpgradeable,
                 functionsOracle.getCurrentProviderIndexData(indexToken, currentFilledCount, currentProviderIndexes[i]);
             uint256 share = (amount * totalShares) / SHARE_DENOMINATOR;
             if (currentProviderIndexes[i] == 1) {
-                
-                    // uint256 crossChainFee = getCrossChainFee(indexToken, usdc, share);
-                    // orderNonce =
-                        // _createBuyOrder(issuanceNonce, indexToken, usdc, address(0), currentProviderIndexes[i], share);
-                    orderNonce = _createBuyOrder(
-                        CreateBuyOrderInput({
-                            requestNonce_: issuanceNonce,
-                            indexToken: indexToken,
-                            usdc: usdc,
-                            underlying: address(0),
-                            providerIndex_: currentProviderIndexes[i],
-                            crossChainFee: crossChainFee,
-                            share: share
-                        })
-                    );
-                    
-            } else {
+                // uint256 crossChainFee = getCrossChainFee(indexToken, usdc, share);
                 // orderNonce =
-                //     _createBuyOrder(issuanceNonce, indexToken, usdc, address(0), currentProviderIndexes[i], share);
+                // _createBuyOrder(issuanceNonce, indexToken, usdc, address(0), currentProviderIndexes[i], share);
+                orderNonce = _createBuyOrder(
+                    CreateBuyOrderInput({
+                        requestNonce_: issuanceNonce,
+                        indexToken: indexToken,
+                        usdc: usdc,
+                        underlying: address(0),
+                        providerIndex_: currentProviderIndexes[i],
+                        crossChainFee: crossChainFee,
+                        share: share
+                    })
+                );
+            } else {
                 orderNonce = _createBuyOrder(
                     CreateBuyOrderInput({
                         requestNonce_: issuanceNonce,
@@ -171,15 +159,6 @@ contract IndexFactory is Initializable, OwnableUpgradeable, PausableUpgradeable,
 
         issuanceNonce += 1;
         return orderNonce;
-        /**
-         * (address[] memory underlyings, uint256[] memory parts) = _calcProRataUSDC(indexToken, amount, totalCurrentList);
-         *
-         *     for (uint256 i = 0; i < totalCurrentList; i++) {
-         *         if (parts[i] == 0) continue;
-         *         orderNonce = _createBuyOrder(issuanceNonce, usdc, underlyings[i], providerIndexes[underlyings[i]], parts[i]);
-         *         emit Issuanced(issuanceNonce, msg.sender, indexToken, usdc, underlyings[i], parts[i]);
-         *     }
-         */
     }
 
     function redemption(address indexToken, uint256 amount)
@@ -192,7 +171,7 @@ contract IndexFactory is Initializable, OwnableUpgradeable, PausableUpgradeable,
         _validateRedemptionInputs(indexToken, amount);
         // transfer cross chain fee
         uint256 crossChainFee = getCrossChainFee(indexToken, orderManager.usdcAddress(), amount);
-        if(crossChainFee > 0) {
+        if (crossChainFee > 0) {
             IERC20(orderManager.usdcAddress()).safeTransferFrom(msg.sender, address(this), crossChainFee);
         }
         // Pull and burn
@@ -203,41 +182,22 @@ contract IndexFactory is Initializable, OwnableUpgradeable, PausableUpgradeable,
         uint256 currentFilledCount = functionsOracle.currentFilledCount(indexToken);
         uint64[] memory currentProviderIndexes =
             functionsOracle.getCurrentProviderIndexes(indexToken, currentFilledCount);
-        
+
         for (uint256 i = 0; i < currentProviderIndexes.length; i++) {
-            // (
-            //     uint256 totalShares,
-            //     address[] memory tokens,
-            //     uint256[] memory marketShares
-            // ) = functionsOracle.getCurrentProviderIndexData(
-            //         indexToken,
-            //         currentFilledCount,
-            //         currentProviderIndexes[i]
-            //     );
-            // uint256 share = (amount * totalShares) / SHARE_DENOMINATOR;
-            // orderNonce = _createBuyOrder(
-            //     issuanceNonce,
-            //     indexToken,
-            //     usdc,
-            //     address(0),
-            //     currentProviderIndexes[i],
-            //     share
-            // );
             address usdc = orderManager.usdcAddress();
             if (currentProviderIndexes[i] == 1) {
-                    orderNonce = _createSellOrder(
-                        CreateSellOrderInput({
-                            requestNonce_: redemptionNonce,
-                            indexToken: indexToken,
-                            inputToken: address(0), // input token
-                            outputTokenHint: usdc, // output token
-                            providerIndex_: currentProviderIndexes[i],
-                            inputAmount: 0,
-                            crossChainFee: crossChainFee,
-                            burnPercent_: burnPercent
-                        })
-                    );
-                
+                orderNonce = _createSellOrder(
+                    CreateSellOrderInput({
+                        requestNonce_: redemptionNonce,
+                        indexToken: indexToken,
+                        inputToken: address(0), // input token
+                        outputTokenHint: usdc, // output token
+                        providerIndex_: currentProviderIndexes[i],
+                        inputAmount: 0,
+                        crossChainFee: crossChainFee,
+                        burnPercent_: burnPercent
+                    })
+                );
             } else {
                 orderNonce = _createSellOrder(
                     CreateSellOrderInput({
@@ -252,50 +212,6 @@ contract IndexFactory is Initializable, OwnableUpgradeable, PausableUpgradeable,
                     })
                 );
             }
-            /**
-             * uint256 totalCurrentList = _requireUnderlyings(indexToken);
-             *     address vaultAddr = _getVault(indexToken);
-             *     address usdc = orderManager.usdcAddress();
-             *
-             *     for (uint256 i = 0; i < totalCurrentList; i++) {
-             *         address underlying = functionsOracle.currentList(indexToken, i);
-             *         require(
-             *             underlying != address(0),
-             *             "IndexFactory: invalid underlying"
-             *         );
-             *
-             *         uint64 providerIndex = providerIndexes[underlying];
-             *         uint256 withdrawn = 0;
-             *
-             *         if (providerIndex != 2) {
-             *             withdrawn = _withdrawProRataFromVault(
-             *                 vaultAddr,
-             *                 underlying,
-             *                 burnPercent
-             *             );
-             *             if (withdrawn > 0) {
-             *                 _approveExactForOrderManager(underlying, withdrawn);
-             *             }
-             *         }
-             *
-             *         orderNonce = _createSellOrder(
-             *             redemptionNonce,
-             *             indexToken,
-             *             underlying, // input for sells (or 0 amount for type 2)
-             *             usdc, // output hint
-             *             providerIndex,
-             *             (providerIndex == 2) ? 0 : withdrawn,
-             *             burnPercent
-             *         );
-             */
-            // emit Redemption(
-            //     redemptionNonce,
-            //     msg.sender,
-            //     indexToken,
-            //     underlying,
-            //     address(0),
-            //     withdrawn
-            // );
         }
 
         factoryStorage.setRedemptionRequester(indexToken, redemptionNonce, msg.sender);
@@ -329,7 +245,9 @@ contract IndexFactory is Initializable, OwnableUpgradeable, PausableUpgradeable,
             completeIssuance(_issuanceNonce, _indexToken);
         }
     }
+
     uint256 public issuanceCalled;
+
     function handleCompleteRedemption(
         uint256 _redemptionNonce,
         address _indexToken,
@@ -346,7 +264,7 @@ contract IndexFactory is Initializable, OwnableUpgradeable, PausableUpgradeable,
 
         // incrementing redemption completed count
         factoryStorage.incrementRedemptionCompletedAssetsCount(_indexToken, _redemptionNonce);
-        
+
         // calling complete redemption
         if (
             factoryStorage.redemptionCompletedAssetsCount(_indexToken, _redemptionNonce)
@@ -514,9 +432,7 @@ contract IndexFactory is Initializable, OwnableUpgradeable, PausableUpgradeable,
         Vault(vaultAddr).withdrawFunds(underlying, address(this), withdrawn);
     }
 
-    function _createBuyOrder(
-        CreateBuyOrderInput memory input
-    ) private returns (uint256 orderNonce) {
+    function _createBuyOrder(CreateBuyOrderInput memory input) private returns (uint256 orderNonce) {
         OrderManager.CreateOrderConfig memory cfg = OrderManager.CreateOrderConfig({
             requestNonce: input.requestNonce_,
             indexTokenAddress: input.indexToken,
@@ -529,14 +445,12 @@ contract IndexFactory is Initializable, OwnableUpgradeable, PausableUpgradeable,
             isBuyOrder: true,
             burnPercent: 0
         });
-        uint totalAmount = input.share + input.crossChainFee;
+        uint256 totalAmount = input.share + input.crossChainFee;
         IERC20(input.usdc).approve(address(orderManager), totalAmount);
         orderNonce = orderManager.createOrder(cfg);
     }
 
-    function _createSellOrder(
-        CreateSellOrderInput memory input
-    ) private returns (uint256 orderNonce) {
+    function _createSellOrder(CreateSellOrderInput memory input) private returns (uint256 orderNonce) {
         OrderManager.CreateOrderConfig memory cfg = OrderManager.CreateOrderConfig({
             requestNonce: input.requestNonce_,
             indexTokenAddress: input.indexToken,

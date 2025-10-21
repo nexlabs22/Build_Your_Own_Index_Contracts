@@ -11,7 +11,7 @@ import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol
 import {StagingCustodyAccount} from "./StagingCustodyAccount.sol";
 // import {IndexFactoryStorage} from "./IndexFactoryStorage.sol";
 import {BackedFiStorage} from "./BackedFiStorage.sol";
-import {FunctionsOracle} from "./FunctionsOracle.sol";
+import {FunctionsOracle} from "../oracle/FunctionsOracle.sol";
 import {IndexToken} from "../token/IndexToken.sol";
 import {FeeCalculation} from "../libraries/FeeCalculation.sol";
 

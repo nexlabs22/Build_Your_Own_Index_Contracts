@@ -89,6 +89,10 @@ contract BackedFiBalancerTest is OlympixUnitTest("BackedFiBalancer") {
         vm.store(address(vault), operatorSlot, bytes32(uint256(1)));
         bytes32 slot = keccak256(abi.encode(indexToken, uint256(55)));
         vm.store(address(globalStorage), slot, bytes32(uint256(uint160(address(vault)))));
+
+        vm.startPrank(globalStorage.owner());
+        globalStorage.setIndexTokenToVault(indexToken, address(vault));
+        vm.stopPrank();
     }
 
     function testInitializeSetsDependencies() public {
