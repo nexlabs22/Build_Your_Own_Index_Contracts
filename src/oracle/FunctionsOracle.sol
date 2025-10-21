@@ -199,13 +199,12 @@ contract FunctionsOracle is Initializable, FunctionsClient, ConfirmedOwner {
      * @notice Store latest result/error
      * @param requestId The request ID, returned by sendRequest()
      * @param response Aggregated response from the user code
-     * @param err Aggregated error from the user code or from the execution pipeline
-     * Either response or error parameter will be set, but never both
+    * Either response or error parameter will be set, but never both
      */
     function fulfillRequest(
         bytes32 requestId,
         bytes memory response,
-        bytes memory err
+        bytes memory /*err*/
     ) internal override {
         // require(requestId != bytes32(0), "invalid request id");
 
@@ -662,7 +661,7 @@ contract FunctionsOracle is Initializable, FunctionsClient, ConfirmedOwner {
 
     function getCurrentData(
         address indexToken,
-        uint256 currentFilledCount
+        uint256 currentFilledCount_
     )
         public
         view
@@ -672,75 +671,75 @@ contract FunctionsOracle is Initializable, FunctionsClient, ConfirmedOwner {
             uint64[] memory chainSelectors
         )
     {
-        CurrentData storage data = currentData[indexToken][currentFilledCount];
+        CurrentData storage data = currentData[indexToken][currentFilledCount_];
         return (data.tokens, data.marketShares, data.chainSelectors);
     }
 
     function getCurrentProviderIndexes(
         address indexToken,
-        uint256 currentFilledCount
+        uint256 currentFilledCount_
     ) public view returns (uint64[] memory) {
-        return currentData[indexToken][currentFilledCount].providerIndexes;
+        return currentData[indexToken][currentFilledCount_].providerIndexes;
     }
 
     function getOracleProviderIndexes(
         address indexToken,
-        uint256 oracleFilledCount
+        uint256 oracleFilledCount_
     ) public view returns (uint64[] memory) {
-        return oracleData[indexToken][oracleFilledCount].providerIndexes;
+        return oracleData[indexToken][oracleFilledCount_].providerIndexes;
     }
 
     function getCurrentChainSelectorTotalShares(
         address indexToken,
-        uint256 currentFilledCount,
+        uint256 currentFilledCount_,
         uint64 chainSelector
     ) public view returns (uint256) {
         return
-            currentData[indexToken][currentFilledCount]
+            currentData[indexToken][currentFilledCount_]
                 .currentChainSelectorTotalShares[chainSelector];
     }
 
     function getOracleChainSelectorTotalShares(
         address indexToken,
-        uint256 oracleFilledCount,
+        uint256 oracleFilledCount_,
         uint64 chainSelector
     ) public view returns (uint256) {
         return
-            oracleData[indexToken][oracleFilledCount]
+            oracleData[indexToken][oracleFilledCount_]
                 .oracleChainSelectorTotalShares[chainSelector];
     }
 
     function getCurrentProviderIndexTotalShares(
         address indexToken,
-        uint256 currentFilledCount,
+        uint256 currentFilledCount_,
         uint64 providerIndex
     ) public view returns (uint256) {
         return
-            currentData[indexToken][currentFilledCount]
+            currentData[indexToken][currentFilledCount_]
                 .currentProviderIndexTotalShares[providerIndex];
     }
 
     function getOracleProviderIndexTotalShares(
         address indexToken,
-        uint256 oracleFilledCount,
+        uint256 oracleFilledCount_,
         uint64 providerIndex
     ) public view returns (uint256) {
         return
-            oracleData[indexToken][oracleFilledCount]
+            oracleData[indexToken][oracleFilledCount_]
                 .oracleProviderIndexTotalShares[providerIndex];
     }
 
     function getCurrentProviderIndexData(
         address indexToken,
-        uint256 currentFilledCount,
+        uint256 currentFilledCount_,
         uint64 providerIndex
     ) public view returns (uint256, address[] memory, uint256[] memory) {
         return (
-            currentData[indexToken][currentFilledCount]
+            currentData[indexToken][currentFilledCount_]
                 .currentProviderIndexTotalShares[providerIndex],
-            currentData[indexToken][currentFilledCount]
+            currentData[indexToken][currentFilledCount_]
                 .currentProviderIndexTokens[providerIndex],
-            currentData[indexToken][currentFilledCount]
+            currentData[indexToken][currentFilledCount_]
                 .currentProviderIndexTokenShares[providerIndex]
         );
     }

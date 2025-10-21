@@ -239,7 +239,6 @@ contract CCIPDeployer is
                             CrossChainIndexFactoryStorage.initialize,
                             (
                                 2,
-                                payable(address(crossChainVault)),
                                 address(link),
                                 address(mockRouter),
                                 wethAddress,
@@ -537,6 +536,7 @@ contract CCIPDeployer is
         crossChainIndexFactoryStorage.setCrossChainFactory(address(crossChainIndexFactory));
         crossChainIndexFactoryStorage.setVerifiedFactory(address(coreSender), 1, true);
         crossChainIndexFactoryStorage.setVerifiedFactory(address(balancerSender), 1, true);
+        crossChainIndexFactoryStorage.setIndexTokenToVault(address(indexToken), address(crossChainVault));
 
         crossChainVault.setOperator(address(crossChainIndexFactory), true);
 

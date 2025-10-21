@@ -16,15 +16,15 @@ contract MockApiOracle {
     bytes32 public preRequestId;
 
     function sendRequest(
-        uint64 subscriptionId,
-        bytes calldata data,
-        uint16 dataVersion,
-        uint32 callbackGasLimit,
-        bytes32 donId
+        uint64 /*subscriptionId*/,
+        bytes calldata /*data*/,
+        uint16 /*dataVersion*/,
+        uint32 /*callbackGasLimit*/,
+        bytes32 /*donId*/
     ) external returns (bytes32) {
         // return getRandomBytes32();
         counter++;
-        return keccak256(abi.encodePacked(block.timestamp, counter));
+        return keccak256(abi.encodePacked(block.timestamp, counter)); 
     }
 
     function fulfillRequest(address _requester, bytes32 _requestId, bytes memory _data) external returns (bool) {
@@ -49,7 +49,7 @@ contract MockApiOracle {
         return keccak256(
             abi.encodePacked(
                 block.timestamp, // Current block timestamp
-                block.difficulty, // Current block difficulty
+                block.prevrandao, // Current block randomness
                 msg.sender // Address of the caller
             )
         );

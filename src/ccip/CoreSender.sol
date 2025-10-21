@@ -174,6 +174,7 @@ contract CoreSender is Initializable, CCIPReceiver, ProposableOwnableUpgradeable
     }
 
     function _encodeIssuanceData(
+        address _indexToken,
         uint256 _issuanceNonce,
         address[] memory _tokenAddresses,
         uint256[] memory _tokenShares,
@@ -181,7 +182,7 @@ contract CoreSender is Initializable, CCIPReceiver, ProposableOwnableUpgradeable
     ) internal view returns (bytes memory) {
         return abi.encode(
             0,
-            address(0),
+            _indexToken,
             _tokenAddresses,
             new address[](0),
             functionsOracle.getFromETHPathBytesForTokens(_tokenAddresses),
@@ -201,27 +202,36 @@ contract CoreSender is Initializable, CCIPReceiver, ProposableOwnableUpgradeable
     ) public onlyFactory {
         weth.transferFrom(msg.sender, address(this), _wethAmount);
         // swap to cross chain token
-        (address[] memory fromETHPath, uint24[] memory fromETHFees) =
-            mainChainStorage.getFromETHPathData(mainChainStorage.crossChainToken(_chainSelector));
-        uint256 crossChainTokenAmount = swap(
-            fromETHPath,
-            fromETHFees,
-            // (_wethAmount * totalShares) / 100e18,
-            _wethAmount,
-            address(this)
-        );
+        uint256 crossChainTokenAmount;
+        {
+            (address[] memory fromETHPath, uint24[] memory fromETHFees) =
+                mainChainStorage.getFromETHPathData(mainChainStorage.crossChainToken(_chainSelector));
+            crossChainTokenAmount = swap(
+                fromETHPath,
+                fromETHFees,
+                _wethAmount,
+                address(this)
+            );
+        }
 
         uint256[] memory totalSharesArr = new uint256[](1);
         totalSharesArr[0] =
             functionsOracle.getCurrentChainSelectorTotalShares(_indexToken, _latestCount, _chainSelector);
         address crossChainIndexFactory = mainChainStorage.crossChainFactoryBySelector(_chainSelector);
         //encode data
-        bytes memory data = _encodeIssuanceData(
-            _issuanceNonce,
-            functionsOracle.allCurrentChainSelectorTokens(_indexToken, _chainSelector),
-            functionsOracle.allCurrentChainSelectorTokenShares(_indexToken, _chainSelector),
-            totalSharesArr
-        );
+        bytes memory data;
+        {
+            address[] memory tokenAddrs = functionsOracle.allCurrentChainSelectorTokens(_indexToken, _chainSelector);
+            uint256[] memory tokenShares =
+                functionsOracle.allCurrentChainSelectorTokenShares(_indexToken, _chainSelector);
+            data = _encodeIssuanceData(
+                _indexToken,
+                _issuanceNonce,
+                tokenAddrs,
+                tokenShares,
+                totalSharesArr
+            );
+        }
         // send issuance request
         Client.EVMTokenAmount[] memory tokensToSendArray = new Client.EVMTokenAmount[](1);
         tokensToSendArray[0].token = mainChainStorage.crossChainToken(_chainSelector);
@@ -239,30 +249,42 @@ contract CoreSender is Initializable, CCIPReceiver, ProposableOwnableUpgradeable
         view
         returns (uint256 totalFee)
     {
-        // get cross chain token amount
-        (address[] memory fromETHPath, uint24[] memory fromETHFees) =
-            mainChainStorage.getFromETHPathData(mainChainStorage.crossChainToken(_chainSelector));
-        uint256 crossChainTokenAmount = mainChainStorage.getAmountOut(fromETHPath, fromETHFees, _wethAmount);
-        // get cross chain factory
+        // Prepare minimal live locals by using a scoped block for temporaries
+        bytes memory data;
+        Client.EVMTokenAmount[] memory tokensToSendArray;
         address crossChainFactory = mainChainStorage.crossChainFactoryBySelector(_chainSelector);
-        uint256[] memory totalSharesArr = new uint256[](1);
-        totalSharesArr[0] = functionsOracle.getCurrentChainSelectorTotalShares(
-            address(_indexToken), functionsOracle.currentFilledCount(address(_indexToken)), _chainSelector
-        );
-        address crossChainIndexFactory = mainChainStorage.crossChainFactoryBySelector(_chainSelector);
+        {
+            // get cross chain token amount
+            (address[] memory fromETHPath, uint24[] memory fromETHFees) =
+                mainChainStorage.getFromETHPathData(mainChainStorage.crossChainToken(_chainSelector));
+            uint256 crossChainTokenAmount = mainChainStorage.getAmountOut(fromETHPath, fromETHFees, _wethAmount);
 
-        //encode data
-        bytes memory data = _encodeIssuanceData(
-            mainChainStorage.issuanceNonce(),
-            functionsOracle.allCurrentChainSelectorTokens(address(0), _chainSelector),
-            functionsOracle.allCurrentChainSelectorTokenShares(address(0), _chainSelector),
-            totalSharesArr
-        );
+            // total shares
+            uint256[] memory totalSharesArr = new uint256[](1);
+            totalSharesArr[0] = functionsOracle.getCurrentChainSelectorTotalShares(
+                address(_indexToken), functionsOracle.currentFilledCount(address(_indexToken)), _chainSelector
+            );
 
-        // send issuance request
-        Client.EVMTokenAmount[] memory tokensToSendArray = new Client.EVMTokenAmount[](1);
-        tokensToSendArray[0].token = mainChainStorage.crossChainToken(_chainSelector);
-        tokensToSendArray[0].amount = crossChainTokenAmount;
+            // tokens and shares arrays
+            address[] memory tokenAddrs =
+                functionsOracle.allCurrentChainSelectorTokens(address(0), _chainSelector);
+            uint256[] memory tokenShares =
+                functionsOracle.allCurrentChainSelectorTokenShares(address(0), _chainSelector);
+
+            // encode data
+            data = _encodeIssuanceData(
+                _indexToken,
+                mainChainStorage.issuanceNonce(),
+                tokenAddrs,
+                tokenShares,
+                totalSharesArr
+            );
+
+            // token amounts for message
+            tokensToSendArray = new Client.EVMTokenAmount[](1);
+            tokensToSendArray[0].token = mainChainStorage.crossChainToken(_chainSelector);
+            tokensToSendArray[0].amount = crossChainTokenAmount;
+        }
 
         Client.EVM2AnyMessage memory message = Client.EVM2AnyMessage({
             receiver: abi.encode(crossChainFactory),
@@ -311,8 +333,8 @@ contract CoreSender is Initializable, CCIPReceiver, ProposableOwnableUpgradeable
         address[] memory tokenAddresses,
         uint256[] memory value1,
         uint256[] memory value2,
-        uint256 totalCurrentList,
-        bytes32 messageId
+        uint256 /* totalCurrentList */,
+        bytes32 /* messageId */
     ) internal {
         uint256 requestIssuanceNonce = nonce;
         for (uint256 i; i < tokenAddresses.length; i++) {
@@ -351,7 +373,7 @@ contract CoreSender is Initializable, CCIPReceiver, ProposableOwnableUpgradeable
         //encode data
         bytes memory data = abi.encode(
             1,
-            address(0),
+            _indexToken,
             tokenAddresses,
             new address[](0),
             functionsOracle.getFromETHPathBytesForTokens(tokenAddresses),
@@ -373,17 +395,21 @@ contract CoreSender is Initializable, CCIPReceiver, ProposableOwnableUpgradeable
         uint256[] memory burnPercentages = new uint256[](1);
         burnPercentages[0] = 0;
         //encode data
-        bytes memory data = abi.encode(
-            1,
-            address(0),
-            tokenAddresses,
-            new address[](0),
-            functionsOracle.getFromETHPathBytesForTokens(tokenAddresses),
-            new bytes[](0),
-            mainChainStorage.redemptionNonce(),
-            new uint256[](0),
-            burnPercentages
-        );
+        bytes memory data;
+        {
+            bytes[] memory fromPaths = functionsOracle.getFromETHPathBytesForTokens(tokenAddresses);
+            data = abi.encode(
+                1,
+                address(0),
+                tokenAddresses,
+                new address[](0),
+                fromPaths,
+                new bytes[](0),
+                mainChainStorage.redemptionNonce(),
+                new uint256[](0),
+                burnPercentages
+            );
+        }
         // send message
         Client.EVM2AnyMessage memory message = Client.EVM2AnyMessage({
             receiver: abi.encode(crossChainIndexFactory),
@@ -476,10 +502,10 @@ contract CoreSender is Initializable, CCIPReceiver, ProposableOwnableUpgradeable
         uint256 nonce,
         Client.Any2EVMMessage memory any2EvmMessage,
         address[] memory tokenAddresses,
-        uint256 totalCurrentList,
+        uint256 /* totalCurrentList */,
         uint256 crossChainPortfolioValue,
-        uint64 sourceChainSelector,
-        bytes32 messageId
+        uint64 /* sourceChainSelector */,
+        bytes32 /* messageId */
     ) internal {
         uint256 requestRedemptionNonce = nonce;
         Client.EVMTokenAmount[] memory tokenAmounts = any2EvmMessage.destTokenAmounts;

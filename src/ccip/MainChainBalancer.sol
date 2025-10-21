@@ -259,7 +259,7 @@ contract MainChainBalancer is
     function _checkValueCurrentChainValues(
         address _indexToken,
         address tokenAddress
-    ) internal returns(uint256 value) {
+    ) internal view returns(uint256 value) {
         (
                 address[] memory toETHPath,
                 uint24[] memory toETHFees
@@ -551,10 +551,10 @@ contract MainChainBalancer is
 
     function _internalSwapTokensToWETHFirstRebalance(
         address _indexToken,
-        uint256 _nonce,
+        uint256 /*_nonce*/,
         uint64 chainSelector,
-        uint256 portfolioValue,
-        uint256 _targetPortfolioValue
+        uint256 /*portfolioValue*/,
+        uint256 /*_targetPortfolioValue*/
     ) internal returns (uint256 swapWethAmount) {
         uint256 initialWethBalance = weth.balanceOf(
             address(indexFactoryStorage.indexTokenToVault(_indexToken))
@@ -703,7 +703,7 @@ contract MainChainBalancer is
             uint256 newTokenMarketShare = functionsOracle
                 .tokenOracleMarketShare(_indexToken, newTokenAddress);
 
-            uint256 wethAmount = _internalSwapsWETHToTokensForFirstRebalance(
+            _internalSwapsWETHToTokensForFirstRebalance(
                 _indexToken,
                 newTokenAddress,
                 wethAmountToSwap,
@@ -715,7 +715,7 @@ contract MainChainBalancer is
 
     function _updateExtraValuesMapping(
         uint256 nonce,
-        uint256 portfolioValue,
+        uint256 /*portfolioValue*/,
         uint256 _targetPortfolioValue,
         uint64 chainSelector,
         uint256 oracleChainSelectorTotalShares,
@@ -747,18 +747,18 @@ contract MainChainBalancer is
     }
 
     function _swapExtraValueCurrentChain(
-        uint256 i,
+        uint256 /*i*/,
         address _indexToken,
         uint256 nonce,
         uint256 portfolioValue,
         uint256 _targetPortfolioValue,
         uint64 chainSelector,
-        uint256 _latestOracleCount,
+        uint256 /*_latestOracleCount*/,
         uint256 oracleChainSelectorTotalShares
     ) internal {
-        ExtraSwapVariables memory swapVars;
+        
         (
-            uint256 chainCurrentRealShare,
+            uint256 unusedChainCurrentRealShare,
             uint256 wethAmountToSwap,
             uint256 extraWethAmount
         ) = _swapTokensToWETHFirstRebalance(
@@ -981,7 +981,7 @@ contract MainChainBalancer is
     }
 
     function _swapLowerValueCurrentChain(
-        uint256 i,
+        uint256 /*i*/,
         address _indexToken,
         uint256 nonce,
         uint256 _targetPortfolioValue,
@@ -1071,7 +1071,7 @@ contract MainChainBalancer is
     function _sendLowerValueOtherChain(
         address _indexToken,
         uint256 nonce,
-        uint256 targetPortfolioValue,
+        uint256 targetPortfolioValue_,
         uint64 chainSelector,
         uint256 oracleChainSelectorTotalShares,
         uint256 chainValue,
@@ -1083,7 +1083,7 @@ contract MainChainBalancer is
         uint256 extraWethAmount = _calculateExtraAmountForLowerValue(
             nonce,
             portfolioValue,
-            targetPortfolioValue,
+            targetPortfolioValue_,
             chainValue,
             oracleChainSelectorTotalShares
         );

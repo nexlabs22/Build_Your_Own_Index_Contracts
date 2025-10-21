@@ -276,9 +276,9 @@ contract MainChainFactory is
         return (totalCrossChainFee * (100 + 20)) / 100;
     }
 
-    function getRedemptionFee(address _indexToken, uint256 amountIn) public view returns (uint256) {
-        uint256 burnPercent = (amountIn * 1e18) / indexToken.totalSupply();
-        uint256 totalChains = functionsOracle.currentChainSelectorsCount(_indexToken);
+    function getRedemptionFee(address _indexToken, uint256 /*amountIn*/) public view returns (uint256) {
+        // uint256 burnPercentage = (amountIn * 1e18) / indexToken.totalSupply(); // unused
+    uint256 totalChains = functionsOracle.currentChainSelectorsCount(_indexToken);
         uint256 latestCount = functionsOracle.currentFilledCount(_indexToken);
         (,, uint64[] memory chainSelectors) = functionsOracle.getCurrentData(_indexToken, latestCount);
         uint256 totalCrossChainFee;
@@ -336,7 +336,7 @@ contract MainChainFactory is
         //     (bool success,) = mainChainStorage.coreSender().call{value: msg.value}("");
         //     require(success, "Cross chain fee transfer failed");
         // }
-        IWETH weth = mainChainStorage.weth();
+        // IWETH _wethLocal = mainChainStorage.weth(); // unused
 
         mainChainStorage.increaseIssuanceNonce();
         mainChainStorage.setIssuanceData(
@@ -462,9 +462,8 @@ contract MainChainFactory is
      * @param _indexToken The address of the index token.
      * @param _wethAmount The amount of WETH.
      * @param _issuanceNonce The issuance nonce.
-     * @param _chainSelectorTokensCount The number of tokens in the chain selector.
+    * @param _chainSelectorTokensCount The number of tokens in the chain selector.
      * @param _chainSelector The chain selector.
-     * @param _latestCount The latest count.
      */
     function _issuanceSwapsCurrentChain(
         address _indexToken,
@@ -472,7 +471,7 @@ contract MainChainFactory is
         uint256 _issuanceNonce,
         uint256 _chainSelectorTokensCount,
         uint64 _chainSelector,
-        uint256 _latestCount
+        uint256 /*_latestCount*/
     ) internal {
         address[] memory tokens = functionsOracle.allCurrentChainSelectorTokens(_indexToken, _chainSelector);
         for (uint256 i = 0; i < _chainSelectorTokensCount; i++) {
@@ -541,9 +540,8 @@ contract MainChainFactory is
         // indexToken.burn(msg.sender, amountIn);
 
         //swap
-        uint256 totalChains = functionsOracle.currentChainSelectorsCount(_indexToken);
-        uint256 latestCount = functionsOracle.currentFilledCount(_indexToken);
-        (,, uint64[] memory chainSelectors) = functionsOracle.getCurrentData(_indexToken, latestCount);
+    uint256 latestCount = functionsOracle.currentFilledCount(_indexToken);
+    (,, uint64[] memory chainSelectors) = functionsOracle.getCurrentData(_indexToken, latestCount);
         for (uint256 i = 0; i < chainSelectors.length; i++) {
             uint64 chainSelector = chainSelectors[i];
             uint256 chainSelectorTokensCount =
@@ -620,14 +618,13 @@ contract MainChainFactory is
      * @param _indexToken The address of the index token.
      * @param _burnPercent The burn percentage.
      * @param _redemptionNonce The redemption nonce.
-     * @param _chainSelectorTokensCount The number of tokens in the chain selector.
      */
 
     function _redemptionSwapsCurrentChain(
         address _indexToken,
         uint256 _burnPercent,
         uint256 _redemptionNonce,
-        uint256 _chainSelectorTokensCount
+        uint256 /*_chainSelectorTokensCount*/
     ) internal {
         address[] memory tokens = functionsOracle.allCurrentChainSelectorTokens(_indexToken, currentChainSelector);
         for (uint256 i = 0; i < tokens.length; i++) {

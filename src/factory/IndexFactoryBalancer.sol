@@ -131,8 +131,8 @@ contract IndexFactoryBalancer is Initializable, OwnableUpgradeable, PausableUpgr
         if(_extraUsdcAmount > 0){
             IERC20(factoryStorage.usdcAddress()).transferFrom(msg.sender, address(this), _extraUsdcAmount);
         }
-        uint256 updatePortfolioNonce = providerNonceToGlobalNonce[_providerIndex][_updateProviderNonce];
-        extraUsdcAmountByNonce[updatePortfolioNonce] += _extraUsdcAmount;
+    uint256 updatePortfolioNonce_ = providerNonceToGlobalNonce[_providerIndex][_updateProviderNonce];
+    extraUsdcAmountByNonce[updatePortfolioNonce_] += _extraUsdcAmount;
     }
 
     function secondReweightAction(address _indexToken, uint256 _updatePortfolioNonce)
@@ -190,10 +190,11 @@ contract IndexFactoryBalancer is Initializable, OwnableUpgradeable, PausableUpgr
         providerTotalValueByNonce[_updatePortfolioNonce][1] += _value;
     }
 
-    function askValuesDinari(address _indexToken) internal whenNotPaused nonReentrant returns (uint256 orderNonce) {
+    function askValuesDinari(address _indexToken) internal whenNotPaused nonReentrant returns (uint256) {
         uint8 providerIndex = dinariBalancer.dinariStorage().providerIndex();
         uint256 providerUpdateNonce = dinariBalancer.askValues(_indexToken);
         providerNonceToGlobalNonce[providerIndex][providerUpdateNonce] = updatePortfolioNonce;
+        return providerUpdateNonce;
     }
 
     function completeDinariAskValues(uint256 _updateProviderNonce, uint256 _value)

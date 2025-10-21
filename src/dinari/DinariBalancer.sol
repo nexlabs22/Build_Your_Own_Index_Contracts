@@ -235,11 +235,11 @@ contract DinariBalancer is Initializable, OwnableUpgradeable, PausableUpgradeabl
                             / tokenValuePercent
                     );
                 if (tokenValue * amount / tokenBalance > minimumOrderAmount) {
-                    (uint256 requestId, uint256 assetAmount) =
+                    (uint256 requestId_, ) =
                         requestSellOrder(_indexToken, tokenAddress, amount, address(dinariStorage.dinariOrderManager()));
-                    actionInfoById[_indexToken][requestId] = ActionInfo(5, _rebalanceNonce);
-                    rebalanceRequestId[_indexToken][_rebalanceNonce][tokenAddress] = requestId;
-                    rebalanceSellAssetAmountById[_indexToken][requestId] = amount;
+                    actionInfoById[_indexToken][requestId_] = ActionInfo(5, _rebalanceNonce);
+                    rebalanceRequestId[_indexToken][_rebalanceNonce][tokenAddress] = requestId_;
+                    rebalanceSellAssetAmountById[_indexToken][requestId_] = amount;
                 }
             } else {
                 uint256 shortagePercent =
@@ -624,7 +624,7 @@ contract DinariBalancer is Initializable, OwnableUpgradeable, PausableUpgradeabl
 
     function checkFirstRebalanceOrdersStatus(address _indexToken, uint256 _rebalanceNonce) public view returns (bool) {
         require(_rebalanceNonce <= rebalanceNonce[_indexToken], "Wrong rebalance nonce!");
-        uint256 completedOrdersCount;
+    // uint256 completedOrdersCount; // unused
         (, address[] memory underlyingAssets,) = functionsOracle.getCurrentProviderIndexData(
             _indexToken, functionsOracle.currentFilledCount(_indexToken), dinariStorage.providerIndex()
         );
@@ -650,7 +650,7 @@ contract DinariBalancer is Initializable, OwnableUpgradeable, PausableUpgradeabl
         returns (bool)
     {
         require(_rebalanceNonce <= rebalanceNonce[_indexToken], "Wrong rebalance nonce!");
-        uint256 completedOrdersCount;
+    // uint256 completedOrdersCount; // unused
         IOrderProcessor issuer = dinariStorage.issuer();
         (, address[] memory underlyingAssets,) = functionsOracle.getCurrentProviderIndexData(
             _indexToken, functionsOracle.currentFilledCount(_indexToken), dinariStorage.providerIndex()

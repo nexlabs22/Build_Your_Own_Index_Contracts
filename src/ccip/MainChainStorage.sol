@@ -619,11 +619,17 @@ contract MainChainStorage is Initializable, ProposableOwnableUpgradeable {
     }
 
     function getCurrentTokenValue(address _indexToken, address tokenAddress) external view returns (uint256) {
-        (address[] memory toETHPath, uint24[] memory toETHFees) = functionsOracle.getToETHPathData(tokenAddress);
+        (address[] memory pathToETH, uint24[] memory feesToETH) = functionsOracle.getToETHPathData(tokenAddress);
 
         uint256 oldTokenValue = tokenAddress == address(weth)
             ? convertEthToUsd(IERC20(tokenAddress).balanceOf(indexFactoryStorage.indexTokenToVault(_indexToken)))
-            : convertEthToUsd(getAmountOut(toETHPath, toETHFees, IERC20(tokenAddress).balanceOf(indexFactoryStorage.indexTokenToVault(_indexToken))));
+            : convertEthToUsd(
+                getAmountOut(
+                    pathToETH,
+                    feesToETH,
+                    IERC20(tokenAddress).balanceOf(indexFactoryStorage.indexTokenToVault(_indexToken))
+                )
+            );
 
         return oldTokenValue;
     }

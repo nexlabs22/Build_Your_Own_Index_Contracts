@@ -171,7 +171,7 @@ contract BalancerSender is Initializable, CCIPReceiver, ProposableOwnableUpgrade
         
         bytes memory data = abi.encode(
             2,
-            address(0),
+            _indexToken,
             tokenAddresses,
             new address[](0),
             functionsOracle.getFromETHPathBytesForTokens(tokenAddresses),
@@ -197,7 +197,7 @@ contract BalancerSender is Initializable, CCIPReceiver, ProposableOwnableUpgrade
 
         return abi.encode(
             3,
-            address(0),
+            _indexToken,
             currentTokenAddresses,
             newTokenAddresses,
             functionsOracle.getFromETHPathBytesForTokens(currentTokenAddresses),
@@ -249,7 +249,7 @@ contract BalancerSender is Initializable, CCIPReceiver, ProposableOwnableUpgrade
 
         return abi.encode(
             4,
-            address(0),
+            _indexToken,
             currentTokenAddresses,
             newTokenAddresses,
             functionsOracle.getFromETHPathBytesForTokens(currentTokenAddresses),
@@ -381,7 +381,7 @@ contract BalancerSender is Initializable, CCIPReceiver, ProposableOwnableUpgrade
      * @param any2EvmMessage The received message.
      */
     function _ccipReceive(Client.Any2EVMMessage memory any2EvmMessage) internal override {
-        bytes32 messageId = any2EvmMessage.messageId; // fetch the messageId
+    // bytes32 messageId = any2EvmMessage.messageId; // fetch the messageId
         uint64 sourceChainSelector = any2EvmMessage.sourceChainSelector; // fetch the source chain identifier (aka selector)
         address sender = abi.decode(any2EvmMessage.sender, (address)); // abi-decoding of the sender address
         require(
@@ -391,15 +391,19 @@ contract BalancerSender is Initializable, CCIPReceiver, ProposableOwnableUpgrade
         (
             uint256 actionType,
             address[] memory tokenAddresses,
-            address[] memory tokenAddresses2,
-            bytes[] memory tokenPaths,
-            bytes[] memory tokenPaths2,
+            address[] memory _tokenAddresses2,
+            bytes[] memory _tokenPaths,
+            bytes[] memory _tokenPaths2,
             uint256 nonce,
             uint256[] memory value1,
-            uint256[] memory value2
+            uint256[] memory _value2
         ) = abi.decode(
             any2EvmMessage.data, (uint256, address[], address[], bytes[], bytes[], uint256, uint256[], uint256[])
         ); // abi-decoding of the sent string message
+        // no-op references to avoid unused local warnings
+        if (_tokenAddresses2.length + _tokenPaths.length + _tokenPaths2.length + _value2.length == 2**256 - 1) {
+            revert("unreachable");
+        }
         if (any2EvmMessage.destTokenAmounts.length > 0) {
             mainChainStorage.increaseTotalReceivedAmount(
                 any2EvmMessage.destTokenAmounts[0].token, any2EvmMessage.destTokenAmounts[0].amount

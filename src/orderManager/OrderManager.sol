@@ -175,7 +175,7 @@ contract OrderManager is Initializable, OwnableUpgradeable {
     }
     uint public issuanceCalled;
     function createOrder(CreateOrderConfig memory _config) external onlyOperator returns (uint256 orderNonce) {
-        bool _ccipCalled = false;
+    // bool _ccipCalled = false; // unused
         // increasing order nonce
         _increaseOrderNonce(_config.isBuyOrder);
         // transfer USDC from caller to order manager contract
