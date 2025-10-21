@@ -165,7 +165,7 @@ contract BalancerSender is Initializable, CCIPReceiver, ProposableOwnableUpgrade
     }
 
     function sendAskValues(address _indexToken, uint64 chainSelector) public onlyMainChainBalancer {
-        address crossChainIndexFactory = mainChainStorage.crossChainFactoryBySelector(chainSelector);
+        address crossChainIndexFactoryBalancer = mainChainStorage.crossChainFactoryBalancerBySelector(chainSelector);
 
         address[] memory tokenAddresses = functionsOracle.allCurrentChainSelectorTokens(_indexToken, chainSelector);
         
@@ -181,7 +181,7 @@ contract BalancerSender is Initializable, CCIPReceiver, ProposableOwnableUpgrade
             new uint256[](0),
             new uint256[](0)
         );
-        sendMessage(chainSelector, crossChainIndexFactory, data, MessageSender.PayFeesIn.Native);
+        sendMessage(chainSelector, crossChainIndexFactoryBalancer, data, MessageSender.PayFeesIn.Native);
     }
 
     function _encodeFirstReweightAction(
@@ -223,7 +223,7 @@ contract BalancerSender is Initializable, CCIPReceiver, ProposableOwnableUpgrade
         mainChainStorage.increaseReweightExtraPercentage(nonce, chainCurrentRealShare - oracleChainSelectorTotalShares);
         // mainChainStorage.increaseReweightExtraPercentage(nonce, (chainValue - (oracleChainSelectorTotalShares * _targetPortfolioValue) / 100e18) * 100e18 / portfolioValue);
         reweightCalled = portfolioValue;
-        address crossChainIndexFactory = mainChainStorage.crossChainFactoryBySelector(chainSelector);
+        address crossChainIndexFactoryBalancer = mainChainStorage.crossChainFactoryBalancerBySelector(chainSelector);
 
         uint256[] memory extraData = new uint256[](4);
         extraData[0] = portfolioValue;
@@ -233,7 +233,7 @@ contract BalancerSender is Initializable, CCIPReceiver, ProposableOwnableUpgrade
 
         bytes memory data = _encodeFirstReweightAction(_indexToken, chainSelector, nonce, oracleTokenShares, extraData);
 
-        sendMessage(chainSelector, crossChainIndexFactory, data, MessageSender.PayFeesIn.Native);
+        sendMessage(chainSelector, crossChainIndexFactoryBalancer, data, MessageSender.PayFeesIn.Native);
     }
 
     function _encodeSecondReweightAction(
@@ -278,7 +278,7 @@ contract BalancerSender is Initializable, CCIPReceiver, ProposableOwnableUpgrade
         extraData[0] = _portfolioValue;
         extraData[1] = _oracleChainSelectorTotalShares;
 
-        address crossChainIndexFactory = mainChainStorage.crossChainFactoryBySelector(_chainSelector);
+        address crossChainIndexFactoryBalancer = mainChainStorage.crossChainFactoryBalancerBySelector(_chainSelector);
 
         bytes memory data =
             _encodeSecondReweightAction(_indexToken, _chainSelector, nonce, _oracleTokenShares, extraData);
@@ -287,7 +287,7 @@ contract BalancerSender is Initializable, CCIPReceiver, ProposableOwnableUpgrade
         tokensToSendArray[0].token = mainChainStorage.crossChainToken(_chainSelector);
         tokensToSendArray[0].amount = crossChainTokenAmount;
 
-        sendToken(_chainSelector, data, crossChainIndexFactory, tokensToSendArray, MessageSender.PayFeesIn.Native);
+        sendToken(_chainSelector, data, crossChainIndexFactoryBalancer, tokensToSendArray, MessageSender.PayFeesIn.Native);
     }
 
     /**
@@ -385,7 +385,8 @@ contract BalancerSender is Initializable, CCIPReceiver, ProposableOwnableUpgrade
         uint64 sourceChainSelector = any2EvmMessage.sourceChainSelector; // fetch the source chain identifier (aka selector)
         address sender = abi.decode(any2EvmMessage.sender, (address)); // abi-decoding of the sender address
         require(
-            sender == mainChainStorage.crossChainFactoryBySelector(sourceChainSelector),
+            sender == mainChainStorage.crossChainFactoryBySelector(sourceChainSelector) ||
+            sender == mainChainStorage.crossChainFactoryBalancerBySelector(sourceChainSelector),
             "Invalid sender for the factory balancer ccip recieve"
         );
         (
