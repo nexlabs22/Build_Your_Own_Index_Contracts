@@ -42,6 +42,7 @@ contract CrossChainIndexFactoryStorage is
     uint16 public constant MAX_TOKENS_LENGTH = 5;
 
     address public crossChainFactory;
+    address public crossChainFactoryBalancer;
 
     mapping(address => address) public indexTokenToVault;
 
@@ -78,7 +79,7 @@ contract CrossChainIndexFactoryStorage is
     mapping(address => uint256) public totalReceivedAmount;
 
     modifier onlyFactory() {
-        require(msg.sender == crossChainFactory, "Only factory can call this function");
+        require(msg.sender == crossChainFactory || msg.sender == crossChainFactoryBalancer, "Only factory can call this function");
         _;
     }
 
@@ -168,6 +169,10 @@ contract CrossChainIndexFactoryStorage is
 
     function setCrossChainFactory(address _factory) public onlyOwner {
         crossChainFactory = _factory;
+    }
+
+    function setCrossChainFactoryBalancer(address _crossChainFactoryBalancer) public onlyOwner {
+        crossChainFactoryBalancer = _crossChainFactoryBalancer;
     }
 
     function setPriceOracle(address _priceOracle) external onlyOwner {

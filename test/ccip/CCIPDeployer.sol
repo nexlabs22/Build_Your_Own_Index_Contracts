@@ -29,6 +29,8 @@ import "../../src/orderManager/OrderManager.sol";
 import "../../src/vault/Vault.sol";
 import "../../src/ccip/CrossChainIndexFactory.sol";
 import "../../src/ccip/CrossChainIndexFactoryStorage.sol";
+import "../../src/ccip/CrossChainIndexFactoryBalancer.sol";
+
 import "../../src/test/Token.sol";
 // import "../../src/ccip/CrossChainFeeSender.sol";
 // import "../../src/ccip/CrossChainFeeReceiver.sol";
@@ -106,6 +108,12 @@ contract CCIPDeployer is
     CrossChainIndexFactory public crossChainIndexFactory2;
     CrossChainIndexFactory public crossChainIndexFactory3;
     CrossChainIndexFactory public crossChainIndexFactory4;
+
+    CrossChainIndexFactoryBalancer public crossChainIndexFactoryBalancer;
+    CrossChainIndexFactoryBalancer public crossChainIndexFactoryBalancer1;
+    CrossChainIndexFactoryBalancer public crossChainIndexFactoryBalancer2;
+    CrossChainIndexFactoryBalancer public crossChainIndexFactoryBalancer3;
+    CrossChainIndexFactoryBalancer public crossChainIndexFactoryBalancer4;
 
     Vault public vault;
     Vault public crossChainVault;
@@ -218,7 +226,7 @@ contract CCIPDeployer is
 
     function deployContracts2()
         public
-        returns (Vault, MainChainStorage, CrossChainIndexFactory, CrossChainIndexFactoryStorage)
+        returns (Vault, MainChainStorage, CrossChainIndexFactory, CrossChainIndexFactoryBalancer, CrossChainIndexFactoryStorage)
     {
         Vault crossChainVaultImpl = new Vault();
         crossChainVault = Vault(
@@ -268,6 +276,21 @@ contract CCIPDeployer is
             )
         );
 
+        CrossChainIndexFactoryBalancer crossChainIndexFactoryBalancerImpl = new CrossChainIndexFactoryBalancer();
+        crossChainIndexFactoryBalancer = CrossChainIndexFactoryBalancer(
+            payable(
+                address(
+                    new ERC1967Proxy(
+                        address(crossChainIndexFactoryBalancerImpl),
+                        abi.encodeCall(
+                            CrossChainIndexFactoryBalancer.initialize,
+                            (address(crossChainIndexFactoryStorage), address(mockRouter), address(link))
+                        )
+                    )
+                )
+            )
+        );
+
         MainChainStorage mainChainStorageImpl = new MainChainStorage();
         mainChainStorage = MainChainStorage(
             payable(
@@ -293,7 +316,7 @@ contract CCIPDeployer is
             )
         );
 
-        return (crossChainVault, mainChainStorage, crossChainIndexFactory, crossChainIndexFactoryStorage);
+        return (crossChainVault, mainChainStorage, crossChainIndexFactory, crossChainIndexFactoryBalancer, crossChainIndexFactoryStorage);
     }
 
     function deployContracts3()
@@ -514,6 +537,7 @@ contract CCIPDeployer is
         mainChainStorage.setCrossChainToken(2, address(crossChainToken), path, feesData);
         // indexFactoryStorage.setCrossChainToken(1, address(crossChainToken), path, feesData);
         mainChainStorage.setCrossChainFactory(address(crossChainIndexFactory), 2);
+        mainChainStorage.setCrossChainFactoryBalancer(address(crossChainIndexFactoryBalancer), 2);
         mainChainStorage.setMainChainFactory(address(mainChainFactory));
         mainChainStorage.setIndexFactoryStorage(address(indexFactoryStorage));
         mainChainStorage.setCoreSender(address(coreSender));
@@ -534,11 +558,13 @@ contract CCIPDeployer is
         crossChainIndexFactoryStorage.setCrossChainToken(1, address(crossChainToken), path, feesData);
         crossChainIndexFactoryStorage.setPriceOracle(priceOracleAddress);
         crossChainIndexFactoryStorage.setCrossChainFactory(address(crossChainIndexFactory));
+        crossChainIndexFactoryStorage.setCrossChainFactoryBalancer(address(crossChainIndexFactoryBalancer));
         crossChainIndexFactoryStorage.setVerifiedFactory(address(coreSender), 1, true);
         crossChainIndexFactoryStorage.setVerifiedFactory(address(balancerSender), 1, true);
         crossChainIndexFactoryStorage.setIndexTokenToVault(address(indexToken), address(crossChainVault));
 
         crossChainVault.setOperator(address(crossChainIndexFactory), true);
+        crossChainVault.setOperator(address(crossChainIndexFactoryBalancer), true);
 
         mockRouter.setFactoryChainSelector(1, address(coreSender));
         mockRouter.setFactoryChainSelector(1, address(factory));
@@ -546,12 +572,15 @@ contract CCIPDeployer is
         mockRouter.setFactoryChainSelector(1, address(mainChainBalancer));
         mockRouter.setFactoryChainSelector(1, address(balancerSender));
         mockRouter.setFactoryChainSelector(2, address(crossChainIndexFactory));
+        mockRouter.setFactoryChainSelector(2, address(crossChainIndexFactoryBalancer));
         // mockRouter.setFactoryChainSelector(1, address(crossChainFeeSender));
         // mockRouter.setFactoryChainSelector(2, address(crossChainFeeReceiver));
 
         link.transfer(address(coreSender), 10e18);
         // link.transfer(address(factory), 10e18);
         link.transfer(address(crossChainIndexFactory), 10e18);
+        link.transfer(address(crossChainIndexFactoryBalancer), 10e18);
+
 
         // set corsender gas limit and balancer sender gas limit
     }
@@ -603,7 +632,7 @@ contract CCIPDeployer is
         (link, oracle, ethPriceOracle, mockRouter) = deployInternalContracts();
 
         (indexToken, vault, functionsOracle, indexFactoryStorage) = deployContracts();
-        (crossChainVault, mainChainStorage, crossChainIndexFactory, crossChainIndexFactoryStorage) = deployContracts2();
+        (crossChainVault, mainChainStorage, crossChainIndexFactory, crossChainIndexFactoryBalancer, crossChainIndexFactoryStorage) = deployContracts2();
         (
             orderManager,
             coreSender,

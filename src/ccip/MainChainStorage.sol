@@ -71,6 +71,7 @@ contract MainChainStorage is Initializable, ProposableOwnableUpgradeable {
 
     mapping(uint64 => address) public crossChainToken;
     mapping(uint64 => address) public crossChainFactoryBySelector;
+    mapping(uint64 => address) public crossChainFactoryBalancerBySelector;
 
     mapping(address => address[]) public fromETHPath;
     mapping(address => address[]) public toETHPath;
@@ -264,6 +265,10 @@ contract MainChainStorage is Initializable, ProposableOwnableUpgradeable {
      */
     function setCrossChainFactory(address _crossChainFactoryAddress, uint64 _chainSelector) public onlyOwner {
         crossChainFactoryBySelector[_chainSelector] = _crossChainFactoryAddress;
+    }
+
+    function setCrossChainFactoryBalancer(address _crossChainFactoryBalancerAddress, uint64 _chainSelector) public onlyOwner {
+        crossChainFactoryBalancerBySelector[_chainSelector] = _crossChainFactoryBalancerAddress;
     }
 
     function setFunctionsOracle(address _functionsOracle) public onlyOwner {
