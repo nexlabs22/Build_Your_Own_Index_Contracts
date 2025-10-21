@@ -12,11 +12,11 @@ pragma solidity ^0.8.0;
  */
 contract MockApiOracle {
     function sendRequest(
-        uint64 subscriptionId,
-        bytes calldata data,
-        uint16 dataVersion,
-        uint32 callbackGasLimit,
-        bytes32 donId
+        uint64 /*subscriptionId*/,
+        bytes calldata /*data*/,
+        uint16 /*dataVersion*/,
+        uint32 /*callbackGasLimit*/,
+        bytes32 /*donId*/
     ) external returns (bytes32) {
         return getRandomBytes32();
     }
@@ -38,7 +38,7 @@ contract MockApiOracle {
         return keccak256(
             abi.encodePacked(
                 block.timestamp, // Current block timestamp
-                block.difficulty, // Current block difficulty
+                block.prevrandao, // Current block randomness
                 msg.sender // Address of the caller
             )
         );

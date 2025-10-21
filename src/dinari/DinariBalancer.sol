@@ -230,6 +230,45 @@ contract DinariBalancer is Initializable, OwnableUpgradeable, PausableUpgradeabl
         return (id, orderAmount);
     }
 
+    function _sellOverweightedAssets(address _indexToken, uint256 _rebalanceNonce, uint256 _portfolioValue) internal {
+        (, address[] memory underlyingAssets,) = functionsOracle.getCurrentProviderIndexData(
+            _indexToken, functionsOracle.currentFilledCount(_indexToken), dinariStorage.providerIndex()
+        );
+
+        address vault = globalStorage.indexTokenToVault(_indexToken);
+
+        for (uint256 i; i < underlyingAssets.length; i++) {
+            // address tokenAddress = functionsOracle.currentList(i);
+            address tokenAddress = underlyingAssets[i];
+            uint256 tokenValue = tokenValueByNonce[_indexToken][_rebalanceNonce][tokenAddress];
+            address wrappedDshare = dinariStorage.wrappedDshareAddress(tokenAddress);
+
+            uint256 tokenBalance = IERC20(wrappedDshare).balanceOf(vault);
+            uint256 tokenValuePercent = (tokenValue * 100e18) / _portfolioValue;
+            if (tokenValuePercent > functionsOracle.tokenOracleMarketShare(_indexToken, tokenAddress)) {
+                uint256 amount = tokenBalance
+                    - (
+                        (tokenBalance * functionsOracle.tokenOracleMarketShare(_indexToken, tokenAddress))
+                            / tokenValuePercent
+                    );
+                if (tokenValue * amount / tokenBalance > minimumOrderAmount) {
+                    (uint256 requestId_,) =
+                        requestSellOrder(_indexToken, tokenAddress, amount, address(dinariStorage.dinariOrderManager()));
+                    actionInfoById[_indexToken][requestId_] = ActionInfo(5, _rebalanceNonce);
+                    rebalanceRequestId[_indexToken][_rebalanceNonce][tokenAddress] = requestId_;
+                    rebalanceSellAssetAmountById[_indexToken][requestId_] = amount;
+                }
+            } else {
+                uint256 shortagePercent =
+                    functionsOracle.tokenOracleMarketShare(_indexToken, tokenAddress) - tokenValuePercent;
+                if ((_portfolioValue * shortagePercent) / 100e18 > minimumOrderAmount) {
+                    tokenShortagePercentByNonce[_indexToken][_rebalanceNonce][tokenAddress] = shortagePercent;
+                    totalShortagePercentByNonce[_indexToken][_rebalanceNonce] += shortagePercent;
+                }
+            }
+        }
+    }
+
     function _recordSell(address indexToken, uint256 nonce, address token, uint256 requestId, uint256 assetAmount)
         internal
     {

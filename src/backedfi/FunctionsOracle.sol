@@ -111,10 +111,9 @@ contract FunctionsOracle is Initializable, FunctionsClient, ConfirmedOwner {
      * @notice Store latest result/error
      * @param requestId The request ID, returned by sendRequest()
      * @param response Aggregated response from the user code
-     * @param err Aggregated error from the user code or from the execution pipeline
-     * Either response or error parameter will be set, but never both
+    * Either response or error parameter will be set, but never both
      */
-    function fulfillRequest(bytes32 requestId, bytes memory response, bytes memory err) internal override {
+    function fulfillRequest(bytes32 requestId, bytes memory response, bytes memory /*err*/) internal override {
         (uint8[] memory assetType, address[] memory _tokens, uint256[] memory _marketShares) =
             abi.decode(response, (uint8[], address[], uint256[]));
         // require(requestId.length > 0, "invalid request id");

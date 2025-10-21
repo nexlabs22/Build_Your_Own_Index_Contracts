@@ -21,6 +21,7 @@ import "./IPriceOracle.sol";
 import "../oracle/FunctionsOracle.sol";
 import "../vault/Vault.sol";
 import "../interfaces/IWETH.sol";
+import "../factory/IndexFactoryStorage.sol";
 
 /// @title Index Token
 /// @author NEX Labs Protocol
@@ -63,6 +64,7 @@ contract MainChainStorage is Initializable, ProposableOwnableUpgradeable {
     address public coreSender;
     address public balancerSender;
     FunctionsOracle public functionsOracle;
+    IndexFactoryStorage public indexFactoryStorage;
 
     mapping(uint256 => IssuanceData) public issuanceData;
     mapping(uint256 => RedemptionData) public redemptionData;
@@ -78,6 +80,10 @@ contract MainChainStorage is Initializable, ProposableOwnableUpgradeable {
     mapping(uint256 => uint256) public portfolioTotalValueByNonce;
     mapping(uint256 => uint256) public extraWethByNonce;
     mapping(uint256 => uint256) public updatedTokensValueCount;
+    mapping(uint256 => uint256) public totalReweightExtraPendingChains;
+    mapping(uint256 => uint256) public totalReweightLowerPendingChains;
+    mapping(uint256 => uint256) public totalReweightExtraCompletedChains;
+    mapping(uint256 => uint256) public totalReweightLowerCompletedChains;
     mapping(uint256 => mapping(address => uint256)) public tokenValueByNonce;
     mapping(uint256 => mapping(uint64 => uint256)) public chainValueByNonce;
 
@@ -116,6 +122,8 @@ contract MainChainStorage is Initializable, ProposableOwnableUpgradeable {
     mapping(uint256 => uint256) public pendingExtraWethByNonce;
     mapping(address => uint256) public totalSentAmount;
     mapping(address => uint256) public totalReceivedAmount;
+
+    mapping(uint256 => uint256) public consumedExtraWethByNonce;
 
     modifier onlyIndexFactory() {
         require(msg.sender == mainChainFactory || msg.sender == coreSender, "Caller is not index factory contract.");
@@ -280,8 +288,12 @@ contract MainChainStorage is Initializable, ProposableOwnableUpgradeable {
      * @dev Sets the IndexFactory contract address.
      * @param _mainChainFactory The address of the IndexFactory contract.
      */
-    function setIndexFactory(address _mainChainFactory) public onlyOwner {
+    function setMainChainFactory(address _mainChainFactory) public onlyOwner {
         mainChainFactory = _mainChainFactory;
+    }
+
+    function setIndexFactoryStorage(address _indexFactoryStorage) public onlyOwner {
+        indexFactoryStorage = IndexFactoryStorage(_indexFactoryStorage);
     }
 
     /**
@@ -357,6 +369,34 @@ contract MainChainStorage is Initializable, ProposableOwnableUpgradeable {
 
     function redemptionIncreaseCompletedTokensCount(uint256 _redemptionNonce) public onlyIndexFactory {
         redemptionData[_redemptionNonce].completedTokensCount++;
+    }
+
+    function increaseReweightTotalExtraPendingChains(uint256 _reweightNonce, uint256 _count) public {
+         require(msg.sender == mainChainBalancer || msg.sender == balancerSender,
+            "Caller is not main chain balancer or balancer sender contract."
+        );
+        totalReweightExtraPendingChains[_reweightNonce] += _count;
+    }
+
+    function increaseReweightTotalLowerPendingChains(uint256 _reweightNonce, uint256 _count) public {
+         require(msg.sender == mainChainBalancer || msg.sender == balancerSender,
+            "Caller is not main chain balancer or balancer sender contract."
+        );
+        totalReweightLowerPendingChains[_reweightNonce] += _count;
+    }
+
+    function increaseReweightTotalExtraCompletedChains(uint256 _reweightNonce, uint256 _count) public {
+         require(msg.sender == mainChainBalancer || msg.sender == balancerSender,
+            "Caller is not main chain balancer or balancer sender contract."
+        );
+        totalReweightExtraCompletedChains[_reweightNonce] += _count;
+    }
+
+    function increaseReweightTotalLowerCompletedChains(uint256 _reweightNonce, uint256 _count) public {
+         require(msg.sender == mainChainBalancer || msg.sender == balancerSender,
+            "Caller is not main chain balancer or balancer sender contract."
+        );
+        totalReweightLowerCompletedChains[_reweightNonce] += _count;
     }
 
     function setRedemptionData(
@@ -559,6 +599,10 @@ contract MainChainStorage is Initializable, ProposableOwnableUpgradeable {
         reweightExtraPercentage[_reweightNonce] += _extraPercentage;
     }
 
+    function increaseConsumedExtraWethByNonce(uint256 _reweightNonce, uint256 _amount) public onlyMainChainBalancer {
+        consumedExtraWethByNonce[_reweightNonce] += _amount;
+    }
+
     /**
      * @dev Converts an amount to Wei.
      * @param _amount The amount to convert.
@@ -574,12 +618,18 @@ contract MainChainStorage is Initializable, ProposableOwnableUpgradeable {
         }
     }
 
-    function getCurrentTokenValue(address tokenAddress) external view returns (uint256) {
-        (address[] memory toETHPath, uint24[] memory toETHFees) = functionsOracle.getToETHPathData(tokenAddress);
+    function getCurrentTokenValue(address _indexToken, address tokenAddress) external view returns (uint256) {
+        (address[] memory pathToETH, uint24[] memory feesToETH) = functionsOracle.getToETHPathData(tokenAddress);
 
         uint256 oldTokenValue = tokenAddress == address(weth)
-            ? convertEthToUsd(IERC20(tokenAddress).balanceOf(address(vault)))
-            : convertEthToUsd(getAmountOut(toETHPath, toETHFees, IERC20(tokenAddress).balanceOf(address(vault))));
+            ? convertEthToUsd(IERC20(tokenAddress).balanceOf(indexFactoryStorage.indexTokenToVault(_indexToken)))
+            : convertEthToUsd(
+                getAmountOut(
+                    pathToETH,
+                    feesToETH,
+                    IERC20(tokenAddress).balanceOf(indexFactoryStorage.indexTokenToVault(_indexToken))
+                )
+            );
 
         return oldTokenValue;
     }
@@ -665,7 +715,7 @@ contract MainChainStorage is Initializable, ProposableOwnableUpgradeable {
             address tokenAddress = functionsOracle.currentList(_indexToken, i);
             if (functionsOracle.tokenChainSelector(tokenAddress) == currentChainSelector) {
                 if (tokenAddress == address(weth)) {
-                    totalValue += IERC20(tokenAddress).balanceOf(address(vault));
+                    totalValue += IERC20(tokenAddress).balanceOf(address(indexFactoryStorage.indexTokenToVault(_indexToken)));
                 } else {
                     (address[] memory path, uint24[] memory fees) = functionsOracle.getToETHPathData(tokenAddress);
                     uint256 value = getAmountOut(
@@ -673,7 +723,7 @@ contract MainChainStorage is Initializable, ProposableOwnableUpgradeable {
                         // toETHFees[tokenAddress],
                         path,
                         fees,
-                        IERC20(tokenAddress).balanceOf(address(vault))
+                        IERC20(tokenAddress).balanceOf(address(indexFactoryStorage.indexTokenToVault(_indexToken)))
                     );
                     totalValue += value;
                 }

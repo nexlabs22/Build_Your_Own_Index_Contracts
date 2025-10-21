@@ -43,8 +43,7 @@ contract CrossChainIndexFactoryStorage is
 
     address public crossChainFactory;
 
-    // IndexToken public indexToken;
-    Vault public vault;
+    mapping(address => address) public indexTokenToVault;
 
     uint64 public currentChainSelector;
 
@@ -85,7 +84,6 @@ contract CrossChainIndexFactoryStorage is
 
     function initialize(
         uint64 _currentChainSelector,
-        address payable _vault,
         address _chainlinkToken,
         //ccip
         address _router,
@@ -99,7 +97,6 @@ contract CrossChainIndexFactoryStorage is
         address _toUsdPriceFeed
     ) external initializer {
         require(_currentChainSelector > 0, "Invalid chain selector");
-        require(_vault != address(0), "Invalid vault address");
         require(_chainlinkToken != address(0), "Invalid Chainlink token address");
         require(_router != address(0), "Invalid router address");
         require(_weth != address(0), "Invalid WETH address");
@@ -113,7 +110,6 @@ contract CrossChainIndexFactoryStorage is
         __Pausable_init();
         //set chain selector
         currentChainSelector = _currentChainSelector;
-        vault = Vault(_vault);
         //set oracle data
         // setChainlinkToken(_chainlinkToken);
 
@@ -162,6 +158,10 @@ contract CrossChainIndexFactoryStorage is
         return (_ethAmount * priceInWei()) / 1e18;
     }
 
+    function setIndexTokenToVault(address _indexToken, address _vault) public onlyOwner {
+        indexTokenToVault[_indexToken] = _vault;
+    }
+
     function setSlippageTolerance(uint256 _slippageTolerance) public onlyOwner {
         slippageTolerance = _slippageTolerance;
     }
@@ -192,9 +192,7 @@ contract CrossChainIndexFactoryStorage is
         toETHFees[_crossChainToken] = PathHelpers.reverseUint24Array(_fromETHFees);
     }
 
-    function setVault(address payable _vault) public onlyOwner {
-        vault = Vault(_vault);
-    }
+    
 
     function setVerifiedFactory(address _factory, uint64 _chainSelector, bool _verified) public onlyOwner {
         verifiedFactory[_factory][_chainSelector] = _verified;
@@ -236,7 +234,7 @@ contract CrossChainIndexFactoryStorage is
         return toETHFees[_tokenAddress];
     }
 
-    function getTokenCurrentValue(address _tokenAddress, address[] memory _fromETHPath, uint24[] memory _fromETHFees)
+    function getTokenCurrentValue(address _indexToken, address _tokenAddress, address[] memory _fromETHPath, uint24[] memory _fromETHFees)
         public
         view
         returns (uint256)
@@ -244,7 +242,7 @@ contract CrossChainIndexFactoryStorage is
         uint256 tokenValue = getAmountOut(
             PathHelpers.reverseAddressArray(_fromETHPath), // toETHPath
             PathHelpers.reverseUint24Array(_fromETHFees), // toETHFees
-            IERC20(_tokenAddress).balanceOf(address(vault))
+            IERC20(_tokenAddress).balanceOf(indexTokenToVault[_indexToken])
         );
         return tokenValue;
     }

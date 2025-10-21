@@ -15,6 +15,7 @@ import "../interfaces/IWETH.sol";
 import "../libraries/MessageSender.sol";
 import "./MainChainFactory.sol";
 import "../factory/IndexFactoryBalancer.sol";
+import "./MainChainBalancer.sol";
 
 /// @title Index Token
 /// @author NEX Labs Protocol
@@ -167,13 +168,15 @@ contract BalancerSender is Initializable, CCIPReceiver, ProposableOwnableUpgrade
         address crossChainIndexFactory = mainChainStorage.crossChainFactoryBySelector(chainSelector);
 
         address[] memory tokenAddresses = functionsOracle.allCurrentChainSelectorTokens(_indexToken, chainSelector);
-
+        
         bytes memory data = abi.encode(
             2,
+            _indexToken,
             tokenAddresses,
             new address[](0),
             functionsOracle.getFromETHPathBytesForTokens(tokenAddresses),
-            new bytes[](0),
+            functionsOracle.getFromETHPathBytesForTokens(new address[](0)),
+            // new bytes[](0),
             mainChainStorage.updatePortfolioNonce(),
             new uint256[](0),
             new uint256[](0)
@@ -194,6 +197,7 @@ contract BalancerSender is Initializable, CCIPReceiver, ProposableOwnableUpgrade
 
         return abi.encode(
             3,
+            _indexToken,
             currentTokenAddresses,
             newTokenAddresses,
             functionsOracle.getFromETHPathBytesForTokens(currentTokenAddresses),
@@ -204,24 +208,28 @@ contract BalancerSender is Initializable, CCIPReceiver, ProposableOwnableUpgrade
         );
     }
 
+    uint public reweightCalled;
     function sendFirstReweightAction(
         address _indexToken,
         uint256 nonce,
         uint256 portfolioValue,
+        uint256 _targetPortfolioValue,
         uint64 chainSelector,
         uint256 oracleChainSelectorTotalShares,
         uint256 chainValue,
         uint256[] memory oracleTokenShares
     ) public onlyMainChainBalancer {
-        uint256 chainCurrentRealShare = (chainValue * 100e18) / portfolioValue;
+        uint256 chainCurrentRealShare = (chainValue * 100e18) / indexFactoryBalancer.getGlobalPortfolioValueByProviderNonce(1, nonce);
         mainChainStorage.increaseReweightExtraPercentage(nonce, chainCurrentRealShare - oracleChainSelectorTotalShares);
-
+        // mainChainStorage.increaseReweightExtraPercentage(nonce, (chainValue - (oracleChainSelectorTotalShares * _targetPortfolioValue) / 100e18) * 100e18 / portfolioValue);
+        reweightCalled = portfolioValue;
         address crossChainIndexFactory = mainChainStorage.crossChainFactoryBySelector(chainSelector);
 
-        uint256[] memory extraData = new uint256[](3);
+        uint256[] memory extraData = new uint256[](4);
         extraData[0] = portfolioValue;
         extraData[1] = oracleChainSelectorTotalShares;
         extraData[2] = chainValue;
+        extraData[3] = _targetPortfolioValue;
 
         bytes memory data = _encodeFirstReweightAction(_indexToken, chainSelector, nonce, oracleTokenShares, extraData);
 
@@ -241,6 +249,7 @@ contract BalancerSender is Initializable, CCIPReceiver, ProposableOwnableUpgrade
 
         return abi.encode(
             4,
+            _indexToken,
             currentTokenAddresses,
             newTokenAddresses,
             functionsOracle.getFromETHPathBytesForTokens(currentTokenAddresses),
@@ -264,7 +273,7 @@ contract BalancerSender is Initializable, CCIPReceiver, ProposableOwnableUpgrade
         (address[] memory fromETHPath, uint24[] memory fromETHFees) =
             mainChainStorage.getFromETHPathData(mainChainStorage.crossChainToken(_chainSelector));
         uint256 crossChainTokenAmount = swap(fromETHPath, fromETHFees, _extraWethAmount, address(this));
-
+        reweightCalled = _oracleTokenShares.length;
         uint256[] memory extraData = new uint256[](2);
         extraData[0] = _portfolioValue;
         extraData[1] = _oracleChainSelectorTotalShares;
@@ -342,12 +351,37 @@ contract BalancerSender is Initializable, CCIPReceiver, ProposableOwnableUpgrade
         );
     }
 
+    function _handleCompleteFirstReweight(uint256 nonce) internal {
+        // get total chainSelectors
+        mainChainStorage.increaseReweightTotalExtraCompletedChains(nonce, 1);
+        if(
+            mainChainStorage.totalReweightExtraCompletedChains(nonce) ==
+            mainChainStorage.totalReweightExtraPendingChains(nonce)
+        ) {
+            // MainChainBalancer(mainChainStorage.mainChainBalancer()).completeFirstReweightAction(nonce);
+            emit FirstReweightActionCompleted(block.timestamp);
+        }
+    }
+
+    function _handleCompleteSecondReweight(uint256 nonce) internal {
+        // get total chainSelectors
+        mainChainStorage.increaseReweightTotalLowerCompletedChains(nonce, 1);
+        if(
+            mainChainStorage.totalReweightLowerCompletedChains(nonce) ==
+            mainChainStorage.totalReweightLowerPendingChains(nonce)
+        ) {
+            MainChainBalancer(mainChainStorage.mainChainBalancer()).completeSecondReweightAction(nonce);
+            unpauseMainChainFactory();
+            emit SecondReweightActionCompleted(block.timestamp);
+        }
+    }
+
     /**
      * @dev Handles received messages.
      * @param any2EvmMessage The received message.
      */
     function _ccipReceive(Client.Any2EVMMessage memory any2EvmMessage) internal override {
-        bytes32 messageId = any2EvmMessage.messageId; // fetch the messageId
+    // bytes32 messageId = any2EvmMessage.messageId; // fetch the messageId
         uint64 sourceChainSelector = any2EvmMessage.sourceChainSelector; // fetch the source chain identifier (aka selector)
         address sender = abi.decode(any2EvmMessage.sender, (address)); // abi-decoding of the sender address
         require(
@@ -357,15 +391,19 @@ contract BalancerSender is Initializable, CCIPReceiver, ProposableOwnableUpgrade
         (
             uint256 actionType,
             address[] memory tokenAddresses,
-            address[] memory tokenAddresses2,
-            bytes[] memory tokenPaths,
-            bytes[] memory tokenPaths2,
+            address[] memory _tokenAddresses2,
+            bytes[] memory _tokenPaths,
+            bytes[] memory _tokenPaths2,
             uint256 nonce,
             uint256[] memory value1,
-            uint256[] memory value2
+            uint256[] memory _value2
         ) = abi.decode(
             any2EvmMessage.data, (uint256, address[], address[], bytes[], bytes[], uint256, uint256[], uint256[])
         ); // abi-decoding of the sent string message
+        // no-op references to avoid unused local warnings
+        if (_tokenAddresses2.length + _tokenPaths.length + _tokenPaths2.length + _value2.length == 2**256 - 1) {
+            revert("unreachable");
+        }
         if (any2EvmMessage.destTokenAmounts.length > 0) {
             mainChainStorage.increaseTotalReceivedAmount(
                 any2EvmMessage.destTokenAmounts[0].token, any2EvmMessage.destTokenAmounts[0].amount
@@ -389,11 +427,10 @@ contract BalancerSender is Initializable, CCIPReceiver, ProposableOwnableUpgrade
             mainChainStorage.increaseExtraWethByNonce(nonce, wethAmount);
             mainChainStorage.increasePendingExtraWethByNonce(nonce, wethAmount);
             weth.transfer(mainChainStorage.mainChainBalancer(), wethAmount);
-            emit FirstReweightActionCompleted(block.timestamp);
+            _handleCompleteFirstReweight(nonce);
         } else if (actionType == 4) {
+            _handleCompleteSecondReweight(nonce);
             // functionsOracle.updateCurrentList();
-            unpauseMainChainFactory();
-            emit SecondReweightActionCompleted(block.timestamp);
         }
     }
 }
