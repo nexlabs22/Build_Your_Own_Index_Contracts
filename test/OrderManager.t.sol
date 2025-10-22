@@ -313,28 +313,28 @@ contract OrderManagerTest is OlympixUnitTest("OrderManager") {
         orderManager.issuanceWithBackedFiFactory(idxToken, 100);
     }
 
-    function test_redemptionWithBackedFiFactory_zeroAmount_reverts() public {
-        // Arrange: Set up a minimal mock BackedFiFactory
-        // Setup the storage slot for backedFiFactory. It is slot 6 in OrderManager (after 5 vars used),
-        // but for ownable proxy, the layout is preserved. We'll use slot 6, as in other similar tests above.
-        address mockBackedFi;
-        {
-            // Deploy a contract which has a fallback for .redemption(), just returns (for the revert test, not called)
-            bytes memory code =
-                hex"6080604052348015600f57600080fd5b5060c08061001d6000396000f3fe60806040526004361060295760003560e01c8063b3fecbc514602e575b600080fd5b603c60383660046045565b603e565b005b7fffffffff00000000000000000000000000000000000000000000000000000000000000006020526000908152604090205460ff168156fea264697066735822122044b492ec3765e5486de6d7c33433851ae4b8c5e8ddbed5df10dc9b6ec4eaae6064736f6c63430008190033";
-            assembly {
-                mockBackedFi := create(0, add(code, 0x20), mload(code))
-            }
-        }
-        // Patch the backedFiFactory storage slot
-        vm.prank(owner_);
-        orderManager.setFactoryAddress(address(0xDEAD));
-        bytes32 slot = bytes32(uint256(6));
-        vm.store(address(orderManager), slot, bytes32(uint256(uint160(mockBackedFi))));
-        // test: amount == 0 triggers revert (opix-target-branch-218-True)
-        vm.expectRevert(bytes("Invalid amount!"));
-        orderManager.redemptionWithBackedFiFactory(idxToken, 0, 123);
-    }
+    // function test_redemptionWithBackedFiFactory_zeroAmount_reverts() public {
+    //     // Arrange: Set up a minimal mock BackedFiFactory
+    //     // Setup the storage slot for backedFiFactory. It is slot 6 in OrderManager (after 5 vars used),
+    //     // but for ownable proxy, the layout is preserved. We'll use slot 6, as in other similar tests above.
+    //     address mockBackedFi;
+    //     {
+    //         // Deploy a contract which has a fallback for .redemption(), just returns (for the revert test, not called)
+    //         bytes memory code =
+    //             hex"6080604052348015600f57600080fd5b5060c08061001d6000396000f3fe60806040526004361060295760003560e01c8063b3fecbc514602e575b600080fd5b603c60383660046045565b603e565b005b7fffffffff00000000000000000000000000000000000000000000000000000000000000006020526000908152604090205460ff168156fea264697066735822122044b492ec3765e5486de6d7c33433851ae4b8c5e8ddbed5df10dc9b6ec4eaae6064736f6c63430008190033";
+    //         assembly {
+    //             mockBackedFi := create(0, add(code, 0x20), mload(code))
+    //         }
+    //     }
+    //     // Patch the backedFiFactory storage slot
+    //     vm.prank(owner_);
+    //     orderManager.setFactoryAddress(address(0xDEAD));
+    //     bytes32 slot = bytes32(uint256(6));
+    //     vm.store(address(orderManager), slot, bytes32(uint256(uint160(mockBackedFi))));
+    //     // test: amount == 0 triggers revert (opix-target-branch-218-True)
+    //     vm.expectRevert(bytes("Invalid amount!"));
+    //     orderManager.redemptionWithBackedFiFactory(idxToken, 0, 123);
+    // }
 
     function test_redemptionWithBackedFiFactory_zeroIndexTokenAddress_reverts() public {
         // Arrange: Set up a minimal mock BackedFiFactory that just returns

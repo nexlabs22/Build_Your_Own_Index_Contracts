@@ -179,6 +179,8 @@ contract IndexFactory is Initializable, OwnableUpgradeable, PausableUpgradeable,
         uint256 burnPercent = _computeBurnPercent(indexToken, amount);
         IndexToken(indexToken).burn(address(this), amount);
 
+        factoryStorage.setRedemptionRequester(msg.sender, redemptionNonce, msg.sender);
+
         uint256 currentFilledCount = functionsOracle.currentFilledCount(indexToken);
         uint64[] memory currentProviderIndexes =
             functionsOracle.getCurrentProviderIndexes(indexToken, currentFilledCount);

@@ -8,6 +8,7 @@ import "../factory/IndexFactory.sol";
 import {BackedFiFactory} from "../backedfi/BackedFiFactory.sol";
 import {MainChainFactory} from "../ccip/MainChainFactory.sol";
 import {IndexFactoryStorage} from "../factory/IndexFactoryStorage.sol";
+import {DinariFactory} from "../dinari/DinariFactory.sol";
 
 contract OrderManager is Initializable, OwnableUpgradeable {
     using SafeERC20 for IERC20;
@@ -49,12 +50,12 @@ contract OrderManager is Initializable, OwnableUpgradeable {
     BackedFiFactory public backedFiFactory;
     MainChainFactory public mainChainFactory;
     IndexFactoryStorage public factoryStorage;
-
-    
+    DinariFactory public dinariFactory;
+    uint256 public issuanceCalled;
 
     mapping(address => bool) public isOperator;
     mapping(uint256 => OrderInfo) public orderInfo; // mapping of orderNonce to OrderInfo
-    mapping(address => mapping(uint64 => mapping(uint256 => bool))) public providerToNonceCount; // is cross chain 
+    mapping(address => mapping(uint64 => mapping(uint256 => bool))) public providerToNonceCount; // is cross chain
     mapping(address => mapping(uint64 => mapping(uint256 => uint256))) public providerNonceToBuyOrderNonce; // mapping of providerNonce to orderNonce
     mapping(address => mapping(uint64 => mapping(uint256 => uint256))) public providerNonceToSellOrderNonce; // mapping of providerNonce to orderNonce
     mapping(uint256 => uint256) public orderNonceToIssuanceNonce; // mapping of orderNonce to issuanceNonce
@@ -92,16 +93,9 @@ contract OrderManager is Initializable, OwnableUpgradeable {
     function getOrderNonce() external view returns (uint256) {
         return orderNonceInfo.orderNonce;
     }
-    function getCCIPFeeInUsdc(address indexToken, address usdc, uint256 amount)
-        external
-        view
-        returns (uint256)
-    {
-        uint256 feeInWETH = mainChainFactory.getIssuanceFee(
-            indexToken,
-            usdc,
-            amount
-        );
+
+    function getCCIPFeeInUsdc(address indexToken, address usdc, uint256 amount) external view returns (uint256) {
+        uint256 feeInWETH = mainChainFactory.getIssuanceFee(indexToken, usdc, amount);
         uint256 feeInUSDC = factoryStorage.convertEthToUsd(feeInWETH);
         return feeInUSDC;
     }
@@ -128,6 +122,10 @@ contract OrderManager is Initializable, OwnableUpgradeable {
 
     function setMainChainFactory(address payable _mainChainFactoryAddress) external onlyOwner {
         mainChainFactory = MainChainFactory(_mainChainFactoryAddress);
+    }
+
+    function setDinariFactory(address _dinariFactory) external onlyOwner {
+        dinariFactory = DinariFactory(_dinariFactory);
     }
 
     function _increaseOrderNonce(bool isBuyOrder) internal {
@@ -173,36 +171,63 @@ contract OrderManager is Initializable, OwnableUpgradeable {
             });
         }
     }
-    uint public issuanceCalled;
+
     function createOrder(CreateOrderConfig memory _config) external onlyOperator returns (uint256 orderNonce) {
-    // bool _ccipCalled = false; // unused
+        // bool _ccipCalled = false; // unused
         // increasing order nonce
         _increaseOrderNonce(_config.isBuyOrder);
         // transfer USDC from caller to order manager contract
-        if(_config.isBuyOrder){
-        _transferInputTokenFromCaller(_config.inputTokenAddress, _config.inputTokenAmount + _config.crossChainFee);
-        } else if(!_config.isBuyOrder && _config.crossChainFee > 0){
+        if (_config.isBuyOrder) {
+            _transferInputTokenFromCaller(_config.inputTokenAddress, _config.inputTokenAmount + _config.crossChainFee);
+        } else if (!_config.isBuyOrder && _config.crossChainFee > 0) {
             _transferInputTokenFromCaller(usdcAddress, _config.crossChainFee);
         }
         // initialize the order based on buy or sell
         _initializeOrder(_config);
         //call the provider function
-        if(_config.isBuyOrder) {
-            if(_config.providerIndex == 1) {
+        if (_config.isBuyOrder) {
+            if (_config.providerIndex == 1) {
                 uint256 ccipNonce = issuanceWithCCIPFactory(
-                    _config.indexTokenAddress, 
+                    _config.indexTokenAddress,
                     _config.inputTokenAddress,
                     _config.inputTokenAmount,
                     _config.crossChainFee
                 );
-                providerNonceToBuyOrderNonce[_config.indexTokenAddress][_config.providerIndex][ccipNonce] = orderNonceInfo.orderNonce;
+                providerNonceToBuyOrderNonce[_config.indexTokenAddress][_config.providerIndex][ccipNonce] =
+                    orderNonceInfo.orderNonce;
+                orderNonceToIssuanceNonce[orderNonceInfo.orderNonce] = _config.requestNonce;
+            } else if (_config.providerIndex == 2) {
+                uint256 dinariNonce = issuanceWithDinari(_config.indexTokenAddress, _config.inputTokenAmount);
+                providerNonceToBuyOrderNonce[_config.indexTokenAddress][_config.providerIndex][dinariNonce] =
+                    orderNonceInfo.orderNonce;
+                orderNonceToIssuanceNonce[orderNonceInfo.orderNonce] = _config.requestNonce;
+            } else if (_config.providerIndex == 3) {
+                uint256 backedFiNonce = issuanceWithBackedFiFactory(_config.indexTokenAddress, _config.inputTokenAmount);
+                providerNonceToBuyOrderNonce[_config.indexTokenAddress][_config.providerIndex][backedFiNonce] =
+                    orderNonceInfo.orderNonce;
                 orderNonceToIssuanceNonce[orderNonceInfo.orderNonce] = _config.requestNonce;
             }
-        } else{
-            if((_config.providerIndex == 1)) {
-                    uint256 ccipNonce = redemptionWithCCIPFactory(_config.indexTokenAddress, _config.burnPercent, _config.outputTokenAddress, _config.crossChainFee);
-                    providerNonceToSellOrderNonce[_config.indexTokenAddress][_config.providerIndex][ccipNonce] = orderNonceInfo.orderNonce;
-                    orderNonceToRedemptionNonce[orderNonceInfo.orderNonce] = _config.requestNonce;
+        } else {
+            if ((_config.providerIndex == 1)) {
+                uint256 ccipNonce = redemptionWithCCIPFactory(
+                    _config.indexTokenAddress, _config.burnPercent, _config.outputTokenAddress, _config.crossChainFee
+                );
+                providerNonceToSellOrderNonce[_config.indexTokenAddress][_config.providerIndex][ccipNonce] =
+                    orderNonceInfo.orderNonce;
+                orderNonceToRedemptionNonce[orderNonceInfo.orderNonce] = _config.requestNonce;
+            } else if (_config.providerIndex == 2) {
+                uint256 dinariNonce =
+                    redemptionWithDinari(_config.indexTokenAddress, _config.inputTokenAmount, _config.burnPercent);
+                providerNonceToSellOrderNonce[_config.indexTokenAddress][_config.providerIndex][dinariNonce] =
+                    orderNonceInfo.orderNonce;
+                orderNonceToRedemptionNonce[orderNonceInfo.orderNonce] = _config.requestNonce;
+            } else if (_config.providerIndex == 3) {
+                uint256 backedFiNonce = redemptionWithBackedFiFactory(
+                    _config.indexTokenAddress, _config.inputTokenAmount, _config.burnPercent
+                );
+                providerNonceToSellOrderNonce[_config.indexTokenAddress][_config.providerIndex][backedFiNonce] =
+                    orderNonceInfo.orderNonce;
+                orderNonceToRedemptionNonce[orderNonceInfo.orderNonce] = _config.requestNonce;
             }
         }
         // emit the event
@@ -253,34 +278,59 @@ contract OrderManager is Initializable, OwnableUpgradeable {
         IERC20(usdcAddress).safeTransferFrom(msg.sender, address(this), _outputValue);
         uint256 orderNonce = providerNonceToSellOrderNonce[_indexToken][providerIndex][_redemptionNonce];
         IERC20(usdcAddress).approve(address(factory), _outputValue);
-        factory.handleCompleteRedemption(orderNonceToRedemptionNonce[orderNonce], _indexToken, _underlyingTokenAddress, _outputValue);
-    }
-
-    function issuanceWithCCIPFactory(address _indexToken, address _tokenIn, uint256 _inputAmount, uint256 _crossChainFee) internal returns (uint256) {
-        require(_inputAmount > 0, "Invalid amount!");
-        require(_indexToken != address(0), "Invalid address!");
-        IERC20(_tokenIn).approve(address(mainChainFactory), _inputAmount + _crossChainFee);
-        return mainChainFactory.issuanceIndexTokens(
-            _indexToken,
-            _tokenIn,
-            _inputAmount,
-            _crossChainFee
+        factory.handleCompleteRedemption(
+            orderNonceToRedemptionNonce[orderNonce], _indexToken, _underlyingTokenAddress, _outputValue
         );
     }
 
-    function issuanceWithBackedFiFactory(address _indexToken, uint256 _inputAmount) public {
+    function issuanceWithCCIPFactory(
+        address _indexToken,
+        address _tokenIn,
+        uint256 _inputAmount,
+        uint256 _crossChainFee
+    ) internal returns (uint256) {
         require(_inputAmount > 0, "Invalid amount!");
         require(_indexToken != address(0), "Invalid address!");
-        backedFiFactory.issuanceIndexTokens(_indexToken, _inputAmount);
+        IERC20(_tokenIn).approve(address(mainChainFactory), _inputAmount + _crossChainFee);
+        return mainChainFactory.issuanceIndexTokens(_indexToken, _tokenIn, _inputAmount, _crossChainFee);
     }
 
-    function redemptionWithBackedFiFactory(address _indexToken, uint256 _inputAmount, uint256 _burnPercent) public {
+    function issuanceWithBackedFiFactory(address _indexToken, uint256 _inputAmount) public returns (uint256) {
         require(_inputAmount > 0, "Invalid amount!");
         require(_indexToken != address(0), "Invalid address!");
-        backedFiFactory.redemption(_indexToken, _inputAmount, _burnPercent);
+        return backedFiFactory.issuanceIndexTokens(_indexToken, _inputAmount);
     }
 
-    function redemptionWithCCIPFactory(address _indexToken,uint256 _burnPercent, address _tokenOut, uint256 _crossChainFee) internal returns (uint256) {
+    function redemptionWithBackedFiFactory(address _indexToken, uint256 _inputAmount, uint256 _burnPercent)
+        public
+        returns (uint256)
+    {
+        // require(_inputAmount > 0, "Invalid amount!");
+        require(_indexToken != address(0), "Invalid address!");
+        return backedFiFactory.redemption(_indexToken, _inputAmount, _burnPercent);
+    }
+
+    function issuanceWithDinari(address _indexToken, uint256 _inputAmount) public returns (uint256) {
+        require(_indexToken != address(0), "Invalid address!");
+        require(_inputAmount > 0, "Invalid amount!");
+        return dinariFactory.issuanceIndexTokens(_indexToken, _inputAmount);
+    }
+
+    function redemptionWithDinari(address _indexToken, uint256 _inputAmount, uint256 _burnPercent)
+        public
+        returns (uint256)
+    {
+        require(_indexToken != address(0), "Invalid address!");
+        // require(_inputAmount > 0, "Invalid amount!");
+        return dinariFactory.redemption(_indexToken, _inputAmount, _burnPercent);
+    }
+
+    function redemptionWithCCIPFactory(
+        address _indexToken,
+        uint256 _burnPercent,
+        address _tokenOut,
+        uint256 _crossChainFee
+    ) internal returns (uint256) {
         require(_indexToken != address(0), "Invalid address!");
         require(_burnPercent > 0, "Invalid burn percent!");
         require(_tokenOut != address(0), "Invalid address!");

@@ -313,7 +313,7 @@ contract DinariStorage is Initializable, OwnableUpgradeable {
         external
         onlyFactory
     {
-        require(_burnedAmount > 0, "Invalid burn amount");
+        // require(_burnedAmount > 0, "Invalid burn amount");
         burnedTokenAmountByNonce[_indexToken][_redemptionNonce] = _burnedAmount;
     }
 
@@ -397,7 +397,7 @@ contract DinariStorage is Initializable, OwnableUpgradeable {
         external
         onlyFactory
     {
-        require(_amount > 0, "Invalid redemption input amount");
+        // require(_amount > 0, "Invalid redemption input amount");
         redemptionInputAmount[_indexToken][_redemptionNonce] = _amount;
     }
 

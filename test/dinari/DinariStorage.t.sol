@@ -828,31 +828,6 @@ contract DinariStorage_MainTest is OlympixUnitTest("DinariStorage") {
         );
     }
 
-    function test_setBurnedTokenAmountByNonce_invalidAmount_reverts() public {
-        // Setup with valid factory address
-        vm.prank(owner);
-        dinariStorage.setFactory(factory);
-        vm.prank(factory);
-        // zero amount should revert
-        vm.expectRevert(bytes("Invalid burn amount"));
-        dinariStorage.setBurnedTokenAmountByNonce(idxToken, 77, 0);
-    }
-
-    // Test that DinariStorage.setBurnedTokenAmountByNonce reverts with burn amount zero, hitting require(_burnedAmount > 0, ...) branch [opix-target-branch-358-True]
-    function test_setBurnedTokenAmountByNonce_zeroAmount_reverts() public {
-        // Set up as factory caller
-        vm.prank(owner);
-        dinariStorage.setFactory(factory);
-
-        address indexToken = idxToken;
-        uint256 redemptionNonce = 42;
-        uint256 burnedAmount = 0;
-        // Call as factory, should revert on zero burn amount
-        vm.prank(factory);
-        vm.expectRevert(bytes("Invalid burn amount"));
-        dinariStorage.setBurnedTokenAmountByNonce(indexToken, redemptionNonce, burnedAmount);
-    }
-
     function test_setIssuanceRequestId_onlyFactory_branch_true() public {
         // Set up factory addresses
         vm.prank(owner);
@@ -1481,39 +1456,6 @@ contract DinariStorage_MainTest is OlympixUnitTest("DinariStorage") {
         vm.prank(fakeBalancer);
         dinariStorage.setRedemptionInputAmount(indexToken, redemptionNonce + 2, amount + 2);
         assertEq(dinariStorage.redemptionInputAmount(indexToken, redemptionNonce + 2), amount + 2);
-    }
-
-    // Test for DinariStorage.setRedemptionInputAmount: require(_amount > 0, ...) branch (opix-target-branch-503-True)
-    function test_setRedemptionInputAmount_zeroAmount_reverts_branch_503_True() public {
-        // Arrange: set all 3 factory-relevant addresses
-        address fac = address(0xFAAA1);
-        address proc = address(0xFAAA2);
-        address bal = address(0xFAAA3);
-        vm.prank(owner);
-        dinariStorage.setFactory(fac);
-        vm.prank(owner);
-        dinariStorage.setFactoryProcessor(proc);
-        vm.prank(owner);
-        dinariStorage.setFactoryBalancer(bal);
-
-        address indexToken = idxToken;
-        uint256 redemptionNonce = 32;
-        uint256 zeroAmount = 0;
-
-        // Prank as a factory address: should revert on require(_amount > 0)
-        vm.prank(fac);
-        vm.expectRevert(bytes("Invalid redemption input amount"));
-        dinariStorage.setRedemptionInputAmount(indexToken, redemptionNonce, zeroAmount);
-
-        // Prank as processor: should revert
-        vm.prank(proc);
-        vm.expectRevert(bytes("Invalid redemption input amount"));
-        dinariStorage.setRedemptionInputAmount(indexToken, redemptionNonce + 1, zeroAmount);
-
-        // Prank as balancer: should revert
-        vm.prank(bal);
-        vm.expectRevert(bytes("Invalid redemption input amount"));
-        dinariStorage.setRedemptionInputAmount(indexToken, redemptionNonce + 2, zeroAmount);
     }
 
     /// Branch coverage for DinariStorage.setActionInfoById opix-target-branch-509-True (require msg.sender is factory/factoryProcessor/factoryBalancer)

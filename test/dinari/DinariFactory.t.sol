@@ -272,17 +272,17 @@ contract DinariFactory_MainTest is OlympixUnitTest("DinariFactory") {
         factory.issuanceIndexTokens(idxToken, 0);
     }
 
-    function testRedemption_RevertOnZeroAmount() public {
-        // Setup: indexToken by owner
-        vm.startPrank(address(dinariStorage.owner()));
-        dinariStorage.setFactory(address(factory));
-        vm.stopPrank();
+    // function testRedemption_RevertOnZeroAmount() public {
+    //     // Setup: indexToken by owner
+    //     vm.startPrank(address(dinariStorage.owner()));
+    //     dinariStorage.setFactory(address(factory));
+    //     vm.stopPrank();
 
-        // Try with _inputAmount = 0, expect revert
-        vm.prank(user);
-        vm.expectRevert(InvalidAmount.selector);
-        factory.redemption(idxToken, 0, 1e18);
-    }
+    //     // Try with _inputAmount = 0, expect revert
+    //     vm.prank(user);
+    //     vm.expectRevert(InvalidAmount.selector);
+    //     factory.redemption(idxToken, 0, 1e18);
+    // }
 
     function test_unpause_roles_opix_345_true_branch() public {
         // This test targets the opix-target-branch-345-True branch:

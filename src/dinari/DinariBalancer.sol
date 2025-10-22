@@ -80,10 +80,6 @@ contract DinariBalancer is Initializable, OwnableUpgradeable, PausableUpgradeabl
     uint256 public minimumOrderAmount;
 
     modifier onlyOwnerOrOperator() {
-        // require(
-        //     msg.sender == owner() || functionsOracle.isOperator(msg.sender),
-        //     "Only owner or operator can call this function"
-        // );
         if (msg.sender != owner() && !functionsOracle.isOperator(msg.sender)) revert UnauthorizedCaller();
         _;
     }
@@ -94,13 +90,9 @@ contract DinariBalancer is Initializable, OwnableUpgradeable, PausableUpgradeabl
         address _globalStorage,
         address _globalBalancer
     ) external initializer {
-        // require(_factoryStorage != address(0), "invalid _factoryStorage address");
         if (_factoryStorage == address(0)) revert ZeroFactoryStorageAddress();
-        // require(_functionsOracle != address(0), "invalid _functionsOracle address");
         if (_functionsOracle == address(0)) revert ZeroFunctionsOracleAddress();
-        // require(_globalStorage != address(0), "invalid _globalStorage address");
         if (_globalStorage == address(0)) revert ZeroGlobalStorageAddress();
-        // require(_globalBalancer != address(0), "invalid _globalBalancer address");
         if (_globalBalancer == address(0)) revert ZeroGlobalBalancerAddress();
 
         dinariStorage = DinariStorage(_factoryStorage);
@@ -286,7 +278,12 @@ contract DinariBalancer is Initializable, OwnableUpgradeable, PausableUpgradeabl
     ) internal {
         uint256 tokenValue = tokenValueByNonce[indexToken][nonce][token];
 
-        uint256 currentPct = functionsOracle.tokenCurrentMarketShare(indexToken, token);
+        // uint256 currentPct = functionsOracle.tokenCurrentMarketShare(indexToken, token);
+
+        uint256 currentPct = tokenValue
+            / globalBalancer.getGlobalPortfolioValueByProviderNonce(
+                dinariStorage.providerIndex(), rebalanceNonce[indexToken]
+            );
         uint256 targetPct = functionsOracle.tokenOracleMarketShare(indexToken, token);
 
         if (currentPct > targetPct) {

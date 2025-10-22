@@ -300,7 +300,7 @@ contract DinariFactory is Initializable, OwnableUpgradeable, PausableUpgradeable
         whenNotPaused
         returns (uint256)
     {
-        if (_inputAmount <= 0) revert InvalidAmount();
+        // if (_inputAmount <= 0) revert InvalidAmount();
         // require(_inputAmount > 0, "Invalid input amount");
         dinariStorage.increaseRedemptionNonce(_indexToken);
         uint256 redemptionNonce = dinariStorage.redemptionNonce(_indexToken);
@@ -308,6 +308,10 @@ contract DinariFactory is Initializable, OwnableUpgradeable, PausableUpgradeable
         IndexToken token = IndexToken(_indexToken);
         token.burn(msg.sender, _inputAmount);
         dinariStorage.setBurnedTokenAmountByNonce(_indexToken, redemptionNonce, _inputAmount);
+
+        // factoryStorage.setRedemptionRequester(
+        //     0x11a8E23DAfbE058e9758c899dAEe0e43f287A96D, redemptionNonce, 0x11a8E23DAfbE058e9758c899dAEe0e43f287A96D
+        // ); // @audit
 
         (, address[] memory underlyingAssets,) = functionsOracle.getCurrentProviderIndexData(
             _indexToken, functionsOracle.currentFilledCount(_indexToken), dinariStorage.providerIndex()
