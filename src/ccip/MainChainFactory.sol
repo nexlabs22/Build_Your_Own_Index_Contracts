@@ -328,15 +328,6 @@ contract MainChainFactory is
         if(_crossChainFee > 0){
             _swapCrossChainFee(_tokenIn, _crossChainFee);
         }
-        // if (!mainChainStorage.isCrossChainFeeSponsered()) {
-        //     require(
-        //         getIssuanceFee(_indexToken, _tokenIn, _tokenInPath, _tokenInFees, _inputAmount) == msg.value,
-        //         "Insufficient ETH sent for cross chain fee"
-        //     );
-        //     (bool success,) = mainChainStorage.coreSender().call{value: msg.value}("");
-        //     require(success, "Cross chain fee transfer failed");
-        // }
-        // IWETH _wethLocal = mainChainStorage.weth(); // unused
 
         mainChainStorage.increaseIssuanceNonce();
         mainChainStorage.setIssuanceData(
@@ -449,7 +440,12 @@ contract MainChainFactory is
         );
 
         uint256 tokenMarketShare = functionsOracle.tokenCurrentMarketShare(_indexToken, _tokenAddress);
-        uint256 swapAmount = (_wethAmount * tokenMarketShare) / 100e18;
+        // uint256 swapAmount = (_wethAmount * tokenMarketShare) / 100e18;
+        uint256 swapAmount = (_wethAmount * tokenMarketShare) / functionsOracle.getCurrentProviderIndexTotalShares(
+            _indexToken,
+            functionsOracle.currentFilledCount(_indexToken),
+            1
+        );
         if (_tokenAddress != address(weth)) {
             swap(fromETHPath, fromETHFees, swapAmount, address(indexFactoryStorage.indexTokenToVault(_indexToken)));
         } else {
@@ -503,7 +499,12 @@ contract MainChainFactory is
     ) internal {
         uint256 totalShares =
             functionsOracle.getCurrentChainSelectorTotalShares(_indexToken, _latestCount, _chainSelector);
-        uint256 chainWethAmount = (_wethAmount * totalShares) / 100e18;
+        // uint256 chainWethAmount = (_wethAmount * totalShares) / 100e18;
+        uint256 chainWethAmount = (_wethAmount * totalShares) / functionsOracle.getCurrentProviderIndexTotalShares(
+            _indexToken,
+            _latestCount,
+            1
+        );
 
         weth.approve(address(coreSender), chainWethAmount);
         coreSender.sendIssuanceRequest(_indexToken, chainWethAmount, _issuanceNonce, _chainSelector, _latestCount);
@@ -572,9 +573,7 @@ contract MainChainFactory is
         return mainChainStorage.redemptionNonce();
     }
 
-    uint256 public balance;
-    uint256 public burnPercent;
-    address public tokenm;
+    
 
     function _completeRedemption(uint256 _redemptionNonce, address _indexToken, uint256 _wethAmount, address _underlyingAddress) internal {
         // swap to usdc
@@ -649,17 +648,7 @@ contract MainChainFactory is
                 toETHPath,
                 toETHFees
             );
-            // mainChainStorage.increasePendingRedemptionHoldValueByNonce(_redemptionNonce, swapAmountOut);
-            // mainChainStorage.increaseRedemptionTotalValue(_redemptionNonce, swapAmountOut);
-            // mainChainStorage.increaseRedemptionTotalPortfolioValues(
-            //     _redemptionNonce,
-            //     tokenAddress == address(weth)
-            //         ? IERC20(tokenAddress).balanceOf(address(indexFactoryStorage.indexTokenToVault(_indexToken)))
-            //         : mainChainStorage.getAmountOut(
-            //             toETHPath, toETHFees, IERC20(tokenAddress).balanceOf(address(indexFactoryStorage.indexTokenToVault(_indexToken)))
-            //         )
-            // );
-            // mainChainStorage.increaseRedemptionCompletedTokensCount(_redemptionNonce, 1);
+            
             // call the order manager here
             _completeRedemption(
                 _redemptionNonce,

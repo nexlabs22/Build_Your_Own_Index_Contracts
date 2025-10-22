@@ -259,6 +259,7 @@ contract CrossChainIndexFactory is
 
     struct HandleIssuanceLocalVars {
         uint256 wethAmount;
+        address[] indexTokens;
         uint256[] oldTokenValues;
         uint256[] newTokenValues;
         bytes data;
@@ -308,11 +309,12 @@ contract CrossChainIndexFactory is
             vars.oldTokenValues[i] = factoryStorage.convertEthToUsd(oldTokenValue);
             vars.newTokenValues[i] = factoryStorage.convertEthToUsd(newTokenValue);
         }
-
+        vars.indexTokens = new address[](1);
+        vars.indexTokens[0] = input.indexToken;
         vars.data = abi.encode(
             0,
             input.targetAddresses,
-            new address[](0),
+            vars.indexTokens,
             new bytes[](0),
             new bytes[](0),
             input.nonce,
@@ -338,6 +340,7 @@ contract CrossChainIndexFactory is
 
     struct HandleRedemptionLocalVars {
         uint256 wethSwapAmountOut;
+        address[] indexTokens;
         uint256[] newTokenValues;
         Vault v;
     }
@@ -377,9 +380,11 @@ contract CrossChainIndexFactory is
         Client.EVMTokenAmount[] memory tokensToSendArray = new Client.EVMTokenAmount[](1);
         tokensToSendArray[0].token = factoryStorage.crossChainToken(input.sourceChainSelector);
         tokensToSendArray[0].amount = crossChainTokenAmount;
+        vars.indexTokens = new address[](1);
+        vars.indexTokens[0] = input.indexToken;
         uint256[] memory zeroArr = new uint256[](0);
         bytes memory data = abi.encode(
-            1, input.targetAddresses, new address[](0), new bytes[](0), new bytes[](0), input.nonce, vars.newTokenValues, zeroArr
+            1, input.targetAddresses, vars.indexTokens, new bytes[](0), new bytes[](0), input.nonce, vars.newTokenValues, zeroArr
         );
         bytes32 messageId =
             sendToken(input.sourceChainSelector, data, input.sender, tokensToSendArray, MessageSender.PayFeesIn.Native);

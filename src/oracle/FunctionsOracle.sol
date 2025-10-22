@@ -438,7 +438,7 @@ contract FunctionsOracle is Initializable, FunctionsClient, ConfirmedOwner {
     }
 
     function updateCurrentList(address _indexToken) external {
-        // require(msg.sender == factoryBalancerAddress, "caller must be factory balancer");
+        require(msg.sender == factoryBalancerAddress, "caller must be factory balancer");
         totalCurrentList[_indexToken] = totalOracleList[_indexToken];
         for (uint256 i = 0; i < totalOracleList[_indexToken]; i++) {
             address tokenAddress = oracleList[_indexToken][i];

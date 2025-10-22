@@ -38,7 +38,11 @@ contract BalancerSender is Initializable, CCIPReceiver, ProposableOwnableUpgrade
     event SecondReweightActionCompleted(uint256 time);
 
     modifier onlyMainChainBalancer() {
-        require(msg.sender == mainChainStorage.mainChainBalancer(), "Only factory balancer can call this function");
+        require(
+        msg.sender == mainChainStorage.mainChainBalancer() ||
+            msg.sender == mainChainStorage.mainChainBalancer2(),
+            "Only factory balancer can call this function"
+        );
         _;
     }
 

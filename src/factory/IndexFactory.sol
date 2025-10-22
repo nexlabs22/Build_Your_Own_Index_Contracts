@@ -48,9 +48,11 @@ contract IndexFactory is Initializable, OwnableUpgradeable, PausableUpgradeable,
     IndexFactoryStorage public factoryStorage;
     uint256 public issuanceNonce;
     uint256 public redemptionNonce;
+    uint256 public issuanceCalled;
 
     mapping(address => bool) public supportedIndexTokens;
     mapping(address => uint64) public providerIndexes;
+    
 
     event SupportedIndexTokenUpdated(address indexed token, bool isSupported);
     event Issuanced(
@@ -71,6 +73,11 @@ contract IndexFactory is Initializable, OwnableUpgradeable, PausableUpgradeable,
     );
 
     uint256 private constant SHARE_DENOMINATOR = 100e18;
+
+    modifier onlyOrderManager() {
+        require(msg.sender == address(orderManager), "IndexFactory: only order manager");
+        _;
+    }
 
     function initialize(address _orderManager, address _functionsOracle, address _factoryStorage)
         external
@@ -102,7 +109,6 @@ contract IndexFactory is Initializable, OwnableUpgradeable, PausableUpgradeable,
 
     function issuanceIndexTokens(address indexToken, uint256 amount)
         public
-        payable
         whenNotPaused
         nonReentrant
         returns (uint256 orderNonce)
@@ -163,7 +169,6 @@ contract IndexFactory is Initializable, OwnableUpgradeable, PausableUpgradeable,
 
     function redemption(address indexToken, uint256 amount)
         external
-        payable
         whenNotPaused
         nonReentrant
         returns (uint256 orderNonce)
@@ -230,7 +235,7 @@ contract IndexFactory is Initializable, OwnableUpgradeable, PausableUpgradeable,
         address _underlyingTokenAddress,
         uint256 _oldTokenValue,
         uint256 _newTokenValue
-    ) public {
+    ) public onlyOrderManager{
         // storing data in the mapping
         factoryStorage.setOldTokenValue(_indexToken, _underlyingTokenAddress, _issuanceNonce, _oldTokenValue);
         factoryStorage.setNewTokenValue(_indexToken, _underlyingTokenAddress, _issuanceNonce, _newTokenValue);
@@ -246,14 +251,13 @@ contract IndexFactory is Initializable, OwnableUpgradeable, PausableUpgradeable,
         }
     }
 
-    uint256 public issuanceCalled;
 
     function handleCompleteRedemption(
         uint256 _redemptionNonce,
         address _indexToken,
         address _underlyingTokenAddress,
         uint256 _outputValue
-    ) public {
+    ) public onlyOrderManager {
         // transferring output USDC
         IERC20(factoryStorage.usdcAddress()).safeTransferFrom(msg.sender, address(this), _outputValue);
 
@@ -274,7 +278,7 @@ contract IndexFactory is Initializable, OwnableUpgradeable, PausableUpgradeable,
         }
     }
 
-    function completeIssuance(uint256 _issuanceNonce, address _indexToken) public {
+    function completeIssuance(uint256 _issuanceNonce, address _indexToken) internal {
         uint256 totalOldValues;
         uint256 totalNewValues;
 
@@ -295,18 +299,14 @@ contract IndexFactory is Initializable, OwnableUpgradeable, PausableUpgradeable,
             mintAmount = newTotalSupply - totalSupply;
         }
         require(mintAmount > 0, "IndexFactory: zero mint amount");
-        // // calculate the mint amount
-        // uint256 totalSupply = IERC20(_indexToken).totalSupply();
-        // uint256 newTotalSupply = (totalSupply * totalNewValues) / totalOldValues;
-        // uint256 mintAmount = newTotalSupply - totalSupply;
-
+        
         // mint index token for requester
         address requester = factoryStorage.issuanceRequester(_indexToken, _issuanceNonce);
         require(requester != address(0), "IndexFactory: invalid requester");
         IndexToken(_indexToken).mint(requester, mintAmount);
     }
 
-    function completeRedemption(uint256 _redemptionNonce, address _indexToken) public {
+    function completeRedemption(uint256 _redemptionNonce, address _indexToken) internal {
         uint256 totalOutputValue = factoryStorage.redemptionTotalOutputValue(_indexToken, _redemptionNonce);
         require(totalOutputValue > 0, "IndexFactory: no output value");
         address requester = factoryStorage.redemptionRequester(_indexToken, _redemptionNonce);

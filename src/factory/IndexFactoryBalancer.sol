@@ -10,6 +10,7 @@ import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol
 
 import {FunctionsOracle} from "../oracle/FunctionsOracle.sol";
 import {MainChainBalancer} from "../ccip/MainChainBalancer.sol";
+import {MainChainBalancer2} from "../ccip/MainChainBalancer2.sol";
 import {IndexFactoryStorage} from "./IndexFactoryStorage.sol";
 import {Vault} from "../vault/Vault.sol";
 import {FeeCalculation} from "../libraries/FeeCalculation.sol";
@@ -21,6 +22,7 @@ contract IndexFactoryBalancer is Initializable, OwnableUpgradeable, PausableUpgr
     FunctionsOracle public functionsOracle;
     IndexFactoryStorage public factoryStorage;
     MainChainBalancer public mainChainBalancer;
+    MainChainBalancer2 public mainChainBalancer2;
     DinariBalancer public dinariBalancer;
 
     uint256 public updatePortfolioNonce;
@@ -46,15 +48,18 @@ contract IndexFactoryBalancer is Initializable, OwnableUpgradeable, PausableUpgr
         address _functionsOracle,
         address _factoryStorage,
         address _mainChainBalancer,
+        address _mainChainBalancer2,
         address _dinariBalancer
     ) external initializer {
         require(_functionsOracle != address(0), "Invalid address for _functionsOracle");
         require(_factoryStorage != address(0), "Invalid address for _factoryStorage");
         require(_mainChainBalancer != address(0), "Invalid address for _mainChainBalancer");
+        require(_mainChainBalancer2 != address(0), "Invalid address for _mainChainBalancer2");
         // require(_dinariBalancer != address(0), "Invalid address for _dinariBalancer");
         functionsOracle = FunctionsOracle(_functionsOracle);
         factoryStorage = IndexFactoryStorage(_factoryStorage);
         mainChainBalancer = MainChainBalancer(_mainChainBalancer);
+        mainChainBalancer2 = MainChainBalancer2(_mainChainBalancer2);
         dinariBalancer = DinariBalancer(_dinariBalancer);
 
         __Ownable_init(msg.sender);
@@ -181,9 +186,9 @@ contract IndexFactoryBalancer is Initializable, OwnableUpgradeable, PausableUpgr
     }
 
     function askValueCCIP(address _indexToken) internal whenNotPaused returns (uint256 orderNonce) {
-        uint256 providerUpdateNonce = mainChainBalancer.getUpdatePortfolioNonce();
+        uint256 providerUpdateNonce = mainChainBalancer2.getUpdatePortfolioNonce();
         providerNonceToGlobalNonce[1][providerUpdateNonce + 1] = updatePortfolioNonce;
-        mainChainBalancer.askValues(_indexToken);
+        mainChainBalancer2.askValues(_indexToken);
         return providerUpdateNonce + 1;
     }
 

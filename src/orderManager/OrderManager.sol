@@ -49,6 +49,8 @@ contract OrderManager is Initializable, OwnableUpgradeable {
     BackedFiFactory public backedFiFactory;
     MainChainFactory public mainChainFactory;
     IndexFactoryStorage public factoryStorage;
+    uint public issuanceCalled;
+
 
     
 
@@ -173,9 +175,7 @@ contract OrderManager is Initializable, OwnableUpgradeable {
             });
         }
     }
-    uint public issuanceCalled;
     function createOrder(CreateOrderConfig memory _config) external onlyOperator returns (uint256 orderNonce) {
-    // bool _ccipCalled = false; // unused
         // increasing order nonce
         _increaseOrderNonce(_config.isBuyOrder);
         // transfer USDC from caller to order manager contract
@@ -236,7 +236,6 @@ contract OrderManager is Initializable, OwnableUpgradeable {
         uint256 _newTokenValue
     ) external onlyOperator {
         uint256 orderNonce = providerNonceToBuyOrderNonce[_indexToken][_providerIndex][_providerIssuanceNonce];
-        issuanceCalled += _oldTokenValue;
         factory.handleCompleteIssuance(
             orderNonceToIssuanceNonce[orderNonce], _indexToken, _underlyingTokenAddress, _oldTokenValue, _newTokenValue
         );

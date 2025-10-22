@@ -7,6 +7,7 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "../utils/proposable/ProposableOwnableUpgradeable.sol";
 import "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
 
+
 // error ZeroAmount();
 // error ZeroAddress();
 // error WrongETHAmount();
@@ -36,6 +37,17 @@ contract IndexFactoryStorage is Initializable, ProposableOwnableUpgradeable {
     // issuance completed count
     mapping(address => mapping(uint256 => uint256)) public issuanceCompletedAssetsCount; // issuanceNonce => count
     mapping(address => mapping(uint256 => uint256)) public redemptionCompletedAssetsCount; // redemptionNonce => count
+
+    modifier onlyIndexFactory() {
+        require(msg.sender == indexFactory, "IndexFactoryStorage: only index factory");
+        _;
+    }
+
+    modifier onlyOrderManager() {
+        require(msg.sender == orderManager, "IndexFactoryStorage: only order manager");
+        _;
+    }
+
 
     function initialize() external initializer {
         __Ownable_init(msg.sender);
@@ -71,7 +83,7 @@ contract IndexFactoryStorage is Initializable, ProposableOwnableUpgradeable {
         return uint256(price);
     }
 
-    /**
+        /**
      * @dev Converts an amount to Wei.
      * @param _amount The amount to convert.
      * @param _amountDecimals The decimals of the amount.
@@ -86,58 +98,64 @@ contract IndexFactoryStorage is Initializable, ProposableOwnableUpgradeable {
         }
     }
 
-    function setIndexFactory(address _indexFactory) external {
+    function setIndexFactory(address _indexFactory) external onlyOwner {
         // if (_indexFactory == address(0)) revert ZeroAddress();
         indexFactory = _indexFactory;
     }
 
-    function setUsdcAddress(address _usdcAddress) external {
+    function setUsdcAddress(address _usdcAddress) external onlyOwner {
         // if (_usdcAddress == address(0)) revert ZeroAddress();
         usdcAddress = _usdcAddress;
     }
 
-    function setToUsdPriceFeed(address _toUsdPriceFeed) external {
+    function setToUsdPriceFeed(address _toUsdPriceFeed) external onlyOwner {
         // if (_toUsdPriceFeed == address(0)) revert ZeroAddress();
         toUsdPriceFeed = AggregatorV3Interface(_toUsdPriceFeed);
     }
 
-    function setMainChainBalancer(address _mainChainBalancer) external {
+    function setMainChainBalancer(address _mainChainBalancer) external onlyOwner {
         // if (_mainChainBalancer == address(0)) revert ZeroAddress();
         mainChainBalancer = _mainChainBalancer;
     }
 
-    function setOrderManager(address _orderManager) external {
+    function setIndexTokenToVault(address _indexToken, address _vault) external onlyOwner {
+        // if (_indexToken == address(0) || _vault == address(0)) revert ZeroAddress();
+        indexTokenToVault[_indexToken] = _vault;
+    }
+
+
+    function setOrderManager(address _orderManager) external onlyOwner {
         // if (_orderManager == address(0)) revert ZeroAddress();
         orderManager = _orderManager;
     }
 
     // update issuance requester mapping
-    function setIssuanceRequester(address _user, uint256 _issuanceNonce, address _requester) external {
+    function setIssuanceRequester(address _user, uint256 _issuanceNonce, address _requester) external onlyIndexFactory {
         issuanceRequester[_user][_issuanceNonce] = _requester;
     }
 
     // update redemption requester mapping
-    function setRedemptionRequester(address _user, uint256 _redemptionNonce, address _requester) external {
+    function setRedemptionRequester(address _user, uint256 _redemptionNonce, address _requester) external onlyIndexFactory {
         redemptionRequester[_user][_redemptionNonce] = _requester;
     }
     // update old token value mapping
 
-    function setOldTokenValue(address _user, address _token, uint256 _issuanceNonce, uint256 _value) external {
+    function setOldTokenValue(address _user, address _token, uint256 _issuanceNonce, uint256 _value) external onlyIndexFactory {
         oldTokenValue[_user][_token][_issuanceNonce] = _value;
     }
 
     // update new token value mapping
-    function setNewTokenValue(address _user, address _token, uint256 _issuanceNonce, uint256 _value) external {
+    function setNewTokenValue(address _user, address _token, uint256 _issuanceNonce, uint256 _value) external onlyIndexFactory {
         newTokenValue[_user][_token][_issuanceNonce] = _value;
     }
 
     // update issuance completed count
-    function incrementIssuanceCompletedAssetsCount(address _indexToken, uint256 _user) external {
+    function incrementIssuanceCompletedAssetsCount(address _indexToken, uint256 _user) external onlyIndexFactory {
         issuanceCompletedAssetsCount[_indexToken][_user]++;
     }
 
     // update redemption completed count
-    function incrementRedemptionCompletedAssetsCount(address _indexToken, uint256 _user) external {
+    function incrementRedemptionCompletedAssetsCount(address _indexToken, uint256 _user) external onlyIndexFactory {
         redemptionCompletedAssetsCount[_indexToken][_user]++;
     }
 
@@ -147,14 +165,10 @@ contract IndexFactoryStorage is Initializable, ProposableOwnableUpgradeable {
         address _indexToken,
         address _token,
         uint256 _value
-    ) external {
+    ) external onlyIndexFactory {
         redemptionOutputValuePerToken[_indexToken][_redemptionNonce][_token] = _value;
         redemptionTotalOutputValue[_indexToken][_redemptionNonce] += _value;
     }
 
-    function setIndexTokenToVault(address _indexToken, address _vault) public onlyOwner {
-        // require(_indexToken == address(0), "Invalid _indexToken address!");
-        // require(_vault == address(0), "Invalid _vault address!");
-        indexTokenToVault[_indexToken] = _vault;
-    }
+    
 }
