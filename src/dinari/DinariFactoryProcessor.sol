@@ -137,7 +137,7 @@ contract DinariFactoryProcessor is
         dinariStorage.issuanceIndexTokenPrimaryTotalSupply(_indexToken, _issuanceNonce);
 
         dinariStorage.setIssuanceIsCompleted(_indexToken, _issuanceNonce, true);
-        
+
         emit Issuanced(
             _indexToken,
             _issuanceNonce,
@@ -195,9 +195,11 @@ contract DinariFactoryProcessor is
             uint256 tokenRequestId = dinariStorage.redemptionRequestId(_indexToken, _redemptionNonce, tokenAddress);
             uint256 balance = issuer.getReceivedAmount(tokenRequestId);
             uint256 feeTaken = issuer.getFeesTaken(tokenRequestId);
-            dinariOrderManager.withdrawFunds(dinariStorage.usdc(), requester, totalBalance);
-            orderManager.completeRedemption(dinariStorage.providerIndex(), _redemptionNonce, _indexToken, tokenAddress, balance - feeTaken);
-            totalBalance += balance - feeTaken;
+            uint256 net = balance > feeTaken ? balance - feeTaken : 0;
+            if (net > 0) {
+                _routeRedemption(_indexToken, _redemptionNonce, tokenAddress, net);
+                totalBalance += net;
+            }
         }
         dinariStorage.setRedemptionIsCompleted(_indexToken, _redemptionNonce, true);
         emit Redemption(
@@ -209,6 +211,21 @@ contract DinariFactoryProcessor is
             totalBalance,
             block.timestamp
         );
+    }
+
+    function _routeRedemption(
+        address _indexToken,
+        uint256 _redemptionNonce,
+        address _tokenAddress,
+        uint256 _net
+    ) internal {
+        if (_net == 0) return;
+        DinariOrderManager dom = dinariStorage.dinariOrderManager();
+        address usdc = dinariStorage.usdc();
+        dom.withdrawFunds(usdc, address(this), _net);
+        IERC20(usdc).approve(address(orderManager), _net);
+        uint8 provider = dinariStorage.providerIndex();
+        orderManager.completeRedemption(provider, _redemptionNonce, _indexToken, _tokenAddress, _net);
     }
 
     function checkMultical(address _indexToken, uint256 _reqeustId) public view returns (bool) {

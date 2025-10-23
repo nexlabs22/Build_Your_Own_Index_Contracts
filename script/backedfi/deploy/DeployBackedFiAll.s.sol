@@ -21,55 +21,86 @@ contract DeployBackedFiAll is Script {
         address owner = vm.addr(deployerPrivateKey);
         string memory targetChain = "sepolia";
 
-        address indexFactoryProxy;
-        address functionsOracleProxy;
-        address indexFactoryStorageProxy;
-        address nexBot;
-        address usdcToken;
-        uint8 providerIndex;
-
-        if (keccak256(bytes(targetChain)) == keccak256("sepolia")) {
-            indexFactoryProxy = vm.envAddress("SEPOLIA_INDEX_FACTORY_PROXY_ADDRESS");
-            functionsOracleProxy = vm.envAddress("SEPOLIA_FUNCTIONS_ORACLE_PROXY_ADDRESS");
-            indexFactoryStorageProxy = vm.envAddress("SEPOLIA_INDEX_FACTORY_STORAGE_PROXY_ADDRESS");
-            nexBot = vm.envAddress("SEPOLIA_NEX_BOT_ADDRESS");
-            usdcToken = vm.envAddress("SEPOLIA_USDC_ADDRESS");
-            providerIndex = uint8(vm.envUint("SEPOLIA_BACKEDFI_PROVIDER_INDEX"));
-        } else if (keccak256(bytes(targetChain)) == keccak256("arbitrum_mainnet")) {
-            indexFactoryProxy = vm.envAddress("ARBITRUM_INDEX_FACTORY_PROXY_ADDRESS");
-            functionsOracleProxy = vm.envAddress("ARBITRUM_FUNCTIONS_ORACLE_PROXY_ADDRESS");
-            indexFactoryStorageProxy = vm.envAddress("ARBITRUM_INDEX_FACTORY_STORAGE_PROXY_ADDRESS");
-            nexBot = vm.envAddress("ARBITRUM_NEX_BOT_ADDRESS");
-            usdcToken = vm.envAddress("ARBITRUM_USDC_ADDRESS");
-            providerIndex = uint8(vm.envUint("ARBITRUM_BACKEDFI_PROVIDER_INDEX"));
-        } else {
-            revert("Unsupported target chain");
-        }
-
         vm.startBroadcast(deployerPrivateKey);
 
-        bytes memory noInitData = "";
+        string memory prefix = _envPrefix(targetChain);
 
-        address backedFiStorageProxy = Upgrades.deployTransparentProxy("BackedFiStorage.sol", owner, noInitData);
-        address stagingProxy = Upgrades.deployTransparentProxy("StagingCustodyAccount.sol", owner, noInitData);
-        address backedFiBalancerProxy = Upgrades.deployTransparentProxy("BackedFiBalancer.sol", owner, noInitData);
-        address backedFiFactoryProxy = Upgrades.deployTransparentProxy("BackedFiFactory.sol", owner, noInitData);
+        address backedFiStorageProxy = _deployProxy("BackedFiStorage.sol", owner);
+        address stagingProxy = _deployProxy("StagingCustodyAccount.sol", owner);
+        address backedFiBalancerProxy = _deployProxy("BackedFiBalancer.sol", owner);
+        address backedFiFactoryProxy = _deployProxy("BackedFiFactory.sol", owner);
 
         backedFiStorage = BackedFiStorage(backedFiStorageProxy);
         stagingCustodyAccount = StagingCustodyAccount(stagingProxy);
         backedFiBalancer = BackedFiBalancer(backedFiBalancerProxy);
         backedFiFactory = BackedFiFactory(backedFiFactoryProxy);
 
-        backedFiStorage.initialize(
-            indexFactoryProxy, functionsOracleProxy, stagingProxy, nexBot, usdcToken, providerIndex
+        _initializeBackedFiStorage(prefix, backedFiStorageProxy, stagingProxy);
+        _initializeStagingCustodyAccount(backedFiStorageProxy, stagingProxy);
+        _initializeBackedFiBalancer(prefix, backedFiStorageProxy, backedFiBalancerProxy);
+        _initializeBackedFiFactory(backedFiStorageProxy, backedFiFactoryProxy);
+
+        _logAddresses(backedFiStorageProxy, stagingProxy, backedFiBalancerProxy, backedFiFactoryProxy);
+
+        vm.stopBroadcast();
+    }
+
+    function _deployProxy(string memory contractName, address owner) internal returns (address) {
+        bytes memory noInitData = "";
+        return Upgrades.deployTransparentProxy(contractName, owner, noInitData);
+    }
+
+    function _envPrefix(string memory targetChain) internal pure returns (string memory) {
+        if (keccak256(bytes(targetChain)) == keccak256("arbitrum_mainnet")) {
+            return "ARBITRUM";
+        }
+        return "SEPOLIA";
+    }
+
+    function _envAddr(string memory prefix, string memory suffix) internal view returns (address) {
+        return vm.envAddress(string.concat(prefix, suffix));
+    }
+
+    function _initializeBackedFiStorage(
+        string memory prefix,
+        address backedFiStorageProxy,
+        address stagingProxy
+    ) internal {
+        BackedFiStorage bfs = BackedFiStorage(backedFiStorageProxy);
+        address indexFactoryProxy = _envAddr(prefix, "_INDEX_FACTORY_PROXY_ADDRESS");
+        address functionsOracleProxy = _envAddr(prefix, "_FUNCTIONS_ORACLE_PROXY_ADDRESS");
+        address nexBot = _envAddr(prefix, "_NEX_BOT_ADDRESS");
+        address usdcToken = _envAddr(prefix, "_USDC_ADDRESS");
+        uint8 providerIndex = uint8(vm.envUint(string.concat(prefix, "_BACKEDFI_PROVIDER_INDEX")));
+        bfs.initialize(indexFactoryProxy, functionsOracleProxy, stagingProxy, nexBot, usdcToken, providerIndex);
+    }
+
+    function _initializeStagingCustodyAccount(address backedFiStorageProxy, address stagingProxy) internal {
+        StagingCustodyAccount(stagingProxy).initialize(backedFiStorageProxy);
+    }
+
+    function _initializeBackedFiBalancer(
+        string memory prefix,
+        address backedFiStorageProxy,
+        address backedFiBalancerProxy
+    ) internal {
+        address functionsOracleProxy = _envAddr(prefix, "_FUNCTIONS_ORACLE_PROXY_ADDRESS");
+        address indexFactoryStorageProxy = _envAddr(prefix, "_INDEX_FACTORY_STORAGE_PROXY_ADDRESS");
+        BackedFiBalancer(backedFiBalancerProxy).initialize(
+            backedFiStorageProxy, functionsOracleProxy, indexFactoryStorageProxy
         );
+    }
 
-        stagingCustodyAccount.initialize(backedFiStorageProxy);
+    function _initializeBackedFiFactory(address backedFiStorageProxy, address backedFiFactoryProxy) internal {
+        BackedFiFactory(backedFiFactoryProxy).initialize(backedFiStorageProxy);
+    }
 
-        backedFiBalancer.initialize(backedFiStorageProxy, functionsOracleProxy, indexFactoryStorageProxy);
-
-        backedFiFactory.initialize(backedFiStorageProxy);
-
+    function _logAddresses(
+        address backedFiStorageProxy,
+        address stagingProxy,
+        address backedFiBalancerProxy,
+        address backedFiFactoryProxy
+    ) internal view {
         console.log("BackedFiStorage proxy deployed at:", backedFiStorageProxy);
         console.log("BackedFiStorage ProxyAdmin:", Upgrades.getAdminAddress(backedFiStorageProxy));
 
@@ -81,7 +112,5 @@ contract DeployBackedFiAll is Script {
 
         console.log("BackedFiFactory proxy deployed at:", backedFiFactoryProxy);
         console.log("BackedFiFactory ProxyAdmin:", Upgrades.getAdminAddress(backedFiFactoryProxy));
-
-        vm.stopBroadcast();
     }
 }

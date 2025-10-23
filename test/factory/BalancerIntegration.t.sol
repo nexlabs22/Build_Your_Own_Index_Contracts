@@ -55,17 +55,23 @@ contract BalancerIntegrationTest is Test {
         // Functions oracle
         FunctionsOracle oracleImpl = new FunctionsOracle();
         oracle = FunctionsOracle(
-            address(new ERC1967Proxy(
-                address(oracleImpl),
-                abi.encodeWithSelector(FunctionsOracle.initialize.selector, address(0x01), bytes32("DON"))
-            ))
+            address(
+                new ERC1967Proxy(
+                    address(oracleImpl),
+                    abi.encodeWithSelector(FunctionsOracle.initialize.selector, address(0x01), bytes32("DON"))
+                )
+            )
         );
         oracle.setOperator(operator, true);
 
         // Global storage
         IndexFactoryStorage factoryStorageImpl = new IndexFactoryStorage();
         factoryStorage = IndexFactoryStorage(
-            address(new ERC1967Proxy(address(factoryStorageImpl), abi.encodeWithSelector(IndexFactoryStorage.initialize.selector)))
+            address(
+                new ERC1967Proxy(
+                    address(factoryStorageImpl), abi.encodeWithSelector(IndexFactoryStorage.initialize.selector)
+                )
+            )
         );
 
         // Dinari components
@@ -88,6 +94,7 @@ contract BalancerIntegrationTest is Test {
                         IndexFactoryBalancer.initialize.selector,
                         address(oracle),
                         address(factoryStorage),
+                        address(mockMainChain),
                         address(mockMainChain),
                         address(dinariBalancer)
                     )
@@ -119,10 +126,7 @@ contract BalancerIntegrationTest is Test {
                 new ERC1967Proxy(
                     address(orderManagerImpl),
                     abi.encodeWithSelector(
-                        DinariOrderManager.initialize.selector,
-                        address(usdc),
-                        uint8(6),
-                        address(orderProcessor)
+                        DinariOrderManager.initialize.selector, address(usdc), uint8(6), address(orderProcessor)
                     )
                 )
             )
@@ -139,12 +143,7 @@ contract BalancerIntegrationTest is Test {
         sca = StagingCustodyAccount(address(new ERC1967Proxy(address(scaImpl), "")));
 
         backedFiStorage.initialize(
-            address(0xFACADE),
-            address(oracle),
-            address(sca),
-            nexBot,
-            address(usdc),
-            BACKED_PROVIDER
+            address(0xFACADE), address(oracle), address(sca), nexBot, address(usdc), BACKED_PROVIDER
         );
         sca.initialize(address(backedFiStorage));
 
@@ -167,9 +166,7 @@ contract BalancerIntegrationTest is Test {
         vm.store(address(dinariBalancer), nonceSlot, bytes32(nonce));
 
         vm.mockCall(
-            address(oracle),
-            abi.encodeWithSignature("currentFilledCount(address)", indexToken),
-            abi.encode(uint256(0))
+            address(oracle), abi.encodeWithSignature("currentFilledCount(address)", indexToken), abi.encode(uint256(0))
         );
         address[] memory tokens = new address[](0);
         uint256[] memory shares = new uint256[](0);
@@ -191,20 +188,13 @@ contract BalancerIntegrationTest is Test {
 
         assertEq(usdc.balanceOf(address(factoryBalancer)), 750e18, "global balancer should hold forwarded USDC");
         assertEq(
-            dinariBalancer.usdcForwardedByNonce(indexToken, nonce),
-            750e18,
-            "dinari forwarded bookkeeping should update"
+            dinariBalancer.usdcForwardedByNonce(indexToken, nonce), 750e18, "dinari forwarded bookkeeping should update"
         );
 
         // Now BackedFi pulls liquidity from the global balancer
         vm.prank(owner);
-        uint256 granted = factoryBalancer.provideUsdc(
-            indexToken,
-            BACKED_PROVIDER,
-            nonce,
-            address(backedFiBalancer),
-            600e18
-        );
+        uint256 granted =
+            factoryBalancer.provideUsdc(indexToken, BACKED_PROVIDER, nonce, address(backedFiBalancer), 600e18);
 
         assertEq(granted, 600e18, "expected amount granted");
         assertEq(usdc.balanceOf(address(backedFiBalancer)), 600e18, "backedfi balancer receives USDC");

@@ -300,12 +300,13 @@ contract DinariFactory is Initializable, OwnableUpgradeable, PausableUpgradeable
         whenNotPaused
         returns (uint256)
     {
+        require(_burnPercent > 0 && _burnPercent <= 100e18, "redemption: bad percent");
+
         dinariStorage.increaseRedemptionNonce(_indexToken);
         uint256 redemptionNonce = dinariStorage.redemptionNonce(_indexToken);
         dinariStorage.setRedemptionInputAmount(_indexToken, redemptionNonce, _inputAmount);
-        IndexToken token = IndexToken(_indexToken);
-        token.burn(msg.sender, _inputAmount);
         dinariStorage.setBurnedTokenAmountByNonce(_indexToken, redemptionNonce, _inputAmount);
+        dinariStorage.setRedemptionRequesterByNonce(_indexToken, redemptionNonce, msg.sender);
 
         (, address[] memory underlyingAssets,) = functionsOracle.getCurrentProviderIndexData(
             _indexToken, functionsOracle.currentFilledCount(_indexToken), dinariStorage.providerIndex()
@@ -316,7 +317,7 @@ contract DinariFactory is Initializable, OwnableUpgradeable, PausableUpgradeable
             uint256 amount = _burnPercent
                 * IERC20(dinariStorage.wrappedDshareAddress(tokenAddress)).balanceOf(
                     factoryStorage.indexTokenToVault(_indexToken)
-                ) / 1e18;
+                ) / 100e18;
 
             (uint256 requestId, uint256 assetAmount) =
                 requestSellOrder(_indexToken, tokenAddress, amount, address(dinariStorage.dinariOrderManager()));

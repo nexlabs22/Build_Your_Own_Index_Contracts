@@ -27,10 +27,18 @@ import {DinariFactoryProcessor} from "../../src/dinari/DinariFactoryProcessor.so
 
 /// Minimal stub for IDShareFactory to satisfy OrderProcessor.initialize
 contract DShareFactoryStub2 is IDShareFactory {
-    function isTokenDShare(address) external pure returns (bool) { return true; }
-    function isTokenWrappedDShare(address) external pure returns (bool) { return true; }
+    function isTokenDShare(address) external pure returns (bool) {
+        return true;
+    }
+
+    function isTokenWrappedDShare(address) external pure returns (bool) {
+        return true;
+    }
+
     function getDShares() external pure returns (address[] memory, address[] memory) {
-        address[] memory a; address[] memory b; return (a, b);
+        address[] memory a;
+        address[] memory b;
+        return (a, b);
     }
 }
 
@@ -71,6 +79,7 @@ contract IssuanceDinariIntegrationTest is Test, CCIPDeployer {
                         address(functionsOracle),
                         address(indexFactoryStorage),
                         address(mainChainBalancer),
+                        address(mainChainBalancer),
                         address(dinariBalancer)
                     )
                 )
@@ -78,10 +87,7 @@ contract IssuanceDinariIntegrationTest is Test, CCIPDeployer {
         );
 
         dinariBalancer.initialize(
-            address(dinariStorage),
-            address(functionsOracle),
-            address(indexFactoryStorage),
-            address(factoryBalancer2)
+            address(dinariStorage), address(functionsOracle), address(indexFactoryStorage), address(factoryBalancer2)
         );
 
         dshareFactoryStub = new DShareFactoryStub2();
@@ -90,7 +96,9 @@ contract IssuanceDinariIntegrationTest is Test, CCIPDeployer {
             address(
                 new ERC1967Proxy(
                     address(issuerImpl),
-                    abi.encodeCall(OrderProcessor.initialize, (address(this), address(this), address(this), dshareFactoryStub))
+                    abi.encodeCall(
+                        OrderProcessor.initialize, (address(this), address(this), address(this), dshareFactoryStub)
+                    )
                 )
             )
         );
@@ -135,14 +143,7 @@ contract IssuanceDinariIntegrationTest is Test, CCIPDeployer {
         usdc.approve(address(dinariFactory), type(uint256).max);
 
         // Provide USDC/WETH V3 liquidity for fee estimation path
-        addLiquidityETH(
-            positionManager,
-            factoryV3Address,
-            usdc,
-            wethAddress,
-            100000e18,
-            100e18
-        );
+        addLiquidityETH(positionManager, factoryV3Address, usdc, wethAddress, 100000e18, 100e18);
     }
 
     function _updateOracleWithDinariOnly(address[] memory assets, uint256[] memory shares) internal {
@@ -169,7 +170,9 @@ contract IssuanceDinariIntegrationTest is Test, CCIPDeployer {
 
         link.transfer(address(functionsOracle), 1e16);
         address[] memory indexTokens = new address[](assets.length);
-        for (uint256 i2 = 0; i2 < assets.length; i2++) indexTokens[i2] = indexTokenAddr;
+        for (uint256 i2 = 0; i2 < assets.length; i2++) {
+            indexTokens[i2] = indexTokenAddr;
+        }
         bytes32 reqId = functionsOracle.requestAssetsData("// update", 0, 0);
         bytes memory data = abi.encode(indexTokens, assets, shares);
         bool ok = oracle.fulfillRequest(address(functionsOracle), reqId, data);
@@ -223,9 +226,12 @@ contract IssuanceDinariIntegrationTest is Test, CCIPDeployer {
         address[] memory ds = new address[](2);
         address[] memory ws = new address[](2);
         address[] memory pf = new address[](2);
-        ds[0] = address(dshareA); ds[1] = address(dshareB);
-        ws[0] = address(wDShareA); ws[1] = address(wDShareB);
-        pf[0] = address(priceFeedA); pf[1] = address(priceFeedB);
+        ds[0] = address(dshareA);
+        ds[1] = address(dshareB);
+        ws[0] = address(wDShareA);
+        ws[1] = address(wDShareB);
+        pf[0] = address(priceFeedA);
+        pf[1] = address(priceFeedB);
         vm.prank(dinariStorage.owner());
         dinariStorage.setWrappedDshareAndPriceFeedAddresses(ds, ws, pf);
 
@@ -293,14 +299,17 @@ contract IssuanceDinariIntegrationTest is Test, CCIPDeployer {
         dshareB.grantRole(dshareB.MINTER_ROLE(), address(this));
         dshareA.grantRole(dshareA.MINTER_ROLE(), address(issuer));
         dshareB.grantRole(dshareB.MINTER_ROLE(), address(issuer));
-        priceFeedA = new MockV3Aggregator(18, 2e18); // 2 USD
+        priceFeedA = new MockV3Aggregator(18, 1e18); // 1 USD
         priceFeedB = new MockV3Aggregator(18, 1e18); // 1 USD
         address[] memory ds = new address[](2);
         address[] memory ws = new address[](2);
         address[] memory pf = new address[](2);
-        ds[0] = address(dshareA); ds[1] = address(dshareB);
-        ws[0] = address(wDShareA); ws[1] = address(wDShareB);
-        pf[0] = address(priceFeedA); pf[1] = address(priceFeedB);
+        ds[0] = address(dshareA);
+        ds[1] = address(dshareB);
+        ws[0] = address(wDShareA);
+        ws[1] = address(wDShareB);
+        pf[0] = address(priceFeedA);
+        pf[1] = address(priceFeedB);
         vm.prank(dinariStorage.owner());
         dinariStorage.setWrappedDshareAndPriceFeedAddresses(ds, ws, pf);
 
@@ -308,7 +317,8 @@ contract IssuanceDinariIntegrationTest is Test, CCIPDeployer {
         assets[0] = address(dshareA);
         assets[1] = address(dshareB);
         uint256[] memory weights = new uint256[](2);
-        weights[0] = 50e18; weights[1] = 50e18;
+        weights[0] = 50e18;
+        weights[1] = 50e18;
         _updateOracleWithDinariOnly(assets, weights);
 
         // Initial balances
@@ -329,9 +339,11 @@ contract IssuanceDinariIntegrationTest is Test, CCIPDeployer {
             uint256 rid = dinariStorage.issuanceRequestId(indexTokenAddr, nonce, uls[i]);
             IOrderProcessor.Order memory ord = dinariStorage.getOrderInstanceById(indexTokenAddr, rid);
             // Pay full USDC amount; mint 10e18 asset units to OM
-            issuer.fillOrder(ord, ord.paymentTokenQuantity, 10e18, 0);
+            issuer.fillOrder(ord, ord.paymentTokenQuantity, 1000e18, 0);
             // OM now holds DShare; log
-            console.log("OM received asset for token", i, ":", IERC20(ord.assetToken).balanceOf(address(dinariOrderManager)));
+            console.log(
+                "OM received asset for token", i, ":", IERC20(ord.assetToken).balanceOf(address(dinariOrderManager))
+            );
         }
 
         // Allow processor to act as factory for completion
@@ -339,6 +351,9 @@ contract IssuanceDinariIntegrationTest is Test, CCIPDeployer {
         dinariStorage.setFactory(address(processor));
         // Complete issuance via processor → OrderManager → IndexFactory
         processor.completeIssuance(indexTokenAddr, nonce);
+
+        uint256 portfolioValue = dinariStorage.getPortfolioValue(address(indexToken));
+        console.log("Portfolio value: ", portfolioValue);
 
         // Check mint
         uint256 ixAfter = indexToken.balanceOf(address(this));

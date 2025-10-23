@@ -14,6 +14,7 @@ import {IndexFactoryStorage} from "./IndexFactoryStorage.sol";
 import {IndexToken} from "../token/IndexToken.sol";
 import {Vault} from "../vault/Vault.sol";
 import {FeeCalculation} from "../libraries/FeeCalculation.sol";
+import "forge-std/console.sol";
 
 error ZeroAmount();
 error ZeroAddress();
@@ -52,7 +53,6 @@ contract IndexFactory is Initializable, OwnableUpgradeable, PausableUpgradeable,
 
     mapping(address => bool) public supportedIndexTokens;
     mapping(address => uint64) public providerIndexes;
-    
 
     event SupportedIndexTokenUpdated(address indexed token, bool isSupported);
     event Issuanced(
@@ -184,8 +184,6 @@ contract IndexFactory is Initializable, OwnableUpgradeable, PausableUpgradeable,
         uint256 burnPercent = _computeBurnPercent(indexToken, amount);
         IndexToken(indexToken).burn(address(this), amount);
 
-        factoryStorage.setRedemptionRequester(msg.sender, redemptionNonce, msg.sender);
-
         uint256 currentFilledCount = functionsOracle.currentFilledCount(indexToken);
         uint64[] memory currentProviderIndexes =
             functionsOracle.getCurrentProviderIndexes(indexToken, currentFilledCount);
@@ -237,14 +235,17 @@ contract IndexFactory is Initializable, OwnableUpgradeable, PausableUpgradeable,
         address _underlyingTokenAddress,
         uint256 _oldTokenValue,
         uint256 _newTokenValue
-    ) public onlyOrderManager{
+    ) public onlyOrderManager {
         // storing data in the mapping
         factoryStorage.setOldTokenValue(_indexToken, _underlyingTokenAddress, _issuanceNonce, _oldTokenValue);
         factoryStorage.setNewTokenValue(_indexToken, _underlyingTokenAddress, _issuanceNonce, _newTokenValue);
+        console.log("_underlyingTokenAddress: ", _underlyingTokenAddress);
 
         // incrementing issuance completed count
         factoryStorage.incrementIssuanceCompletedAssetsCount(_indexToken, _issuanceNonce);
         // calling complete issuance
+        // console.log("_oldTokenValue: ", factoryStorage.oldTokenValue(_indexToken, _underlyingTokenAddress, ));
+        console.log("_newTokenValue: ", _newTokenValue);
         if (
             factoryStorage.issuanceCompletedAssetsCount(_indexToken, _issuanceNonce)
                 == functionsOracle.totalCurrentList(_indexToken)
@@ -252,7 +253,6 @@ contract IndexFactory is Initializable, OwnableUpgradeable, PausableUpgradeable,
             completeIssuance(_issuanceNonce, _indexToken);
         }
     }
-
 
     function handleCompleteRedemption(
         uint256 _redemptionNonce,
@@ -286,8 +286,9 @@ contract IndexFactory is Initializable, OwnableUpgradeable, PausableUpgradeable,
 
         for (uint256 i = 0; i < functionsOracle.totalCurrentList(_indexToken); i++) {
             address _underlyingTokenAddress = functionsOracle.currentList(_indexToken, i);
-            totalOldValues += factoryStorage.oldTokenValue(_indexToken, _underlyingTokenAddress, i);
-            totalNewValues += factoryStorage.newTokenValue(_indexToken, _underlyingTokenAddress, i);
+            console.log("underlying assets: ", _underlyingTokenAddress);
+            totalOldValues += factoryStorage.oldTokenValue(_indexToken, _underlyingTokenAddress, _issuanceNonce);
+            totalNewValues += factoryStorage.newTokenValue(_indexToken, _underlyingTokenAddress, _issuanceNonce);
         }
 
         require(totalNewValues > totalOldValues, "IndexFactory: no new tokens to mint");
@@ -301,7 +302,7 @@ contract IndexFactory is Initializable, OwnableUpgradeable, PausableUpgradeable,
             mintAmount = newTotalSupply - totalSupply;
         }
         require(mintAmount > 0, "IndexFactory: zero mint amount");
-        
+
         // mint index token for requester
         address requester = factoryStorage.issuanceRequester(_indexToken, _issuanceNonce);
         require(requester != address(0), "IndexFactory: invalid requester");

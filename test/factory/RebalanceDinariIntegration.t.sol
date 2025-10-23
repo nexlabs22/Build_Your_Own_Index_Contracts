@@ -55,6 +55,7 @@ contract RebalanceDinariIntegrationTest is Test, CCIPDeployer {
                         address(functionsOracle),
                         address(indexFactoryStorage),
                         address(mainChainBalancer),
+                        address(mainChainBalancer),
                         address(dinariBalancer)
                     )
                 )

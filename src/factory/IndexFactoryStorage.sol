@@ -7,7 +7,6 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "../utils/proposable/ProposableOwnableUpgradeable.sol";
 import "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
 
-
 // error ZeroAmount();
 // error ZeroAddress();
 // error WrongETHAmount();
@@ -48,7 +47,6 @@ contract IndexFactoryStorage is Initializable, ProposableOwnableUpgradeable {
         _;
     }
 
-
     function initialize() external initializer {
         __Ownable_init(msg.sender);
     }
@@ -83,7 +81,7 @@ contract IndexFactoryStorage is Initializable, ProposableOwnableUpgradeable {
         return uint256(price);
     }
 
-        /**
+    /**
      * @dev Converts an amount to Wei.
      * @param _amount The amount to convert.
      * @param _amountDecimals The decimals of the amount.
@@ -123,30 +121,41 @@ contract IndexFactoryStorage is Initializable, ProposableOwnableUpgradeable {
         indexTokenToVault[_indexToken] = _vault;
     }
 
-
     function setOrderManager(address _orderManager) external onlyOwner {
         // if (_orderManager == address(0)) revert ZeroAddress();
         orderManager = _orderManager;
     }
 
     // update issuance requester mapping
-    function setIssuanceRequester(address _user, uint256 _issuanceNonce, address _requester) external onlyIndexFactory {
-        issuanceRequester[_user][_issuanceNonce] = _requester;
+    function setIssuanceRequester(address _indexToken, uint256 _issuanceNonce, address _requester)
+        external
+        onlyIndexFactory
+    {
+        issuanceRequester[_indexToken][_issuanceNonce] = _requester;
     }
 
     // update redemption requester mapping
-    function setRedemptionRequester(address _user, uint256 _redemptionNonce, address _requester) external onlyIndexFactory {
-        redemptionRequester[_user][_redemptionNonce] = _requester;
+    function setRedemptionRequester(address _indexToken, uint256 _redemptionNonce, address _requester)
+        external
+        onlyIndexFactory
+    {
+        redemptionRequester[_indexToken][_redemptionNonce] = _requester;
     }
     // update old token value mapping
 
-    function setOldTokenValue(address _user, address _token, uint256 _issuanceNonce, uint256 _value) external onlyIndexFactory {
-        oldTokenValue[_user][_token][_issuanceNonce] = _value;
+    function setOldTokenValue(address _indexToken, address _token, uint256 _issuanceNonce, uint256 _value)
+        external
+        onlyIndexFactory
+    {
+        oldTokenValue[_indexToken][_token][_issuanceNonce] = _value;
     }
 
     // update new token value mapping
-    function setNewTokenValue(address _user, address _token, uint256 _issuanceNonce, uint256 _value) external onlyIndexFactory {
-        newTokenValue[_user][_token][_issuanceNonce] = _value;
+    function setNewTokenValue(address _indexToken, address _token, uint256 _issuanceNonce, uint256 _value)
+        external
+        onlyIndexFactory
+    {
+        newTokenValue[_indexToken][_token][_issuanceNonce] = _value;
     }
 
     // update issuance completed count
@@ -169,6 +178,4 @@ contract IndexFactoryStorage is Initializable, ProposableOwnableUpgradeable {
         redemptionOutputValuePerToken[_indexToken][_redemptionNonce][_token] = _value;
         redemptionTotalOutputValue[_indexToken][_redemptionNonce] += _value;
     }
-
-    
 }
