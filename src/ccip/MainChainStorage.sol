@@ -61,6 +61,7 @@ contract MainChainStorage is Initializable, ProposableOwnableUpgradeable {
 
     address public mainChainFactory;
     address public mainChainBalancer;
+    address public mainChainBalancer2;
     address public coreSender;
     address public balancerSender;
     FunctionsOracle public functionsOracle;
@@ -133,7 +134,7 @@ contract MainChainStorage is Initializable, ProposableOwnableUpgradeable {
 
     modifier onlyMainChainBalancer() {
         require(
-            msg.sender == mainChainBalancer || msg.sender == balancerSender,
+            msg.sender == mainChainBalancer || msg.sender == mainChainBalancer2 || msg.sender == balancerSender,
             "Caller is not index factory balancer contract."
         );
         _;
@@ -321,6 +322,10 @@ contract MainChainStorage is Initializable, ProposableOwnableUpgradeable {
         mainChainBalancer = _mainChainBalancer;
     }
 
+    function setMainChainBalancer2(address _mainChainBalancer2) public onlyOwner {
+        mainChainBalancer2 = _mainChainBalancer2;
+    }
+
     /**
      * @dev Sets the vault address.
      * @param _vaultAddress The address of the vault.
@@ -376,31 +381,20 @@ contract MainChainStorage is Initializable, ProposableOwnableUpgradeable {
         redemptionData[_redemptionNonce].completedTokensCount++;
     }
 
-    function increaseReweightTotalExtraPendingChains(uint256 _reweightNonce, uint256 _count) public {
-         require(msg.sender == mainChainBalancer || msg.sender == balancerSender,
-            "Caller is not main chain balancer or balancer sender contract."
-        );
+    function increaseReweightTotalExtraPendingChains(uint256 _reweightNonce, uint256 _count) public onlyMainChainBalancer {
         totalReweightExtraPendingChains[_reweightNonce] += _count;
     }
 
-    function increaseReweightTotalLowerPendingChains(uint256 _reweightNonce, uint256 _count) public {
-         require(msg.sender == mainChainBalancer || msg.sender == balancerSender,
-            "Caller is not main chain balancer or balancer sender contract."
-        );
+    function increaseReweightTotalLowerPendingChains(uint256 _reweightNonce, uint256 _count) public onlyMainChainBalancer {
         totalReweightLowerPendingChains[_reweightNonce] += _count;
     }
 
-    function increaseReweightTotalExtraCompletedChains(uint256 _reweightNonce, uint256 _count) public {
-         require(msg.sender == mainChainBalancer || msg.sender == balancerSender,
-            "Caller is not main chain balancer or balancer sender contract."
-        );
+    function increaseReweightTotalExtraCompletedChains(uint256 _reweightNonce, uint256 _count) public onlyMainChainBalancer {
         totalReweightExtraCompletedChains[_reweightNonce] += _count;
     }
 
-    function increaseReweightTotalLowerCompletedChains(uint256 _reweightNonce, uint256 _count) public {
-         require(msg.sender == mainChainBalancer || msg.sender == balancerSender,
-            "Caller is not main chain balancer or balancer sender contract."
-        );
+
+    function increaseReweightTotalLowerCompletedChains(uint256 _reweightNonce, uint256 _count) public onlyMainChainBalancer {
         totalReweightLowerCompletedChains[_reweightNonce] += _count;
     }
 

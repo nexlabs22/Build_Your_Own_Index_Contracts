@@ -29,8 +29,9 @@ contract BalancerSender is Initializable, CCIPReceiver, ProposableOwnableUpgrade
     IndexFactoryBalancer public indexFactoryBalancer;
 
     uint64 public currentChainSelector;
-
     IWETH public weth;
+    uint public reweightCalled;
+
 
     event MessageSent(bytes32 messageId);
     event AskValuesCompleted(uint256 time);
@@ -38,7 +39,11 @@ contract BalancerSender is Initializable, CCIPReceiver, ProposableOwnableUpgrade
     event SecondReweightActionCompleted(uint256 time);
 
     modifier onlyMainChainBalancer() {
-        require(msg.sender == mainChainStorage.mainChainBalancer(), "Only factory balancer can call this function");
+        require(
+        msg.sender == mainChainStorage.mainChainBalancer() ||
+            msg.sender == mainChainStorage.mainChainBalancer2(),
+            "Only factory balancer can call this function"
+        );
         _;
     }
 
@@ -208,7 +213,6 @@ contract BalancerSender is Initializable, CCIPReceiver, ProposableOwnableUpgrade
         );
     }
 
-    uint public reweightCalled;
     function sendFirstReweightAction(
         address _indexToken,
         uint256 nonce,
@@ -221,8 +225,6 @@ contract BalancerSender is Initializable, CCIPReceiver, ProposableOwnableUpgrade
     ) public onlyMainChainBalancer {
         uint256 chainCurrentRealShare = (chainValue * 100e18) / indexFactoryBalancer.getGlobalPortfolioValueByProviderNonce(1, nonce);
         mainChainStorage.increaseReweightExtraPercentage(nonce, chainCurrentRealShare - oracleChainSelectorTotalShares);
-        // mainChainStorage.increaseReweightExtraPercentage(nonce, (chainValue - (oracleChainSelectorTotalShares * _targetPortfolioValue) / 100e18) * 100e18 / portfolioValue);
-        reweightCalled = portfolioValue;
         address crossChainIndexFactoryBalancer = mainChainStorage.crossChainFactoryBalancerBySelector(chainSelector);
 
         uint256[] memory extraData = new uint256[](4);

@@ -137,7 +137,7 @@ contract DinariFactoryProcessor is
         dinariStorage.issuanceIndexTokenPrimaryTotalSupply(_indexToken, _issuanceNonce);
 
         dinariStorage.setIssuanceIsCompleted(_indexToken, _issuanceNonce, true);
-
+        
         emit Issuanced(
             _indexToken,
             _issuanceNonce,

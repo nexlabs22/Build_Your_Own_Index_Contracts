@@ -478,7 +478,6 @@ contract CrossChainIndexFactoryBalancer is
         uint256 /*nonce*/
     ) internal returns (uint256) {
         SwapFirstReweightActionVars memory vars;
-        // swapData.chainSelectorCurrentTokensCount = data.chainSelectorCurrentTokensCount;
         vars.initialWethBalance = weth().balanceOf(address(data.vault));
 
         vars.swapWethAmount = _swapToETHFirstReweightAction(

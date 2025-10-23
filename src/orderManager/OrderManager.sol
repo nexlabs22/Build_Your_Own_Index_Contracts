@@ -261,7 +261,6 @@ contract OrderManager is Initializable, OwnableUpgradeable {
         uint256 _newTokenValue
     ) external onlyOperator {
         uint256 orderNonce = providerNonceToBuyOrderNonce[_indexToken][_providerIndex][_providerIssuanceNonce];
-        issuanceCalled += _oldTokenValue;
         factory.handleCompleteIssuance(
             orderNonceToIssuanceNonce[orderNonce], _indexToken, _underlyingTokenAddress, _oldTokenValue, _newTokenValue
         );

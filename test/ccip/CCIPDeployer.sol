@@ -23,6 +23,7 @@ import "../../src/factory/IndexFactoryStorage.sol";
 import "../../src/ccip/MainChainFactory.sol";
 import "../../src/ccip/MainChainStorage.sol";
 import "../../src/ccip/MainChainBalancer.sol";
+import "../../src/ccip/MainChainBalancer2.sol";
 import "../../src/oracle/FunctionsOracle.sol";
 import "../../src/ccip/MainChainStorage.sol";
 import "../../src/orderManager/OrderManager.sol";
@@ -94,6 +95,7 @@ contract CCIPDeployer is
     OrderManager public orderManager;
     BalancerSender public balancerSender;
     MainChainBalancer public mainChainBalancer;
+    MainChainBalancer2 public mainChainBalancer2;
     // CrossChainFeeSender public crossChainFeeSender;
     // CrossChainFeeReceiver public crossChainFeeReceiver;
 
@@ -321,7 +323,7 @@ contract CCIPDeployer is
 
     function deployContracts3()
         public
-        returns (OrderManager, CoreSender, IndexFactory, MainChainFactory, BalancerSender, MainChainBalancer)
+        returns (OrderManager, CoreSender, IndexFactory, MainChainFactory, BalancerSender)
     {
         OrderManager orderManagerImpl = new OrderManager();
         orderManager = OrderManager(
@@ -419,6 +421,16 @@ contract CCIPDeployer is
             )
         );
 
+        
+
+        return (orderManager, coreSender, indexFactory, mainChainFactory, balancerSender);
+    }
+
+
+    function deployContracts4()
+        public
+        returns (MainChainBalancer, MainChainBalancer2, IndexFactoryBalancer)
+    {
         MainChainBalancer mainChainBalancerImpl = new MainChainBalancer();
         MainChainBalancer mainChainBalancer = MainChainBalancer(
             payable(
@@ -441,14 +453,28 @@ contract CCIPDeployer is
             )
         );
 
-        return (orderManager, coreSender, indexFactory, mainChainFactory, balancerSender, mainChainBalancer);
-    }
+        MainChainBalancer2 mainChainBalancer2Impl = new MainChainBalancer2();
+        MainChainBalancer2 mainChainBalancer2 = MainChainBalancer2(
+            payable(
+                address(
+                    new ERC1967Proxy(
+                        address(mainChainBalancer2Impl),
+                        abi.encodeCall(
+                            MainChainBalancer2.initialize,
+                            (
+                                1,
+                                address(mainChainStorage),
+                                address(functionsOracle),
+                                payable(address(balancerSender)),
+                                wethAddress,
+                                address(usdc)
+                            )
+                        )
+                    )
+                )
+            )
+        );
 
-
-    function deployContracts4()
-        public
-        returns (IndexFactoryBalancer)
-    {
         IndexFactoryBalancer indexFactoryBalancerImpl = new IndexFactoryBalancer();
         IndexFactoryBalancer indexFactoryBalancer = IndexFactoryBalancer(
             payable(
@@ -457,7 +483,7 @@ contract CCIPDeployer is
                         address(indexFactoryBalancerImpl),
                         abi.encodeCall(
                             IndexFactoryBalancer.initialize,
-                            (address(functionsOracle), address(indexFactoryStorage), address(mainChainBalancer), address(0))
+                            (address(functionsOracle), address(indexFactoryStorage), address(mainChainBalancer), address(mainChainBalancer2), address(0))
                         )
                     )
                 )
@@ -465,7 +491,7 @@ contract CCIPDeployer is
         );
 
 
-        return (indexFactoryBalancer);
+        return (mainChainBalancer, mainChainBalancer2, indexFactoryBalancer);
     }
 
     // function deployContracts3() public returns (CrossChainFeeSender, CrossChainFeeReceiver) {
@@ -515,7 +541,7 @@ contract CCIPDeployer is
         path[0] = address(weth);
         path[1] = address(crossChainToken);
 
-        functionsOracle.setFactoryBalancer(address(mainChainBalancer));
+        functionsOracle.setFactoryBalancer(address(factoryBalancer));
         functionsOracle.setOperator(address(factoryBalancer), true);
         functionsOracle.setOperator(address(balancerSender), true);
         // functionsOracle.setBalancerSender(address(balancerSender));
@@ -532,6 +558,8 @@ contract CCIPDeployer is
         indexFactoryStorage.setIndexTokenToVault(address(indexToken), address(vault));
         mainChainBalancer.setIndexFactoryBalancer(address(factoryBalancer));
         mainChainBalancer.setIndexFactoryStorage(address(indexFactoryStorage));
+        mainChainBalancer2.setIndexFactoryBalancer(address(factoryBalancer));
+        mainChainBalancer2.setIndexFactoryStorage(address(indexFactoryStorage));
         balancerSender.setIndexFactoryBalancer(address(factoryBalancer));
         mainChainFactory.setIndexFactoryStorage(address(indexFactoryStorage));
         mainChainStorage.setCrossChainToken(2, address(crossChainToken), path, feesData);
@@ -547,6 +575,7 @@ contract CCIPDeployer is
         // indexFactoryStorage.setMainChainBalancer(address(mainChainBalancer));
         mainChainStorage.setBalancerSender(address(balancerSender));
         mainChainStorage.setMainChainBalancer(address(mainChainBalancer));
+        mainChainStorage.setMainChainBalancer2(address(mainChainBalancer2));
         mainChainStorage.setCoreSenderAndBalancerSenderGasLimits(2000000, 2000000);
         mainChainStorage.setIssuanceAndRedemptionFeePercentages(20, 20);
         mainChainStorage.setIsCrossChainFeeSponsered(false);
@@ -570,6 +599,7 @@ contract CCIPDeployer is
         mockRouter.setFactoryChainSelector(1, address(factory));
         mockRouter.setFactoryChainSelector(1, address(mainChainFactory));
         mockRouter.setFactoryChainSelector(1, address(mainChainBalancer));
+        mockRouter.setFactoryChainSelector(1, address(mainChainBalancer2));
         mockRouter.setFactoryChainSelector(1, address(balancerSender));
         mockRouter.setFactoryChainSelector(2, address(crossChainIndexFactory));
         mockRouter.setFactoryChainSelector(2, address(crossChainIndexFactoryBalancer));
@@ -638,10 +668,11 @@ contract CCIPDeployer is
             coreSender,
             factory,
             mainChainFactory,
-            balancerSender, // balancerSender
-            mainChainBalancer // mainChainBalancer
+            balancerSender
         ) = deployContracts3();
         (
+            mainChainBalancer,
+            mainChainBalancer2,
             factoryBalancer // indexFactoryBalancer
         ) = deployContracts4();
 

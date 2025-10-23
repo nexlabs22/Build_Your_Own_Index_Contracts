@@ -331,10 +331,9 @@ contract CoreSender is Initializable, CCIPReceiver, ProposableOwnableUpgradeable
     function _handleReceivedIssuance(
         uint256 nonce,
         address[] memory tokenAddresses,
+        address _indexToken,
         uint256[] memory value1,
-        uint256[] memory value2,
-        uint256 /* totalCurrentList */,
-        bytes32 /* messageId */
+        uint256[] memory value2
     ) internal {
         uint256 requestIssuanceNonce = nonce;
         for (uint256 i; i < tokenAddresses.length; i++) {
@@ -347,7 +346,7 @@ contract CoreSender is Initializable, CCIPReceiver, ProposableOwnableUpgradeable
             orderManager.completeIssuance(
                 1, // provider index
                 requestIssuanceNonce,
-                address(indexToken),
+                _indexToken,
                 tokenAddresses[i],
                 oldTokenValue,
                 newTokenValue
@@ -422,52 +421,7 @@ contract CoreSender is Initializable, CCIPReceiver, ProposableOwnableUpgradeable
         return IRouterClient(i_router).getFee(_chainSelector, message);
     }
 
-    function completeRedemptionRequest(uint256 nonce, bytes32 _messageId) internal {
-        mainChainStorage.decreasePendingRedemptionInputByNonce(nonce);
-        mainChainStorage.decreasePendingRedemptionHoldValueByNonce(nonce);
-        uint256 wethAmount = mainChainStorage.getRedemptionTotalValue(nonce);
-        uint256 totalPortfolioValues = mainChainStorage.getRedemptionTotalPortfolioValues(nonce);
-        address requester = mainChainStorage.getRedemptionRequester(nonce);
-        address outputToken = mainChainStorage.getRedemptionOutputToken(nonce);
-        // uint256 fee = FeeCalculation.calculateFee(wethAmount, mainChainStorage.feeRate());
-        uint256 fee;
-
-        require(weth.transfer(address(0), fee), "Fee transfer failed");
-        uint256 indexTokenPrice =
-            indexToken.totalSupply() != 0 ? (totalPortfolioValues * 1e18) / indexToken.totalSupply() : 0;
-        if (outputToken == address(weth)) {
-            weth.withdraw(wethAmount - fee);
-            (bool _requesterSuccess,) = requester.call{value: wethAmount - fee}("");
-            require(_requesterSuccess, "transfer eth to the requester failed");
-            emit Redemption(
-                _messageId,
-                nonce,
-                requester,
-                outputToken,
-                mainChainStorage.getRedemptionInputAmount(nonce),
-                wethAmount - fee,
-                indexTokenPrice,
-                block.timestamp
-            );
-        } else {
-            uint256 reallOut = swap(
-                mainChainStorage.getRedemptionOutputTokenPath(nonce),
-                mainChainStorage.getRedemptionOutputTokenFees(nonce),
-                wethAmount - fee,
-                requester
-            );
-            emit Redemption(
-                _messageId,
-                nonce,
-                requester,
-                outputToken,
-                mainChainStorage.getRedemptionInputAmount(nonce),
-                reallOut,
-                indexTokenPrice,
-                block.timestamp
-            );
-        }
-    }
+    
 
     function _completeRedemption(uint256 _redemptionNonce, address _indexToken, uint256 _wethAmount, address _underlyingAddress) internal {
         // swap to usdc
@@ -502,15 +456,11 @@ contract CoreSender is Initializable, CCIPReceiver, ProposableOwnableUpgradeable
         uint256 nonce,
         Client.Any2EVMMessage memory any2EvmMessage,
         address[] memory tokenAddresses,
-        uint256 /* totalCurrentList */,
-        uint256 crossChainPortfolioValue,
-        uint64 /* sourceChainSelector */,
-        bytes32 /* messageId */
+        address _indexToken,
+        uint256 crossChainPortfolioValue
     ) internal {
         uint256 requestRedemptionNonce = nonce;
         Client.EVMTokenAmount[] memory tokenAmounts = any2EvmMessage.destTokenAmounts;
-        // address token = tokenAmounts[0].token;
-        // uint256 amount = tokenAmounts[0].amount;
         (address[] memory toETHPath, uint24[] memory toETHFees) = mainChainStorage.getToETHPathData(tokenAmounts[0].token);
         uint256 wethAmount = swap(toETHPath, toETHFees, tokenAmounts[0].amount, address(this));
 
@@ -520,19 +470,13 @@ contract CoreSender is Initializable, CCIPReceiver, ProposableOwnableUpgradeable
             wethAmount,
             crossChainPortfolioValue
         );
-        // mainChainStorage.increaseRedemptionTotalValue(requestRedemptionNonce, wethAmount);
-
-        // mainChainStorage.increaseRedemptionTotalPortfolioValues(requestRedemptionNonce, crossChainPortfolioValue);
-        // mainChainStorage.increaseRedemptionCompletedTokensCount(requestRedemptionNonce, tokenAddresses.length);
-        // if (mainChainStorage.getRedemptionCompletedTokensCount(requestRedemptionNonce) == totalCurrentList) {
-        //     // completeRedemptionRequest(requestRedemptionNonce, messageId);
-        // }
+        
 
         // call the order manager here
         for(uint256 i; i < tokenAddresses.length; i++) {
             _completeRedemption(
                 requestRedemptionNonce,
-                address(indexToken),
+                _indexToken,
                 wethAmount / tokenAddresses.length,
                 tokenAddresses[i]
             );
@@ -619,7 +563,7 @@ contract CoreSender is Initializable, CCIPReceiver, ProposableOwnableUpgradeable
         (
             uint256 actionType,
             address[] memory tokenAddresses,
-            ,
+            address[] memory indexTokens,
             ,
             ,
             uint256 nonce,
@@ -634,10 +578,10 @@ contract CoreSender is Initializable, CCIPReceiver, ProposableOwnableUpgradeable
             );
         }
         if (actionType == 0) {
-            _handleReceivedIssuance(nonce, tokenAddresses, value1, value2, totalCurrentList, messageId);
+            _handleReceivedIssuance(nonce, tokenAddresses, indexTokens[0], value1, value2);
         } else if (actionType == 1) {
             _handleReceivedRedemption(
-                nonce, any2EvmMessage, tokenAddresses, totalCurrentList, value1[0], sourceChainSelector, messageId
+                nonce, any2EvmMessage, tokenAddresses, indexTokens[0], value1[0]
             );
         }
     }

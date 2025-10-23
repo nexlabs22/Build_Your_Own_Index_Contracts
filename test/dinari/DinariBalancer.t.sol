@@ -29,7 +29,7 @@ contract DinariBalancerTest is OlympixUnitTest("DinariBalancer") {
     address internal owner = makeAddr("owner");
     address internal operator = makeAddr("operator");
     address internal stranger = makeAddr("stranger");
-
+ 
     DinariBalancer internal balancer;
     DinariStorage internal dinariStorage;
     FunctionsOracle internal oracle;
