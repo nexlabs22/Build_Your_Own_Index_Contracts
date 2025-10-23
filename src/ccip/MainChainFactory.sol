@@ -320,6 +320,7 @@ contract MainChainFactory is
         whenNotPaused
         returns (uint256)
     {
+        require(msg.sender == address(orderManager), "Only order manager can call");
         // Validate input parameters
         require(_tokenIn != address(0), "Invalid input token address");
         require(_inputAmount > 0, "Input amount must be greater than zero");
@@ -519,6 +520,7 @@ contract MainChainFactory is
     function redemption(address _indexToken, uint256 _burnPercent, address _tokenOut, uint256 _crossChainFee) public whenNotPaused returns(uint256){
         // Validate input parameters
         // require(amountIn > 0, "Amount must be greater than zero");
+        require(msg.sender == address(orderManager), "Only order manager can call");
         require(_tokenOut != address(0), "Invalid output token address");
         (address[] memory _tokenOutPath, uint24[] memory _tokenOutFees) = functionsOracle.getFromETHPathData(_tokenOut);
         require(_tokenOutPath[0] == address(weth), "Invalid token path");
