@@ -244,10 +244,7 @@ contract MainChainBalancer is
 
     function _firstReweightSwaps(
         uint256 i,
-        // uint256 _chainValue,
         address _indexToken,
-        // uint256 _nonce,
-        // uint256 _portfolioValue,
         uint256 _targetPortfolioValue,
         uint64 _chainSelector,
         uint256 _latestOracleCount
@@ -293,7 +290,7 @@ contract MainChainBalancer is
                 _sendExtraValueOtherChains(
                     _indexToken,
                     nonce,
-                    portfolioValue,
+                    indexFactoryBalancer.getGlobalPortfolioValueByProviderNonce(1, nonce),
                     _targetPortfolioValue,
                     _chainSelector,
                     _oracleChainSelectorTotalShares,
@@ -364,18 +361,7 @@ contract MainChainBalancer is
         ) {
             uint64 chainSelector = chainSelectors[i];
 
-            // uint256 chainSelectorCurrentTokensCount = functionsOracle.currentChainSelectorTokensCount(_indexToken, chainSelector);
-            // uint256 chainSelectorOracleTokensCount = functionsOracle.oracleChainSelectorTokensCount(_indexToken, chainSelector);
-            // uint256 currentChainSelectorTotalShares =
-            //     functionsOracle.getCurrentChainSelectorTotalShares(_indexToken, latestOracleCount, chainSelector);
-            uint256 oracleChainSelectorTotalShares = functionsOracle
-                .getOracleChainSelectorTotalShares(
-                    _indexToken,
-                    latestOracleCount,
-                    chainSelector
-                );
-            // uint256 chainValue = mainChainStorage.chainValueByNonce(nonce, chainSelector);
-            // uint256[] memory oracleTokenShares = functionsOracle.allOracleChainSelectorTokenShares(_indexToken, chainSelector);
+            
             bool _isCrossChain = _firstReweightSwaps(
                 i,
                 _indexToken,
@@ -481,7 +467,6 @@ contract MainChainBalancer is
                 1,
                 _nonce
             );
-        // wethAmountToSwap += (swapWethAmount *_targetPortfolioValue ) / mainChainStorage.chainValueByNonce(_nonce, chainSelector);
         wethAmountToSwap =
             (swapWethAmount * oracleChainSelectorTotalShares) /
             chainCurrentRealShare;
