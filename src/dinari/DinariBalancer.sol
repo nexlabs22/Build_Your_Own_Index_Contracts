@@ -278,12 +278,11 @@ contract DinariBalancer is Initializable, OwnableUpgradeable, PausableUpgradeabl
     ) internal {
         uint256 tokenValue = tokenValueByNonce[indexToken][nonce][token];
 
-        // uint256 currentPct = functionsOracle.tokenCurrentMarketShare(indexToken, token);
+        uint256 providerTotal = globalBalancer.getGlobalPortfolioValueByProviderNonce(
+            dinariStorage.providerIndex(), rebalanceNonce[indexToken]
+        );
+        uint256 currentPct = providerTotal == 0 ? 0 : (tokenValue * 100e18) / providerTotal;
 
-        uint256 currentPct = tokenValue
-            / globalBalancer.getGlobalPortfolioValueByProviderNonce(
-                dinariStorage.providerIndex(), rebalanceNonce[indexToken]
-            );
         uint256 targetPct = functionsOracle.tokenOracleMarketShare(indexToken, token);
 
         if (currentPct > targetPct) {
@@ -470,16 +469,32 @@ contract DinariBalancer is Initializable, OwnableUpgradeable, PausableUpgradeabl
         uint256 pulled = _withdrawUsdcFromIssuer(usdcOwed);
         usdcRealizedByNonce[_indexToken][_rebalanceNonce] += pulled;
 
+        uint256 granted = 0;
         if (_maxUsdcFromGlobal > 0) {
-            _requestUsdcFromGlobal(_indexToken, _rebalanceNonce, _maxUsdcFromGlobal);
+            uint256 shortageUsd = providerShortageUsdByNonce[_indexToken][_rebalanceNonce];
+            uint256 ask = shortageUsd < _maxUsdcFromGlobal ? shortageUsd : _maxUsdcFromGlobal;
+            if (ask > 0) {
+                granted = _requestUsdcFromGlobal(_indexToken, _rebalanceNonce, ask);
+            }
+
+            // _requestUsdcFromGlobal(_indexToken, _rebalanceNonce, _maxUsdcFromGlobal);
         }
 
         uint256 totalShortagePercent = totalShortagePercentByNonce[_indexToken][_rebalanceNonce];
-        uint256 spent = 0;
-        if (pulled > 0 && totalShortagePercent > 0) {
-            spent = _buyUnderweightedAssets(_indexToken, _rebalanceNonce, totalShortagePercent, pulled);
-            usdcSpentByNonce[_indexToken][_rebalanceNonce] += spent;
+        if (totalShortagePercent > 0) {
+            uint256 budget = pulled + granted;
+            if (budget > 0) {
+                uint256 spent = _buyUnderweightedAssets(_indexToken, _rebalanceNonce, totalShortagePercent, budget);
+                usdcSpentByNonce[_indexToken][_rebalanceNonce] += spent;
+            }
         }
+
+        // uint256 totalShortagePercent = totalShortagePercentByNonce[_indexToken][_rebalanceNonce];
+        // uint256 spent = 0;
+        // if (pulled > 0 && totalShortagePercent > 0) {
+        //     spent = _buyUnderweightedAssets(_indexToken, _rebalanceNonce, totalShortagePercent, pulled);
+        //     usdcSpentByNonce[_indexToken][_rebalanceNonce] += spent;
+        // }
 
         uint256 realized = usdcRealizedByNonce[_indexToken][_rebalanceNonce];
         uint256 already = usdcForwardedByNonce[_indexToken][_rebalanceNonce];

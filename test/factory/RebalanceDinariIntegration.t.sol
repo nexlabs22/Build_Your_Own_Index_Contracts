@@ -61,6 +61,10 @@ contract RebalanceDinariIntegrationTest is Test, CCIPDeployer {
             )
         );
 
+        vm.startPrank(dinariStorage.owner());
+        dinariStorage.setFunctionsOracle(address(functionsOracle));
+        vm.stopPrank();
+
         dinariBalancer.initialize(
             address(dinariStorage), address(functionsOracle), address(indexFactoryStorage), address(factoryBalancer2)
         );
