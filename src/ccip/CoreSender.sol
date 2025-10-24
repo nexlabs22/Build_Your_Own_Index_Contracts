@@ -23,7 +23,6 @@ import "../orderManager/OrderManager.sol";
 /// @author NEX Labs Protocol
 /// @notice The main token contract for Index Token (NEX Labs Protocol)
 /// @dev This contract uses an upgradeable pattern
-
 contract CoreSender is Initializable, CCIPReceiver, ProposableOwnableUpgradeable, ReentrancyGuardUpgradeable {
     using MessageSender for *;
 
@@ -99,7 +98,7 @@ contract CoreSender is Initializable, CCIPReceiver, ProposableOwnableUpgradeable
         __ccipReceiver_init(_router);
         __Ownable_init(msg.sender);
         __ReentrancyGuard_init();
-        __ReentrancyGuard_init_unchained();
+        // __ReentrancyGuard_init_unchained();
         indexToken = IndexToken(_token);
         orderManager = OrderManager(_orderManager);
         mainChainStorage = MainChainStorage(_mainChainStorage);
@@ -137,9 +136,8 @@ contract CoreSender is Initializable, CCIPReceiver, ProposableOwnableUpgradeable
     }
 
     function withdrawLink() external onlyOwnerOrOperator {
-        IERC20(mainChainStorage.linkToken()).transfer(
-            msg.sender, IERC20(mainChainStorage.linkToken()).balanceOf(address(this))
-        );
+        IERC20(mainChainStorage.linkToken())
+            .transfer(msg.sender, IERC20(mainChainStorage.linkToken()).balanceOf(address(this)));
     }
 
     /**
@@ -206,12 +204,7 @@ contract CoreSender is Initializable, CCIPReceiver, ProposableOwnableUpgradeable
         {
             (address[] memory fromETHPath, uint24[] memory fromETHFees) =
                 mainChainStorage.getFromETHPathData(mainChainStorage.crossChainToken(_chainSelector));
-            crossChainTokenAmount = swap(
-                fromETHPath,
-                fromETHFees,
-                _wethAmount,
-                address(this)
-            );
+            crossChainTokenAmount = swap(fromETHPath, fromETHFees, _wethAmount, address(this));
         }
 
         uint256[] memory totalSharesArr = new uint256[](1);
@@ -224,13 +217,7 @@ contract CoreSender is Initializable, CCIPReceiver, ProposableOwnableUpgradeable
             address[] memory tokenAddrs = functionsOracle.allCurrentChainSelectorTokens(_indexToken, _chainSelector);
             uint256[] memory tokenShares =
                 functionsOracle.allCurrentChainSelectorTokenShares(_indexToken, _chainSelector);
-            data = _encodeIssuanceData(
-                _indexToken,
-                _issuanceNonce,
-                tokenAddrs,
-                tokenShares,
-                totalSharesArr
-            );
+            data = _encodeIssuanceData(_indexToken, _issuanceNonce, tokenAddrs, tokenShares, totalSharesArr);
         }
         // send issuance request
         Client.EVMTokenAmount[] memory tokensToSendArray = new Client.EVMTokenAmount[](1);
@@ -266,18 +253,13 @@ contract CoreSender is Initializable, CCIPReceiver, ProposableOwnableUpgradeable
             );
 
             // tokens and shares arrays
-            address[] memory tokenAddrs =
-                functionsOracle.allCurrentChainSelectorTokens(address(0), _chainSelector);
+            address[] memory tokenAddrs = functionsOracle.allCurrentChainSelectorTokens(address(0), _chainSelector);
             uint256[] memory tokenShares =
                 functionsOracle.allCurrentChainSelectorTokenShares(address(0), _chainSelector);
 
             // encode data
             data = _encodeIssuanceData(
-                _indexToken,
-                mainChainStorage.issuanceNonce(),
-                tokenAddrs,
-                tokenShares,
-                totalSharesArr
+                _indexToken, mainChainStorage.issuanceNonce(), tokenAddrs, tokenShares, totalSharesArr
             );
 
             // token amounts for message
@@ -295,37 +277,6 @@ contract CoreSender is Initializable, CCIPReceiver, ProposableOwnableUpgradeable
         });
 
         return IRouterClient(i_router).getFee(_chainSelector, message);
-    }
-
-    function completeIssuanceRequest(uint256 _issuanceNonce, bytes32 _messageId) internal {
-        mainChainStorage.decreasePendingIssuanceInputByNonce(_issuanceNonce);
-        uint256 totalOldVaules;
-        uint256 totalNewVaules;
-        uint256 totalCurrentList = functionsOracle.totalCurrentList(address(0));
-        for (uint256 i = 0; i < totalCurrentList; i++) {
-            address tokenAddress = functionsOracle.currentList(address(0), i);
-            totalOldVaules += mainChainStorage.getIssuanceOldTokenValue(_issuanceNonce, tokenAddress);
-            totalNewVaules += mainChainStorage.getIssuanceNewTokenValue(_issuanceNonce, tokenAddress);
-        }
-
-        uint256 amountToMint;
-        if (indexToken.totalSupply() > 0) {
-            amountToMint = (indexToken.totalSupply() * totalNewVaules) / totalOldVaules - indexToken.totalSupply();
-        } else {
-            amountToMint = (totalNewVaules) / 100;
-        }
-        indexToken.mint(mainChainStorage.getIssuanceRequester(_issuanceNonce), amountToMint);
-        uint256 indexTokenPrice = (totalNewVaules * 1e18) / indexToken.totalSupply();
-        emit Issuanced(
-            _messageId,
-            _issuanceNonce,
-            mainChainStorage.getIssuanceRequester(_issuanceNonce),
-            mainChainStorage.getIssuanceInputToken(_issuanceNonce),
-            mainChainStorage.getIssuanceInputAmount(_issuanceNonce),
-            amountToMint,
-            indexTokenPrice,
-            block.timestamp
-        );
     }
 
     function _handleReceivedIssuance(
@@ -421,23 +372,19 @@ contract CoreSender is Initializable, CCIPReceiver, ProposableOwnableUpgradeable
         return IRouterClient(i_router).getFee(_chainSelector, message);
     }
 
-    
-
-    function _completeRedemption(uint256 _redemptionNonce, address _indexToken, uint256 _wethAmount, address _underlyingAddress) internal {
+    function _completeRedemption(
+        uint256 _redemptionNonce,
+        address _indexToken,
+        uint256 _wethAmount,
+        address _underlyingAddress
+    ) internal {
         // swap to usdc
-        (address[] memory toTokenPath, uint24[] memory toTokenFees) =
-            functionsOracle.getFromETHPathData(usdcAddress);
+        (address[] memory toTokenPath, uint24[] memory toTokenFees) = functionsOracle.getFromETHPathData(usdcAddress);
         uint256 outputAmount = swap(toTokenPath, toTokenFees, _wethAmount, address(this));
         // approve to order manager
         IERC20(usdcAddress).approve(address(orderManager), outputAmount);
         // call order manager
-        orderManager.completeRedemption(
-            1,
-            _redemptionNonce,
-            _indexToken,
-            _underlyingAddress,
-            outputAmount
-        );
+        orderManager.completeRedemption(1, _redemptionNonce, _indexToken, _underlyingAddress, outputAmount);
     }
 
     function _updateRedemptionCompleteData(
@@ -461,24 +408,16 @@ contract CoreSender is Initializable, CCIPReceiver, ProposableOwnableUpgradeable
     ) internal {
         uint256 requestRedemptionNonce = nonce;
         Client.EVMTokenAmount[] memory tokenAmounts = any2EvmMessage.destTokenAmounts;
-        (address[] memory toETHPath, uint24[] memory toETHFees) = mainChainStorage.getToETHPathData(tokenAmounts[0].token);
+        (address[] memory toETHPath, uint24[] memory toETHFees) =
+            mainChainStorage.getToETHPathData(tokenAmounts[0].token);
         uint256 wethAmount = swap(toETHPath, toETHFees, tokenAmounts[0].amount, address(this));
 
-        _updateRedemptionCompleteData(
-            requestRedemptionNonce,
-            tokenAddresses,
-            wethAmount,
-            crossChainPortfolioValue
-        );
-        
+        _updateRedemptionCompleteData(requestRedemptionNonce, tokenAddresses, wethAmount, crossChainPortfolioValue);
 
         // call the order manager here
-        for(uint256 i; i < tokenAddresses.length; i++) {
+        for (uint256 i; i < tokenAddresses.length; i++) {
             _completeRedemption(
-                requestRedemptionNonce,
-                _indexToken,
-                wethAmount / tokenAddresses.length,
-                tokenAddresses[i]
+                requestRedemptionNonce, _indexToken, wethAmount / tokenAddresses.length, tokenAddresses[i]
             );
         }
     }
@@ -563,9 +502,7 @@ contract CoreSender is Initializable, CCIPReceiver, ProposableOwnableUpgradeable
         (
             uint256 actionType,
             address[] memory tokenAddresses,
-            address[] memory indexTokens,
-            ,
-            ,
+            address[] memory indexTokens,,,
             uint256 nonce,
             uint256[] memory value1,
             uint256[] memory value2
@@ -580,9 +517,7 @@ contract CoreSender is Initializable, CCIPReceiver, ProposableOwnableUpgradeable
         if (actionType == 0) {
             _handleReceivedIssuance(nonce, tokenAddresses, indexTokens[0], value1, value2);
         } else if (actionType == 1) {
-            _handleReceivedRedemption(
-                nonce, any2EvmMessage, tokenAddresses, indexTokens[0], value1[0]
-            );
+            _handleReceivedRedemption(nonce, any2EvmMessage, tokenAddresses, indexTokens[0], value1[0]);
         }
     }
 }

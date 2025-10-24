@@ -21,14 +21,8 @@ import "../interfaces/IWETH.sol";
 /// @notice The main contract for managing fees and withdrawals
 /// @dev This contract uses an upgradeable pattern
 
-contract FeeVault is
-    Initializable,
-    ProposableOwnableUpgradeable,
-    ReentrancyGuardUpgradeable,
-    PausableUpgradeable
-{
+contract FeeVault is Initializable, ProposableOwnableUpgradeable, ReentrancyGuardUpgradeable, PausableUpgradeable {
     using SafeERC20 for IERC20;
-    
 
     MainChainStorage public mainChainStorage;
     FunctionsOracle public functionsOracle;
@@ -43,6 +37,7 @@ contract FeeVault is
         require(isOperator[msg.sender], "FeeVault: caller is not an operator");
         _;
     }
+
     /**
      * @dev Initializes the contract with the given parameters.
      * @param _currentChainSelector The current chain selector.
@@ -99,7 +94,6 @@ contract FeeVault is
         usdcAddress = _usdc;
     }
 
-
     /**
      * @dev Sets the MainChainStorage contract address.
      * @param _mainChainStorage The address of the MainChainStorage contract.
@@ -115,8 +109,6 @@ contract FeeVault is
     function setFunctionsOracle(address _functionsOracle) public onlyOwner {
         functionsOracle = FunctionsOracle(_functionsOracle);
     }
-
-    
 
     /**
      * @dev Fallback function to receive ETH.
@@ -144,14 +136,13 @@ contract FeeVault is
     function withdrawFunds(address _token, address _to, uint256 _amount) external onlyOperator {
         require(_to != address(0), "NexVault: invalid address");
         require(_amount > 0, "NexVault: amount must be greater than 0");
-        if(_token == address(0)) {
+        if (_token == address(0)) {
             // Swap and withdraw ETH
             require(address(this).balance >= _amount, "NexVault: insufficient ETH balance");
-            (address[] memory toETHPath, uint24[] memory toETHFees) =
-                functionsOracle.getToETHPathData(usdcAddress);
+            (address[] memory toETHPath, uint24[] memory toETHFees) = functionsOracle.getToETHPathData(usdcAddress);
             uint256 wethAmount = swap(toETHPath, toETHFees, _amount, address(this));
             weth.withdraw(wethAmount);
-            (bool success, ) = _to.call{value: wethAmount}("");
+            (bool success,) = _to.call{value: wethAmount}("");
             require(success, "NexVault: ETH transfer failed");
             emit FundsWithdrawn(address(0), _to, wethAmount);
         } else {
@@ -159,6 +150,5 @@ contract FeeVault is
             IERC20(_token).safeTransfer(_to, _amount);
             emit FundsWithdrawn(_token, _to, _amount);
         }
-        
     }
 }

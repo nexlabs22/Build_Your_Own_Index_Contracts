@@ -19,6 +19,9 @@ import "../libraries/SwapHelpers.sol";
 import "../interfaces/IUniswapV2Router02.sol";
 import "../interfaces/IWETH.sol";
 import "../orderManager/OrderManager.sol";
+import {IndexFactoryStorage} from "../factory/IndexFactoryStorage.sol";
+import "../vault/Vault.sol";
+
 /// @title Index Token
 /// @author NEX Labs Protocol
 /// @notice The main token contract for Index Token (NEX Labs Protocol)
@@ -120,7 +123,7 @@ contract MainChainFactory is
 
         __Ownable_init(msg.sender);
         __ReentrancyGuard_init();
-        __ReentrancyGuard_init_unchained();
+        // __ReentrancyGuard_init_unchained();
         //set chain selector
         currentChainSelector = _currentChainSelector;
         indexToken = IndexToken(_token);
@@ -225,29 +228,15 @@ contract MainChainFactory is
         outputAmount = SwapHelpers.swap(swapRouterV3, swapRouterV2, path, fees, amountIn, amountOutMinimum, _recipient);
     }
 
-    function getIssuanceFee(
-        address _indexToken,
-        address _tokenIn,
-        uint256 _inputAmount
-    ) public view returns (uint256) {
+    function getIssuanceFee(address _indexToken, address _tokenIn, uint256 _inputAmount) public view returns (uint256) {
         (address[] memory _tokenInPath, uint24[] memory _tokenInFees) = functionsOracle.getToETHPathData(_tokenIn);
         // get weth amount
-        uint256 wethAmount = mainChainStorage.getAmountOut(
-                _tokenInPath,
-                _tokenInFees,
-                _inputAmount
-            );
-        
+        uint256 wethAmount = mainChainStorage.getAmountOut(_tokenInPath, _tokenInFees, _inputAmount);
 
         // get fee for other chains
-        uint256 totalChains = functionsOracle.currentChainSelectorsCount(
-            _indexToken
-        );
+        uint256 totalChains = functionsOracle.currentChainSelectorsCount(_indexToken);
         uint256 latestCount = functionsOracle.currentFilledCount(_indexToken);
-        (, , uint64[] memory chainSelectors) = functionsOracle.getCurrentData(
-            _indexToken,
-            latestCount
-        );
+        (,, uint64[] memory chainSelectors) = functionsOracle.getCurrentData(_indexToken, latestCount);
 
         uint256 totalCrossChainFee;
 
@@ -256,18 +245,12 @@ contract MainChainFactory is
             // uint256 chainSelectorTokensCount = functionsOracle
             //     .currentChainSelectorTokensCount(_indexToken, chainSelectors[i]);
             if (chainSelectors[i] != currentChainSelector) {
-                uint256 totalShares = functionsOracle
-                    .getCurrentChainSelectorTotalShares(
-                        _indexToken,
-                        latestCount,
-                        chainSelectors[i]
-                    );
+                uint256 totalShares =
+                    functionsOracle.getCurrentChainSelectorTotalShares(_indexToken, latestCount, chainSelectors[i]);
                 // uint256 chainWethAmount = (wethAmount * totalShares) / 100e18;
                 //get the fee
                 uint256 fee = coreSender.calculateIssuanceFee(
-                    _indexToken,
-                    chainSelectors[i],
-                    (wethAmount * totalShares) / 100e18
+                    _indexToken, chainSelectors[i], (wethAmount * totalShares) / 100e18
                 );
                 totalCrossChainFee += fee;
             }
@@ -276,9 +259,16 @@ contract MainChainFactory is
         return (totalCrossChainFee * (100 + 20)) / 100;
     }
 
-    function getRedemptionFee(address _indexToken, uint256 /*amountIn*/) public view returns (uint256) {
+    function getRedemptionFee(
+        address _indexToken,
+        uint256 /*amountIn*/
+    )
+        public
+        view
+        returns (uint256)
+    {
         // uint256 burnPercentage = (amountIn * 1e18) / indexToken.totalSupply(); // unused
-    uint256 totalChains = functionsOracle.currentChainSelectorsCount(_indexToken);
+        uint256 totalChains = functionsOracle.currentChainSelectorsCount(_indexToken);
         uint256 latestCount = functionsOracle.currentFilledCount(_indexToken);
         (,, uint64[] memory chainSelectors) = functionsOracle.getCurrentData(_indexToken, latestCount);
         uint256 totalCrossChainFee;
@@ -293,10 +283,7 @@ contract MainChainFactory is
         return (totalCrossChainFee * (100 + 20)) / 100;
     }
 
-    function _swapCrossChainFee(
-        address _tokenIn,
-        uint256 _crossChainFee
-    ) internal {
+    function _swapCrossChainFee(address _tokenIn, uint256 _crossChainFee) internal {
         // transfer cross chain fee
         IERC20(_tokenIn).transferFrom(msg.sender, address(this), _crossChainFee);
         (address[] memory _tokenInPath, uint24[] memory _tokenInFees) = functionsOracle.getToETHPathData(_tokenIn);
@@ -326,7 +313,7 @@ contract MainChainFactory is
         require(_inputAmount > 0, "Input amount must be greater than zero");
         (address[] memory _tokenInPath, uint24[] memory _tokenInFees) = functionsOracle.getToETHPathData(_tokenIn);
         require(_tokenInPath[_tokenInPath.length - 1] == address(weth), "Invalid token path");
-        if(_crossChainFee > 0){
+        if (_crossChainFee > 0) {
             _swapCrossChainFee(_tokenIn, _crossChainFee);
         }
 
@@ -442,11 +429,10 @@ contract MainChainFactory is
 
         uint256 tokenMarketShare = functionsOracle.tokenCurrentMarketShare(_indexToken, _tokenAddress);
         // uint256 swapAmount = (_wethAmount * tokenMarketShare) / 100e18;
-        uint256 swapAmount = (_wethAmount * tokenMarketShare) / functionsOracle.getCurrentProviderIndexTotalShares(
-            _indexToken,
-            functionsOracle.currentFilledCount(_indexToken),
-            1
-        );
+        uint256 swapAmount = (_wethAmount * tokenMarketShare)
+            / functionsOracle.getCurrentProviderIndexTotalShares(
+                _indexToken, functionsOracle.currentFilledCount(_indexToken), 1
+            );
         if (_tokenAddress != address(weth)) {
             swap(fromETHPath, fromETHFees, swapAmount, address(indexFactoryStorage.indexTokenToVault(_indexToken)));
         } else {
@@ -459,7 +445,7 @@ contract MainChainFactory is
      * @param _indexToken The address of the index token.
      * @param _wethAmount The amount of WETH.
      * @param _issuanceNonce The issuance nonce.
-    * @param _chainSelectorTokensCount The number of tokens in the chain selector.
+     * @param _chainSelectorTokensCount The number of tokens in the chain selector.
      * @param _chainSelector The chain selector.
      */
     function _issuanceSwapsCurrentChain(
@@ -498,14 +484,12 @@ contract MainChainFactory is
         uint64 _chainSelector,
         uint256 _latestCount
     ) internal {
-        uint256 totalShares =
-            functionsOracle.getCurrentChainSelectorTotalShares(_indexToken, _latestCount, _chainSelector);
-        // uint256 chainWethAmount = (_wethAmount * totalShares) / 100e18;
-        uint256 chainWethAmount = (_wethAmount * totalShares) / functionsOracle.getCurrentProviderIndexTotalShares(
-            _indexToken,
-            _latestCount,
-            1
+        uint256 totalShares = functionsOracle.getCurrentChainSelectorTotalShares(
+            _indexToken, _latestCount, _chainSelector
         );
+        // uint256 chainWethAmount = (_wethAmount * totalShares) / 100e18;
+        uint256 chainWethAmount = (_wethAmount * totalShares)
+            / functionsOracle.getCurrentProviderIndexTotalShares(_indexToken, _latestCount, 1);
 
         weth.approve(address(coreSender), chainWethAmount);
         coreSender.sendIssuanceRequest(_indexToken, chainWethAmount, _issuanceNonce, _chainSelector, _latestCount);
@@ -517,17 +501,21 @@ contract MainChainFactory is
      * @param _burnPercent The burn percentage.
      * @param _tokenOut The address of the output token.
      */
-    function redemption(address _indexToken, uint256 _burnPercent, address _tokenOut, uint256 _crossChainFee) public whenNotPaused returns(uint256){
+    function redemption(address _indexToken, uint256 _burnPercent, address _tokenOut, uint256 _crossChainFee)
+        public
+        whenNotPaused
+        returns (uint256)
+    {
         // Validate input parameters
         // require(amountIn > 0, "Amount must be greater than zero");
         require(msg.sender == address(orderManager), "Only order manager can call");
         require(_tokenOut != address(0), "Invalid output token address");
         (address[] memory _tokenOutPath, uint24[] memory _tokenOutFees) = functionsOracle.getFromETHPathData(_tokenOut);
         require(_tokenOutPath[0] == address(weth), "Invalid token path");
-        if(_crossChainFee > 0){
+        if (_crossChainFee > 0) {
             _swapCrossChainFee(_tokenOut, _crossChainFee);
         }
-        
+
         mainChainStorage.increaseRedemptionNonce();
         // mainChainStorage.increasePendingRedemptionInputByNonce(mainChainStorage.redemptionNonce(), amountIn);
         mainChainStorage.setRedemptionData(
@@ -543,8 +531,8 @@ contract MainChainFactory is
         // indexToken.burn(msg.sender, amountIn);
 
         //swap
-    uint256 latestCount = functionsOracle.currentFilledCount(_indexToken);
-    (,, uint64[] memory chainSelectors) = functionsOracle.getCurrentData(_indexToken, latestCount);
+        uint256 latestCount = functionsOracle.currentFilledCount(_indexToken);
+        (,, uint64[] memory chainSelectors) = functionsOracle.getCurrentData(_indexToken, latestCount);
         for (uint256 i = 0; i < chainSelectors.length; i++) {
             uint64 chainSelector = chainSelectors[i];
             uint256 chainSelectorTokensCount =
@@ -575,23 +563,19 @@ contract MainChainFactory is
         return mainChainStorage.redemptionNonce();
     }
 
-    
-
-    function _completeRedemption(uint256 _redemptionNonce, address _indexToken, uint256 _wethAmount, address _underlyingAddress) internal {
+    function _completeRedemption(
+        uint256 _redemptionNonce,
+        address _indexToken,
+        uint256 _wethAmount,
+        address _underlyingAddress
+    ) internal {
         // swap to usdc
-        (address[] memory toTokenPath, uint24[] memory toTokenFees) =
-            functionsOracle.getFromETHPathData(usdcAddress);
+        (address[] memory toTokenPath, uint24[] memory toTokenFees) = functionsOracle.getFromETHPathData(usdcAddress);
         uint256 outputAmount = swap(toTokenPath, toTokenFees, _wethAmount, address(this));
         // approve to order manager
         IERC20(usdcAddress).approve(address(orderManager), outputAmount);
         // call order manager
-        orderManager.completeRedemption(
-            1,
-            _redemptionNonce,
-            _indexToken,
-            _underlyingAddress,
-            outputAmount
-        );
+        orderManager.completeRedemption(1, _redemptionNonce, _indexToken, _underlyingAddress, outputAmount);
     }
 
     function _updateRedemptionCurrentChainMappings(
@@ -609,7 +593,9 @@ contract MainChainFactory is
             tokenAddress == address(weth)
                 ? IERC20(tokenAddress).balanceOf(address(indexFactoryStorage.indexTokenToVault(_indexToken)))
                 : mainChainStorage.getAmountOut(
-                    toETHPath, toETHFees, IERC20(tokenAddress).balanceOf(address(indexFactoryStorage.indexTokenToVault(_indexToken)))
+                    toETHPath,
+                    toETHFees,
+                    IERC20(tokenAddress).balanceOf(address(indexFactoryStorage.indexTokenToVault(_indexToken)))
                 )
         );
         mainChainStorage.increaseRedemptionCompletedTokensCount(_redemptionNonce, 1);
@@ -626,15 +612,19 @@ contract MainChainFactory is
         uint256 _burnPercent,
         uint256 _redemptionNonce,
         uint256 /*_chainSelectorTokensCount*/
-    ) internal {
+    )
+        internal
+    {
         address[] memory tokens = functionsOracle.allCurrentChainSelectorTokens(_indexToken, currentChainSelector);
         for (uint256 i = 0; i < tokens.length; i++) {
             address tokenAddress = tokens[i];
             (address[] memory toETHPath, uint24[] memory toETHFees) = functionsOracle.getToETHPathData(tokenAddress);
 
             uint256 swapAmount =
-                (_burnPercent * IERC20(tokenAddress).balanceOf(indexFactoryStorage.indexTokenToVault(_indexToken))) / 100e18;
-            Vault(indexFactoryStorage.indexTokenToVault(_indexToken)).withdrawFunds(tokenAddress, address(this), swapAmount);
+                (_burnPercent * IERC20(tokenAddress).balanceOf(indexFactoryStorage.indexTokenToVault(_indexToken)))
+                    / 100e18;
+            Vault(indexFactoryStorage.indexTokenToVault(_indexToken))
+                .withdrawFunds(tokenAddress, address(this), swapAmount);
 
             uint256 swapAmountOut =
                 tokenAddress == address(weth) ? swapAmount : swap(toETHPath, toETHFees, swapAmount, address(this));
@@ -643,21 +633,11 @@ contract MainChainFactory is
             }
 
             _updateRedemptionCurrentChainMappings(
-                _redemptionNonce,
-                _indexToken,
-                swapAmountOut,
-                tokenAddress,
-                toETHPath,
-                toETHFees
+                _redemptionNonce, _indexToken, swapAmountOut, tokenAddress, toETHPath, toETHFees
             );
-            
+
             // call the order manager here
-            _completeRedemption(
-                _redemptionNonce,
-                _indexToken,
-                swapAmountOut,
-                tokenAddress
-            );
+            _completeRedemption(_redemptionNonce, _indexToken, swapAmountOut, tokenAddress);
         }
     }
 

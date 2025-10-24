@@ -2,19 +2,19 @@
 pragma solidity ^0.8.20;
 
 library PathHelpers {
-    function getFromETHPathBytes(address[] memory _path, uint24[] memory _fees) public pure returns (bytes memory) {
+    function getFromETHPathBytes(address[] memory _path, uint24[] memory _fees) internal pure returns (bytes memory) {
         return abi.encode(_path, _fees);
     }
 
-    function getZeroFromETHPathBytes() public pure returns (bytes memory) {
+    function getZeroFromETHPathBytes() internal pure returns (bytes memory) {
         return abi.encode(new address[](0), new uint24[](0));
     }
 
-    function decodePathBytes(bytes memory _pathBytes) public pure returns (address[] memory, uint24[] memory) {
+    function decodePathBytes(bytes memory _pathBytes) internal pure returns (address[] memory, uint24[] memory) {
         return abi.decode(_pathBytes, (address[], uint24[]));
     }
 
-    function reverseUint24Array(uint24[] memory input) public pure returns (uint24[] memory) {
+    function reverseUint24Array(uint24[] memory input) internal pure returns (uint24[] memory) {
         uint256 length = input.length;
 
         for (uint256 i = 0; i < length / 2; i++) {
@@ -25,7 +25,7 @@ library PathHelpers {
         return input;
     }
 
-    function reverseAddressArray(address[] memory input) public pure returns (address[] memory) {
+    function reverseAddressArray(address[] memory input) internal pure returns (address[] memory) {
         uint256 length = input.length;
 
         for (uint256 i = 0; i < length / 2; i++) {
@@ -36,7 +36,7 @@ library PathHelpers {
         return input;
     }
 
-    function encodePath(address[] memory tokens, uint24[] memory fees) public pure returns (bytes memory path) {
+    function encodePath(address[] memory tokens, uint24[] memory fees) internal pure returns (bytes memory path) {
         require(tokens.length == fees.length + 1, "Invalid input arrays");
 
         for (uint256 i = 0; i < fees.length; i++) {

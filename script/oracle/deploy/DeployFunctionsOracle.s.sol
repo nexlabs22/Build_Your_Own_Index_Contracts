@@ -42,4 +42,3 @@ contract DeployFunctionsOracle is Script {
         vm.stopBroadcast();
     }
 }
-

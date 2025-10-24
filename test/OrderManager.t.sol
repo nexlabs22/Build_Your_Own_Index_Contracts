@@ -4,7 +4,7 @@ pragma solidity 0.8.25;
 import "forge-std/Test.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
-import {OrderManager} from "../../src/orderManager/OrderManager.sol";
+import {OrderManager} from "../src/orderManager/OrderManager.sol";
 // import {IndexFactory} from "../src/factory/IndexFactory.sol";
 import {BackedFiFactory} from "../src/backedfi/BackedFiFactory.sol";
 import {BackedFiStorage} from "../src/backedfi/BackedFiStorage.sol";

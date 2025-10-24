@@ -12,6 +12,7 @@ import "../../../src/ccip/BalancerSender.sol";
 import "../../../src/ccip/CoreSender.sol";
 import "../../../src/ccip/MainChainBalancer.sol";
 import "../../../src/ccip/MainChainFactory.sol";
+import "../../../src/ccip/MainChainBalancer2.sol";
 
 contract DeployCCIPAll is Script {
     MainChainStorage public mainChainStorage;
@@ -20,6 +21,7 @@ contract DeployCCIPAll is Script {
     BalancerSender public balancerSender;
     CoreSender public coreSender;
     MainChainBalancer public mainChainBalancer;
+    MainChainBalancer2 public mainChainBalancer2;
     MainChainFactory public mainChainFactory;
 
     struct ChainConfig {
@@ -49,25 +51,30 @@ contract DeployCCIPAll is Script {
         vm.startBroadcast(deployerPrivateKey);
 
         address mainChainStorageProxy = _deployMainChainStorage(owner, cfg);
-        if (cfg.vaultAddress != address(0)) {
-            mainChainStorage.setVault(cfg.vaultAddress);
-        }
-        address ccStorageProxy = _deployCrossChainIndexFactoryStorage(owner, cfg);
-        address ccFactoryProxy = _deployCrossChainIndexFactory(owner, cfg, ccStorageProxy);
+        // if (cfg.vaultAddress != address(0)) {
+        //     mainChainStorage.setVault(cfg.vaultAddress);
+        // }
+        // address ccStorageProxy = _deployCrossChainIndexFactoryStorage(owner, cfg);
+        // address ccFactoryProxy = _deployCrossChainIndexFactory(owner, cfg, ccStorageProxy);
         address balancerSenderProxy = _deployBalancerSender(owner, cfg, mainChainStorageProxy);
         address coreSenderProxy = _deployCoreSender(owner, cfg, mainChainStorageProxy);
         address mainChainBalancerProxy =
             _deployMainChainBalancer(owner, cfg, mainChainStorageProxy, balancerSenderProxy);
+        address mainChainBalancer2Proxy =
+            _deployMainChainBalancer2(owner, cfg, mainChainStorageProxy, balancerSenderProxy);
         address mainChainFactoryProxy = _deployMainChainFactory(owner, cfg, mainChainStorageProxy, coreSenderProxy);
+
+        mainChainStorage.setMainChainBalancer(mainChainBalancerProxy);
+        mainChainStorage.setMainChainBalancer2(mainChainBalancer2Proxy);
 
         console.log("MainChainStorage proxy deployed at:", mainChainStorageProxy);
         console.log("MainChainStorage ProxyAdmin:", Upgrades.getAdminAddress(mainChainStorageProxy));
 
-        console.log("CrossChainIndexFactoryStorage proxy deployed at:", ccStorageProxy);
-        console.log("CrossChainIndexFactoryStorage ProxyAdmin:", Upgrades.getAdminAddress(ccStorageProxy));
+        // console.log("CrossChainIndexFactoryStorage proxy deployed at:", ccStorageProxy);
+        // console.log("CrossChainIndexFactoryStorage ProxyAdmin:", Upgrades.getAdminAddress(ccStorageProxy));
 
-        console.log("CrossChainIndexFactory proxy deployed at:", ccFactoryProxy);
-        console.log("CrossChainIndexFactory ProxyAdmin:", Upgrades.getAdminAddress(ccFactoryProxy));
+        // console.log("CrossChainIndexFactory proxy deployed at:", ccFactoryProxy);
+        // console.log("CrossChainIndexFactory ProxyAdmin:", Upgrades.getAdminAddress(ccFactoryProxy));
 
         console.log("BalancerSender proxy deployed at:", balancerSenderProxy);
         console.log("BalancerSender ProxyAdmin:", Upgrades.getAdminAddress(balancerSenderProxy));
@@ -77,6 +84,9 @@ contract DeployCCIPAll is Script {
 
         console.log("MainChainBalancer proxy deployed at:", mainChainBalancerProxy);
         console.log("MainChainBalancer ProxyAdmin:", Upgrades.getAdminAddress(mainChainBalancerProxy));
+
+        console.log("MainChainBalancer2 proxy deployed at:", mainChainBalancer2Proxy);
+        console.log("MainChainBalancer2 ProxyAdmin:", Upgrades.getAdminAddress(mainChainBalancer2Proxy));
 
         console.log("MainChainFactory proxy deployed at:", mainChainFactoryProxy);
         console.log("MainChainFactory ProxyAdmin:", Upgrades.getAdminAddress(mainChainFactoryProxy));
@@ -95,11 +105,10 @@ contract DeployCCIPAll is Script {
             cfg.factoryV3 = vm.envAddress("SEPOLIA_UNISWAP_FACTORY_V3_ADDRESS");
             cfg.swapRouterV2 = vm.envAddress("SEPOLIA_SWAP_ROUTER_V2_ADDRESS");
             cfg.factoryV2 = vm.envAddress("SEPOLIA_UNISWAP_FACTORY_V2_ADDRESS");
-            cfg.vaultAddress = vm.envAddress("SEPOLIA_VAULT_PROXY_ADDRESS");
             cfg.ccipRouter = vm.envAddress("SEPOLIA_CCIP_ROUTER_ADDRESS");
-            cfg.indexToken = vm.envAddress("SEPOLIA_INDEX_TOKEN_PROXY_ADDRESS");
             cfg.orderManager = vm.envAddress("SEPOLIA_ORDER_MANAGER_PROXY_ADDRESS");
             cfg.usdc = vm.envAddress("SEPOLIA_USDC_ADDRESS");
+            cfg.indexToken = vm.envAddress("SEPOLIA_INDEX_TOKEN_PROXY_ADDRESS");
         } else if (keccak256(bytes(targetChain)) == keccak256("arbitrum_mainnet")) {
             cfg.chainSelector = uint64(vm.envUint("ARBITRUM_CCIP_CHAIN_SELECTOR"));
             cfg.functionsOracle = vm.envAddress("ARBITRUM_FUNCTIONS_ORACLE_PROXY_ADDRESS");
@@ -110,9 +119,7 @@ contract DeployCCIPAll is Script {
             cfg.factoryV3 = vm.envAddress("ARBITRUM_UNISWAP_FACTORY_V3_ADDRESS");
             cfg.swapRouterV2 = vm.envAddress("ARBITRUM_SWAP_ROUTER_V2_ADDRESS");
             cfg.factoryV2 = vm.envAddress("ARBITRUM_UNISWAP_FACTORY_V2_ADDRESS");
-            cfg.vaultAddress = vm.envAddress("ARBITRUM_VAULT_PROXY_ADDRESS");
             cfg.ccipRouter = vm.envAddress("ARBITRUM_CCIP_ROUTER_ADDRESS");
-            cfg.indexToken = vm.envAddress("ARBITRUM_INDEX_TOKEN_PROXY_ADDRESS");
             cfg.orderManager = vm.envAddress("ARBITRUM_ORDER_MANAGER_PROXY_ADDRESS");
             cfg.usdc = vm.envAddress("ARBITRUM_USDC_ADDRESS");
         } else {
@@ -142,41 +149,41 @@ contract DeployCCIPAll is Script {
         mainChainStorage = MainChainStorage(proxy);
     }
 
-    function _deployCrossChainIndexFactoryStorage(address owner, ChainConfig memory cfg)
-        internal
-        returns (address proxy)
-    {
-        proxy = Upgrades.deployTransparentProxy(
-            "CrossChainIndexFactoryStorage.sol",
-            owner,
-            abi.encodeCall(
-                CrossChainIndexFactoryStorage.initialize,
-                (
-                    cfg.chainSelector,
-                    cfg.linkToken,
-                    cfg.ccipRouter,
-                    cfg.weth,
-                    cfg.swapRouterV3,
-                    cfg.factoryV3,
-                    cfg.swapRouterV2,
-                    cfg.toUsdPriceFeed
-                )
-            )
-        );
-        crossChainIndexFactoryStorage = CrossChainIndexFactoryStorage(proxy);
-    }
+    // function _deployCrossChainIndexFactoryStorage(address owner, ChainConfig memory cfg)
+    //     internal
+    //     returns (address proxy)
+    // {
+    //     proxy = Upgrades.deployTransparentProxy(
+    //         "CrossChainIndexFactoryStorage.sol",
+    //         owner,
+    //         abi.encodeCall(
+    //             CrossChainIndexFactoryStorage.initialize,
+    //             (
+    //                 cfg.chainSelector,
+    //                 cfg.linkToken,
+    //                 cfg.ccipRouter,
+    //                 cfg.weth,
+    //                 cfg.swapRouterV3,
+    //                 cfg.factoryV3,
+    //                 cfg.swapRouterV2,
+    //                 cfg.toUsdPriceFeed
+    //             )
+    //         )
+    //     );
+    //     crossChainIndexFactoryStorage = CrossChainIndexFactoryStorage(proxy);
+    // }
 
-    function _deployCrossChainIndexFactory(address owner, ChainConfig memory cfg, address ccStorageProxy)
-        internal
-        returns (address proxy)
-    {
-        proxy = Upgrades.deployTransparentProxy(
-            "CrossChainIndexFactory.sol",
-            owner,
-            abi.encodeCall(CrossChainIndexFactory.initialize, (ccStorageProxy, cfg.ccipRouter, cfg.linkToken))
-        );
-        crossChainIndexFactory = CrossChainIndexFactory(payable(proxy));
-    }
+    // function _deployCrossChainIndexFactory(address owner, ChainConfig memory cfg, address ccStorageProxy)
+    //     internal
+    //     returns (address proxy)
+    // {
+    //     proxy = Upgrades.deployTransparentProxy(
+    //         "CrossChainIndexFactory.sol",
+    //         owner,
+    //         abi.encodeCall(CrossChainIndexFactory.initialize, (ccStorageProxy, cfg.ccipRouter, cfg.linkToken))
+    //     );
+    //     crossChainIndexFactory = CrossChainIndexFactory(payable(proxy));
+    // }
 
     function _deployBalancerSender(address owner, ChainConfig memory cfg, address mainChainStorageProxy)
         internal
@@ -239,6 +246,30 @@ contract DeployCCIPAll is Script {
             )
         );
         mainChainBalancer = MainChainBalancer(proxy);
+    }
+
+    function _deployMainChainBalancer2(
+        address owner,
+        ChainConfig memory cfg,
+        address mainChainStorageProxy,
+        address balancerSenderProxy
+    ) internal returns (address proxy) {
+        proxy = Upgrades.deployTransparentProxy(
+            "MainChainBalancer2.sol",
+            owner,
+            abi.encodeCall(
+                MainChainBalancer2.initialize,
+                (
+                    cfg.chainSelector,
+                    mainChainStorageProxy,
+                    cfg.functionsOracle,
+                    payable(balancerSenderProxy),
+                    cfg.weth,
+                    cfg.usdc
+                )
+            )
+        );
+        mainChainBalancer2 = MainChainBalancer2(proxy);
     }
 
     function _deployMainChainFactory(
