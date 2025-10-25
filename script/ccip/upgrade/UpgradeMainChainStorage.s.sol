@@ -24,7 +24,7 @@ contract UpgradeMainChainStorage is Script {
             revert("Unsupported target chain");
         }
 
-        Upgrades.upgradeProxy(proxyAddress, "MainChainStorage.sol", "", owner);
+        Upgrades.upgradeProxy(proxyAddress, "MainChainStorageV2.sol", "", owner);
 
         address newImpl = Upgrades.getImplementationAddress(proxyAddress);
         console.log("MainChainStorage proxy upgraded to new implementation at:", newImpl);

@@ -1,0 +1,50 @@
+// SPDX-License-Identifier: MIT
+pragma solidity 0.8.25;
+
+import {Script} from "forge-std/Script.sol";
+import {console} from "forge-std/console.sol";
+import {stdJson} from "forge-std/StdJson.sol";
+
+import {FunctionsOracle} from "../../../src/oracle/FunctionsOracle.sol";
+
+contract CallMockFulfillRequest is Script {
+    using stdJson for string;
+
+    function run() external {
+        uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
+        string memory targetChain = vm.envOr("TARGET_CHAIN", string("arbitrum_sepolia"));
+        address oracle = _functionsOracle(targetChain);
+
+        string memory jsonPath = vm.envString("MOCK_FULFILL_REQUEST_JSON");
+        string memory json = vm.readFile(jsonPath);
+
+        address[] memory indexTokens = abi.decode(json.parseRaw(".indexTokens"), (address[]));
+        address[] memory tokens = abi.decode(json.parseRaw(".tokens"), (address[]));
+        uint256[] memory marketShares = abi.decode(json.parseRaw(".marketShares"), (uint256[]));
+
+        require(indexTokens.length == tokens.length, "length mismatch");
+        require(tokens.length == marketShares.length, "length mismatch");
+
+        console.log("Calling mockFulfillRequest on:", oracle);
+        vm.startBroadcast(deployerPrivateKey);
+        FunctionsOracle(oracle).mockFulfillRequest(indexTokens, tokens, marketShares);
+        vm.stopBroadcast();
+    }
+
+    function _functionsOracle(string memory targetChain) internal view returns (address) {
+        string memory prefix = _envPrefix(targetChain);
+        return vm.envAddress(string.concat(prefix, "_FUNCTIONS_ORACLE_PROXY_ADDRESS"));
+    }
+
+    function _envPrefix(string memory targetChain) internal pure returns (string memory) {
+        bytes32 chainHash = keccak256(bytes(targetChain));
+        if (chainHash == keccak256("arbitrum_mainnet")) {
+            return "ARBITRUM";
+        }
+        if (chainHash == keccak256("arbitrum_sepolia")) {
+            return "ARBITRUM_SEPOLIA";
+        }
+        return "SEPOLIA";
+    }
+}
+

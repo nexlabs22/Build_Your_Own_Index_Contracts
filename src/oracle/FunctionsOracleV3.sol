@@ -14,7 +14,8 @@ error ProviderIndexIsZero();
 
 /// @title FunctionsOracle
 /// @notice Stores data and provides functions for managing index token issuance and redemption
-contract FunctionsOracle is Initializable, FunctionsClient, ConfirmedOwner {
+/// @custom:oz-upgrades-from FunctionsOracleV2
+contract FunctionsOracleV3 is Initializable, FunctionsClient, ConfirmedOwner {
     using FunctionsRequest for FunctionsRequest.Request;
 
     // Addresses of factory contracts
@@ -299,7 +300,7 @@ contract FunctionsOracle is Initializable, FunctionsClient, ConfirmedOwner {
 
             uint64 chainSelector = tokenChainSelector[token];
             uint64 providerIndex = tokenProviderIndex[token];
-            if (chainSelector == 0) revert ChainSelectorIsZero();
+            // if (chainSelector == 0) revert ChainSelectorIsZero();
             if (providerIndex == 0) revert ProviderIndexIsZero();
             // oracle main actions
             _initMainOracleData(indexToken, token, share);

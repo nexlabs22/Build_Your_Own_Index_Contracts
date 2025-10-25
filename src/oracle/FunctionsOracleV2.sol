@@ -14,7 +14,8 @@ error ProviderIndexIsZero();
 
 /// @title FunctionsOracle
 /// @notice Stores data and provides functions for managing index token issuance and redemption
-contract FunctionsOracle is Initializable, FunctionsClient, ConfirmedOwner {
+/// @custom:oz-upgrades-from FunctionsOracle
+contract FunctionsOracleV2 is Initializable, FunctionsClient, ConfirmedOwner {
     using FunctionsRequest for FunctionsRequest.Request;
 
     // Addresses of factory contracts
