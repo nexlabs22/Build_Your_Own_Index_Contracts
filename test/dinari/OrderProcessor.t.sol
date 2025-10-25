@@ -454,11 +454,7 @@ contract OrderProcessorTest is Test {
         paymentToken.mint(user, quantityIn * 1e6);
 
         SigUtils.Permit memory permit = SigUtils.Permit({
-            owner: user,
-            spender: address(issuer),
-            value: quantityIn,
-            nonce: 0,
-            deadline: block.timestamp + 30 days
+            owner: user, spender: address(issuer), value: quantityIn, nonce: 0, deadline: block.timestamp + 30 days
         });
 
         bytes32 digest = sigUtils.getTypedDataHash(permit);

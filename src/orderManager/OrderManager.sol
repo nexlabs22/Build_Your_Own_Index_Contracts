@@ -194,17 +194,17 @@ contract OrderManager is Initializable, OwnableUpgradeable {
                     _config.crossChainFee
                 );
                 providerNonceToBuyOrderNonce[_config.indexTokenAddress][_config.providerIndex][ccipNonce] =
-                    orderNonceInfo.orderNonce;
+                orderNonceInfo.orderNonce;
                 orderNonceToIssuanceNonce[orderNonceInfo.orderNonce] = _config.requestNonce;
             } else if (_config.providerIndex == 2) {
                 uint256 dinariNonce = issuanceWithDinari(_config.indexTokenAddress, _config.inputTokenAmount);
                 providerNonceToBuyOrderNonce[_config.indexTokenAddress][_config.providerIndex][dinariNonce] =
-                    orderNonceInfo.orderNonce;
+                orderNonceInfo.orderNonce;
                 orderNonceToIssuanceNonce[orderNonceInfo.orderNonce] = _config.requestNonce;
             } else if (_config.providerIndex == 3) {
                 uint256 backedFiNonce = issuanceWithBackedFiFactory(_config.indexTokenAddress, _config.inputTokenAmount);
                 providerNonceToBuyOrderNonce[_config.indexTokenAddress][_config.providerIndex][backedFiNonce] =
-                    orderNonceInfo.orderNonce;
+                orderNonceInfo.orderNonce;
                 orderNonceToIssuanceNonce[orderNonceInfo.orderNonce] = _config.requestNonce;
             }
         } else {
@@ -213,20 +213,20 @@ contract OrderManager is Initializable, OwnableUpgradeable {
                     _config.indexTokenAddress, _config.burnPercent, _config.outputTokenAddress, _config.crossChainFee
                 );
                 providerNonceToSellOrderNonce[_config.indexTokenAddress][_config.providerIndex][ccipNonce] =
-                    orderNonceInfo.orderNonce;
+                orderNonceInfo.orderNonce;
                 orderNonceToRedemptionNonce[orderNonceInfo.orderNonce] = _config.requestNonce;
             } else if (_config.providerIndex == 2) {
                 uint256 dinariNonce =
                     redemptionWithDinari(_config.indexTokenAddress, _config.inputTokenAmount, _config.burnPercent);
                 providerNonceToSellOrderNonce[_config.indexTokenAddress][_config.providerIndex][dinariNonce] =
-                    orderNonceInfo.orderNonce;
+                orderNonceInfo.orderNonce;
                 orderNonceToRedemptionNonce[orderNonceInfo.orderNonce] = _config.requestNonce;
             } else if (_config.providerIndex == 3) {
                 uint256 backedFiNonce = redemptionWithBackedFiFactory(
                     _config.indexTokenAddress, _config.inputTokenAmount, _config.burnPercent
                 );
                 providerNonceToSellOrderNonce[_config.indexTokenAddress][_config.providerIndex][backedFiNonce] =
-                    orderNonceInfo.orderNonce;
+                orderNonceInfo.orderNonce;
                 orderNonceToRedemptionNonce[orderNonceInfo.orderNonce] = _config.requestNonce;
             }
         }

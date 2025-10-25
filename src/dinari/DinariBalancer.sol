@@ -126,9 +126,10 @@ contract DinariBalancer is Initializable, OwnableUpgradeable, PausableUpgradeabl
     }
 
     function getAmountAfterFee(uint24 percentageFeeRate, uint256 orderValue) internal pure returns (uint256) {
-        return percentageFeeRate != 0
-            ? PrbMath2.mulDiv(orderValue, 1_000_000, (1_000_000 + percentageFeeRate))
-            : orderValue;
+        return
+            percentageFeeRate != 0
+                ? PrbMath2.mulDiv(orderValue, 1_000_000, (1_000_000 + percentageFeeRate))
+                : orderValue;
     }
 
     function askValues(address _indexToken) public whenNotPaused onlyOwnerOrOperator returns (uint256) {
@@ -239,10 +240,8 @@ contract DinariBalancer is Initializable, OwnableUpgradeable, PausableUpgradeabl
             uint256 tokenValuePercent = (tokenValue * 100e18) / _portfolioValue;
             if (tokenValuePercent > functionsOracle.tokenOracleMarketShare(_indexToken, tokenAddress)) {
                 uint256 amount = tokenBalance
-                    - (
-                        (tokenBalance * functionsOracle.tokenOracleMarketShare(_indexToken, tokenAddress))
-                            / tokenValuePercent
-                    );
+                    - ((tokenBalance * functionsOracle.tokenOracleMarketShare(_indexToken, tokenAddress))
+                        / tokenValuePercent);
                 if (tokenValue * amount / tokenBalance > minimumOrderAmount) {
                     (uint256 requestId_,) =
                         requestSellOrder(_indexToken, tokenAddress, amount, address(dinariStorage.dinariOrderManager()));
@@ -544,7 +543,9 @@ contract DinariBalancer is Initializable, OwnableUpgradeable, PausableUpgradeabl
         nonReentrant
         onlyOwnerOrOperator
     {
-        if (!checkSecondRebalanceOrdersStatus(_indexToken, _rebalanceNonce)) revert PrevActionNotCompleted();
+        if (!checkSecondRebalanceOrdersStatus(_indexToken, _rebalanceNonce)) {
+            revert PrevActionNotCompleted();
+        }
         // require(checkSecondRebalanceOrdersStatus(_indexToken, _rebalanceNonce), "Rebalance orders are not completed");
 
         IOrderProcessor issuer = dinariStorage.issuer();
@@ -632,11 +633,7 @@ contract DinariBalancer is Initializable, OwnableUpgradeable, PausableUpgradeabl
         return true;
     }
 
-    function checkSecondRebalanceOrdersStatus(address _indexToken, uint256 _rebalanceNonce)
-        public
-        view
-        returns (bool)
-    {
+    function checkSecondRebalanceOrdersStatus(address _indexToken, uint256 _rebalanceNonce) public view returns (bool) {
         if (_rebalanceNonce > rebalanceNonce[_indexToken]) revert WrongRebalanceNonce();
 
         // require(_rebalanceNonce <= rebalanceNonce[_indexToken], "Wrong rebalance nonce!");

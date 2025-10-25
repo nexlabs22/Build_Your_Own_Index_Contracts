@@ -61,11 +61,9 @@ contract DeployBackedFiAll is Script {
         return vm.envAddress(string.concat(prefix, suffix));
     }
 
-    function _initializeBackedFiStorage(
-        string memory prefix,
-        address backedFiStorageProxy,
-        address stagingProxy
-    ) internal {
+    function _initializeBackedFiStorage(string memory prefix, address backedFiStorageProxy, address stagingProxy)
+        internal
+    {
         BackedFiStorage bfs = BackedFiStorage(backedFiStorageProxy);
         address indexFactoryProxy = _envAddr(prefix, "_INDEX_FACTORY_PROXY_ADDRESS");
         address functionsOracleProxy = _envAddr(prefix, "_FUNCTIONS_ORACLE_PROXY_ADDRESS");
@@ -86,9 +84,8 @@ contract DeployBackedFiAll is Script {
     ) internal {
         address functionsOracleProxy = _envAddr(prefix, "_FUNCTIONS_ORACLE_PROXY_ADDRESS");
         address indexFactoryStorageProxy = _envAddr(prefix, "_INDEX_FACTORY_STORAGE_PROXY_ADDRESS");
-        BackedFiBalancer(backedFiBalancerProxy).initialize(
-            backedFiStorageProxy, functionsOracleProxy, indexFactoryStorageProxy
-        );
+        BackedFiBalancer(backedFiBalancerProxy)
+            .initialize(backedFiStorageProxy, functionsOracleProxy, indexFactoryStorageProxy);
     }
 
     function _initializeBackedFiFactory(address backedFiStorageProxy, address backedFiFactoryProxy) internal {

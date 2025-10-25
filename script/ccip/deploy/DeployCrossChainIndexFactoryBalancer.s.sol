@@ -3,20 +3,15 @@ pragma solidity 0.8.25;
 
 import {Script} from "forge-std/Script.sol";
 import {console} from "forge-std/console.sol";
-import {ProxyAdmin} from "@openzeppelin/contracts/proxy/transparent/ProxyAdmin.sol";
-import {TransparentUpgradeableProxy} from "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
-import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import "openzeppelin-foundry-upgrades/Upgrades.sol";
 
-import "../../../src/ccip/CrossChainIndexFactory.sol";
+import {CrossChainIndexFactoryBalancer} from "../../../src/ccip/CrossChainIndexFactoryBalancer.sol";
 
-contract DeployCrossChainIndexFactory is Script {
-    CrossChainIndexFactory public crossChainIndexFactory;
-
+contract DeployCrossChainIndexFactoryBalancer is Script {
     function run() external {
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
-        string memory targetChain = vm.envOr("TARGET_CHAIN", string("arbitrum_sepolia"));
         address owner = vm.addr(deployerPrivateKey);
+        string memory targetChain = vm.envOr("TARGET_CHAIN", string("arbitrum_sepolia"));
 
         address storageProxy;
         address ccipRouter;
@@ -41,18 +36,19 @@ contract DeployCrossChainIndexFactory is Script {
         vm.startBroadcast(deployerPrivateKey);
 
         address proxy = Upgrades.deployTransparentProxy(
-            "CrossChainIndexFactory.sol",
+            "CrossChainIndexFactoryBalancer.sol",
             owner,
-            abi.encodeCall(CrossChainIndexFactory.initialize, (storageProxy, ccipRouter, linkToken))
+            abi.encodeCall(CrossChainIndexFactoryBalancer.initialize, (storageProxy, ccipRouter, linkToken))
         );
 
-        crossChainIndexFactory = CrossChainIndexFactory(payable(proxy));
+        CrossChainIndexFactoryBalancer balancer = CrossChainIndexFactoryBalancer(payable(proxy));
         address adminAddr = Upgrades.getAdminAddress(proxy);
 
-        console.log("CrossChainIndexFactory implementation deployed at:", address(crossChainIndexFactory));
-        console.log("CrossChainIndexFactory proxy deployed at:", proxy);
-        console.log("ProxyAdmin for CrossChainIndexFactory deployed at:", adminAddr);
+        console.log("CrossChainIndexFactoryBalancer implementation deployed at:", address(balancer));
+        console.log("CrossChainIndexFactoryBalancer proxy deployed at:", proxy);
+        console.log("ProxyAdmin for CrossChainIndexFactoryBalancer deployed at:", adminAddr);
 
         vm.stopBroadcast();
     }
 }
+

@@ -7,7 +7,6 @@ pragma solidity ^0.8.23;
 /// Orders are requested on-chain, processed off-chain, then fulfillment is submitted for on-chain settlement
 interface IOrderProcessor {
     /// ------------------ Types ------------------ ///
-
     // Market or limit order
     enum OrderType {
         MARKET,

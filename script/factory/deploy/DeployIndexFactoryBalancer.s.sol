@@ -42,7 +42,13 @@ contract DeployIndexFactoryBalancer is Script {
             owner,
             abi.encodeCall(
                 IndexFactoryBalancer.initialize,
-                (functionsOracleProxy, indexFactoryStorageProxy, mainChainBalancerProxy, mainChainBalancer2Proxy, dinariBalancerProxy)
+                (
+                    functionsOracleProxy,
+                    indexFactoryStorageProxy,
+                    mainChainBalancerProxy,
+                    mainChainBalancer2Proxy,
+                    dinariBalancerProxy
+                )
             )
         );
 

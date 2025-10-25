@@ -3,8 +3,9 @@ pragma solidity 0.8.25;
 
 // import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import {AccessControlDefaultAdminRulesUpgradeable} from
-    "@openzeppelin/contracts-upgradeable/access/extensions/AccessControlDefaultAdminRulesUpgradeable.sol";
+import {
+    AccessControlDefaultAdminRulesUpgradeable
+} from "@openzeppelin/contracts-upgradeable/access/extensions/AccessControlDefaultAdminRulesUpgradeable.sol";
 import {IDShare, ITransferRestrictor} from "./interfaces/IDShare.sol";
 import {ERC20Rebasing} from "./ERC20Rebasing.sol";
 
@@ -14,7 +15,6 @@ import {ERC20Rebasing} from "./ERC20Rebasing.sol";
 /// @author Dinari (https://github.com/dinaricrypto/sbt-contracts/blob/main/src/dShare.sol)
 contract DShare is IDShare, Initializable, ERC20Rebasing, AccessControlDefaultAdminRulesUpgradeable {
     /// ------------------ Types ------------------ ///
-
     error Unauthorized();
     error ZeroValue();
 

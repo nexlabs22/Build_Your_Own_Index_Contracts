@@ -30,8 +30,9 @@ abstract contract FunctionsClient is IFunctionsClient {
         internal
         returns (bytes32)
     {
-        bytes32 requestId =
-            i_router.sendRequest(subscriptionId, data, FunctionsRequest.REQUEST_DATA_VERSION, callbackGasLimit, donId);
+        bytes32 requestId = i_router.sendRequest(
+            subscriptionId, data, FunctionsRequest.REQUEST_DATA_VERSION, callbackGasLimit, donId
+        );
         emit RequestSent(requestId);
         return requestId;
     }

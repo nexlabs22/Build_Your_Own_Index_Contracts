@@ -32,12 +32,7 @@ error RedemptionAlreadyCompleted();
 /// @title Index Token Factory
 /// @author NEX Labs Protocol
 /// @notice Allows User to initiate burn/mint requests and allows issuers to approve or deny them
-contract DinariFactoryProcessor is
-    Initializable,
-    OwnableUpgradeable,
-    PausableUpgradeable,
-    ReentrancyGuardUpgradeable
-{
+contract DinariFactoryProcessor is Initializable, OwnableUpgradeable, PausableUpgradeable, ReentrancyGuardUpgradeable {
     DinariStorage public dinariStorage;
     IndexFactoryStorage public factoryStorage;
     FunctionsOracle public functionsOracle;
@@ -166,9 +161,8 @@ contract DinariFactoryProcessor is
 
     function _setCompleteIssuanceData(address _tokenAddress, uint256 _balance, address _indexToken) internal {
         IERC20(_tokenAddress).approve(dinariStorage.wrappedDshareAddress(_tokenAddress), _balance);
-        WrappedDShare(dinariStorage.wrappedDshareAddress(_tokenAddress)).deposit(
-            _balance, address(factoryStorage.indexTokenToVault(_indexToken))
-        );
+        WrappedDShare(dinariStorage.wrappedDshareAddress(_tokenAddress))
+            .deposit(_balance, address(factoryStorage.indexTokenToVault(_indexToken)));
     }
 
     function completeRedemption(address _indexToken, uint256 _redemptionNonce) public nonReentrant whenNotPaused {
@@ -213,12 +207,9 @@ contract DinariFactoryProcessor is
         );
     }
 
-    function _routeRedemption(
-        address _indexToken,
-        uint256 _redemptionNonce,
-        address _tokenAddress,
-        uint256 _net
-    ) internal {
+    function _routeRedemption(address _indexToken, uint256 _redemptionNonce, address _tokenAddress, uint256 _net)
+        internal
+    {
         if (_net == 0) return;
         DinariOrderManager dom = dinariStorage.dinariOrderManager();
         address usdc = dinariStorage.usdc();

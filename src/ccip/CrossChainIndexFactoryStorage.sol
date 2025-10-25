@@ -79,7 +79,10 @@ contract CrossChainIndexFactoryStorage is
     mapping(address => uint256) public totalReceivedAmount;
 
     modifier onlyFactory() {
-        require(msg.sender == crossChainFactory || msg.sender == crossChainFactoryBalancer, "Only factory can call this function");
+        require(
+            msg.sender == crossChainFactory || msg.sender == crossChainFactoryBalancer,
+            "Only factory can call this function"
+        );
         _;
     }
 
@@ -197,8 +200,6 @@ contract CrossChainIndexFactoryStorage is
         toETHFees[_crossChainToken] = PathHelpers.reverseUint24Array(_fromETHFees);
     }
 
-    
-
     function setVerifiedFactory(address _factory, uint64 _chainSelector, bool _verified) public onlyOwner {
         verifiedFactory[_factory][_chainSelector] = _verified;
     }
@@ -239,11 +240,12 @@ contract CrossChainIndexFactoryStorage is
         return toETHFees[_tokenAddress];
     }
 
-    function getTokenCurrentValue(address _indexToken, address _tokenAddress, address[] memory _fromETHPath, uint24[] memory _fromETHFees)
-        public
-        view
-        returns (uint256)
-    {
+    function getTokenCurrentValue(
+        address _indexToken,
+        address _tokenAddress,
+        address[] memory _fromETHPath,
+        uint24[] memory _fromETHFees
+    ) public view returns (uint256) {
         uint256 tokenValue = getAmountOut(
             PathHelpers.reverseAddressArray(_fromETHPath), // toETHPath
             PathHelpers.reverseUint24Array(_fromETHFees), // toETHFees
@@ -296,9 +298,8 @@ contract CrossChainIndexFactoryStorage is
     {
         uint256 lastAmount = amountIn;
         for (uint256 i = 0; i < path.length - 1; i++) {
-            lastAmount = IPriceOracle(priceOracle).estimateAmountOut(
-                address(factoryV3), path[i], path[i + 1], uint128(lastAmount), fees[i]
-            );
+            lastAmount = IPriceOracle(priceOracle)
+                .estimateAmountOut(address(factoryV3), path[i], path[i + 1], uint128(lastAmount), fees[i]);
         }
         amountOut = lastAmount;
     }

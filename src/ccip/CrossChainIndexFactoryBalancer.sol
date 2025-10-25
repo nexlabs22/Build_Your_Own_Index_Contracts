@@ -45,6 +45,7 @@ contract CrossChainIndexFactoryBalancer is
         uint256[] percentages;
         uint256[] extraValues;
     }
+
     struct Message {
         uint64 sourceChainSelector; // The chain selector of the source chain.
         address sender; // The address of the sender.
@@ -195,9 +196,11 @@ contract CrossChainIndexFactoryBalancer is
         return messageId;
     }
 
-    function _decodeReceive(
-        Client.Any2EVMMessage memory any2EvmMessage
-    ) internal pure returns( DecodedMessage memory m) {
+    function _decodeReceive(Client.Any2EVMMessage memory any2EvmMessage)
+        internal
+        pure
+        returns (DecodedMessage memory m)
+    {
         (
             uint256 _actionType,
             address _indexToken,
@@ -294,12 +297,7 @@ contract CrossChainIndexFactoryBalancer is
         }
     }
 
-    
-
     uint256 public receivedCount;
-    
-
-    
 
     struct HandleAskValuesInputs {
         address indexToken;
@@ -319,10 +317,12 @@ contract CrossChainIndexFactoryBalancer is
         HandleAskValuesLocalVars memory vars;
         vars.tokenValueArr = new uint256[](input.targetAddresses.length);
         for (uint256 i = 0; i < input.targetAddresses.length; i++) {
-            (address[] memory _fromETHPath2, uint24[] memory _fromETHFees2) = PathHelpers.decodePathBytes(input.targetPaths[i]);
+            (address[] memory _fromETHPath2, uint24[] memory _fromETHFees2) =
+                PathHelpers.decodePathBytes(input.targetPaths[i]);
             if (input.targetAddresses[i] == address(weth())) {
-                vars.tokenValueArr[i] =
-                    factoryStorage.convertEthToUsd(IERC20(input.targetAddresses[i]).balanceOf(address(vault(input.indexToken))));
+                vars.tokenValueArr[i] = factoryStorage.convertEthToUsd(
+                    IERC20(input.targetAddresses[i]).balanceOf(address(vault(input.indexToken)))
+                );
             } else {
                 uint256 tokenValue = factoryStorage.getAmountOut(
                     PathHelpers.reverseAddressArray(_fromETHPath2), // toETHPath
@@ -333,7 +333,14 @@ contract CrossChainIndexFactoryBalancer is
             }
         }
         bytes memory data = abi.encode(
-            2, input.targetAddresses, new address[](0), new bytes[](0), new bytes[](0), input.nonce, vars.tokenValueArr, zeroArr
+            2,
+            input.targetAddresses,
+            new address[](0),
+            new bytes[](0),
+            new bytes[](0),
+            input.nonce,
+            vars.tokenValueArr,
+            zeroArr
         );
         sendMessage(input.sourceChainSelector, input.sender, data, MessageSender.PayFeesIn.Native);
     }
@@ -474,7 +481,8 @@ contract CrossChainIndexFactoryBalancer is
         bytes[] memory currentTargetPaths,
         bytes[] memory oracleTargetPaths,
         uint256[] memory oracleTokenShares,
-        address /*sender*/,
+        address,
+        /*sender*/
         uint256 /*nonce*/
     ) internal returns (uint256) {
         SwapFirstReweightActionVars memory vars;
@@ -569,7 +577,7 @@ contract CrossChainIndexFactoryBalancer is
         SwapSecondReweightActionVars memory vars;
         vars.chainSelectorTotalShares = extraData[1];
         vars.chainSelectorCurrentTokensCount = currentTokens.length;
-    vars.initialWethBalance = weth_.balanceOf(address(vault_));
+        vars.initialWethBalance = weth_.balanceOf(address(vault_));
         vars.swapWethAmount = 0; // Initialize swapWethAmount to 0
         for (uint256 i = 0; i < currentTokens.length; i++) {
             address tokenAddress = currentTokens[i];
@@ -621,7 +629,7 @@ contract CrossChainIndexFactoryBalancer is
     ) public returns (bytes32) {
         // Validate input parameters
         require(destinationChainSelector > 0, "Invalid destination chain selector");
-    require(receiver != address(0), "Invalid receiver address");
+        require(receiver != address(0), "Invalid receiver address");
         require(_data.length > 0, "Data cannot be empty");
 
         // bytes32 data;

@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity 0.8.25;
 
-import {AccessControlDefaultAdminRules} from
-    "@openzeppelin/contracts/access/extensions/AccessControlDefaultAdminRules.sol";
+import {
+    AccessControlDefaultAdminRules
+} from "@openzeppelin/contracts/access/extensions/AccessControlDefaultAdminRules.sol";
 import {ITransferRestrictor} from "./interfaces/ITransferRestrictor.sol";
 
 /// @notice Enforces transfer restrictions
@@ -11,7 +12,6 @@ import {ITransferRestrictor} from "./interfaces/ITransferRestrictor.sol";
 /// Accounts may be restricted if they are suspected of malicious or illegal activity
 contract TransferRestrictor is AccessControlDefaultAdminRules, ITransferRestrictor {
     /// ------------------ Types ------------------ ///
-
     /// @dev Account is restricted
     error AccountRestricted();
 

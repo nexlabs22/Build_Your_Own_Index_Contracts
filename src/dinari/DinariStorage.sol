@@ -385,10 +385,7 @@ contract DinariStorage is Initializable, OwnableUpgradeable {
         issuanceIndexTokenPrimaryTotalSupply[_indexToken][_issuanceNonce] = _amount;
     }
 
-    function setIssuanceInputAmount(address _indexToken, uint256 _issuanceNonce, uint256 _amount)
-        external
-        onlyFactory
-    {
+    function setIssuanceInputAmount(address _indexToken, uint256 _issuanceNonce, uint256 _amount) external onlyFactory {
         require(_amount > 0, "Invalid issuance input amount");
         issuanceInputAmount[_indexToken][_issuanceNonce] = _amount;
     }
@@ -417,11 +414,7 @@ contract DinariStorage is Initializable, OwnableUpgradeable {
         orderInstanceById[_indexToken][_requestId] = _order;
     }
 
-    function getOrderInstanceById(address _indexToken, uint256 _id)
-        public
-        view
-        returns (IOrderProcessor.Order memory)
-    {
+    function getOrderInstanceById(address _indexToken, uint256 _id) public view returns (IOrderProcessor.Order memory) {
         require(_id > 0, "Invalid Request Id");
         return orderInstanceById[_indexToken][_id];
     }
@@ -517,8 +510,7 @@ contract DinariStorage is Initializable, OwnableUpgradeable {
         require(_inputAmount > 0, "Invalid amount");
         uint256 fees;
 
-        (uint256 totalMarketShare, address[] memory underlyingAssets, uint256[] memory underlyingMarketShares) =
-        functionsOracle.getCurrentProviderIndexData(
+        (uint256 totalMarketShare, address[] memory underlyingAssets, uint256[] memory underlyingMarketShares) = functionsOracle.getCurrentProviderIndexData(
             _indexToken, functionsOracle.currentFilledCount(_indexToken), providerIndex
         );
 

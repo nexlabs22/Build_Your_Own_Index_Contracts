@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
+
 // pragma experimental ABIEncoderV2;
 // import "chainlink/contracts/src/v0.8/libs/LinkTokenReceiver.sol";
 // import "chainlink/contracts/src/v0.8/libs/SafeMathChainlink.sol";
@@ -12,12 +13,19 @@ pragma solidity ^0.8.0;
  */
 contract MockApiOracle {
     function sendRequest(
-        uint64 /*subscriptionId*/,
-        bytes calldata /*data*/,
-        uint16 /*dataVersion*/,
-        uint32 /*callbackGasLimit*/,
+        uint64,
+        /*subscriptionId*/
+        bytes calldata,
+        /*data*/
+        uint16,
+        /*dataVersion*/
+        uint32,
+        /*callbackGasLimit*/
         bytes32 /*donId*/
-    ) external returns (bytes32) {
+    )
+        external
+        returns (bytes32)
+    {
         return getRandomBytes32();
     }
 

@@ -88,9 +88,9 @@ contract BackedFiStorage is Initializable, OwnableUpgradeable {
         //     // || msg.sender == address(factoryBalancer),
         //     "Caller is not a factory contract"
         // );
-        if (
-            msg.sender != address(indexFactory) && msg.sender != nexBot && msg.sender != address(sca)
-        ) revert NotFactoryContract();
+        if (msg.sender != address(indexFactory) && msg.sender != nexBot && msg.sender != address(sca)) {
+            revert NotFactoryContract();
+        }
         _;
     }
 
@@ -180,10 +180,7 @@ contract BackedFiStorage is Initializable, OwnableUpgradeable {
         feeReceiver = _feeReceiver;
     }
 
-    function setIssuanceInputAmount(address _indexToken, uint256 _issuanceNonce, uint256 _amount)
-        external
-        onlyFactory
-    {
+    function setIssuanceInputAmount(address _indexToken, uint256 _issuanceNonce, uint256 _amount) external onlyFactory {
         if (_amount == 0) revert ZeroAmount();
         issuanceInputAmountByIndexToken[_indexToken][_issuanceNonce] = _amount;
     }
@@ -465,7 +462,12 @@ contract BackedFiStorage is Initializable, OwnableUpgradeable {
         return !redemptionRoundActive[_indexToken][prev] && redemptionIsCompleted[_indexToken][prev];
     }
 
-    function getPortfolioValue(address _indexToken, address[] memory, /* underlyingAssets */ uint256[] memory _prices)
+    function getPortfolioValue(
+        address _indexToken,
+        address[] memory,
+        /* underlyingAssets */
+        uint256[] memory _prices
+    )
         public
         view
         returns (uint256 totalValue)
@@ -504,7 +506,11 @@ contract BackedFiStorage is Initializable, OwnableUpgradeable {
         address _indexToken,
         address _underlyingAsset,
         uint256 _price // 1e18-scaled
-    ) public view returns (uint256 totalValue) {
+    )
+        public
+        view
+        returns (uint256 totalValue)
+    {
         // require(_indexToken != address(0), "invalid index token");
         if (_indexToken == address(0)) revert InvalidIndexTokenAddress();
         address vaultAddr = indexTokenToVault[_indexToken];

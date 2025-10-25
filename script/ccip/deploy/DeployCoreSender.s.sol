@@ -56,7 +56,16 @@ contract DeployCoreSender is Script {
             owner,
             abi.encodeCall(
                 CoreSender.initialize,
-                (payable(indexToken), mainChainStorage, orderManager, functionsOracle, linkToken, ccipRouter, weth, usdc)
+                (
+                    payable(indexToken),
+                    mainChainStorage,
+                    orderManager,
+                    functionsOracle,
+                    linkToken,
+                    ccipRouter,
+                    weth,
+                    usdc
+                )
             )
         );
 

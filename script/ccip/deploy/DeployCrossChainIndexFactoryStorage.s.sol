@@ -15,7 +15,7 @@ contract DeployCrossChainIndexFactoryStorage is Script {
 
     function run() external {
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
-        string memory targetChain = "sepolia";
+        string memory targetChain = vm.envOr("TARGET_CHAIN", string("arbitrum_sepolia"));
         address owner = vm.addr(deployerPrivateKey);
 
         uint64 chainSelector;
@@ -27,7 +27,16 @@ contract DeployCrossChainIndexFactoryStorage is Script {
         address swapRouterV2;
         address priceFeed;
 
-        if (keccak256(bytes(targetChain)) == keccak256("sepolia")) {
+        if (keccak256(bytes(targetChain)) == keccak256("arbitrum_sepolia")) {
+            chainSelector = uint64(vm.envUint("ARBITRUM_SEPOLIA_CHAIN_SELECTOR"));
+            linkToken = vm.envAddress("ARBITRUM_SEPOLIA_CHAINLINK_TOKEN_ADDRESS");
+            ccipRouter = vm.envAddress("ARBITRUM_SEPOLIA_CCIP_ROUTER_ADDRESS");
+            weth = vm.envAddress("ARBITRUM_SEPOLIA_WETH_ADDRESS");
+            swapRouterV3 = vm.envAddress("ARBITRUM_SEPOLIA_ROUTER_V3_ADDRESS");
+            factoryV3 = vm.envAddress("ARBITRUM_SEPOLIA_FACTORY_V3_ADDRESS");
+            swapRouterV2 = vm.envAddress("ARBITRUM_SEPOLIA_ROUTER_V2_ADDRESS");
+            priceFeed = vm.envAddress("ARBITRUM_SEPOLIA_TO_USD_PRICE_FEED");
+        } else if (keccak256(bytes(targetChain)) == keccak256("sepolia")) {
             chainSelector = uint64(vm.envUint("SEPOLIA_CCIP_CHAIN_SELECTOR"));
             linkToken = vm.envAddress("SEPOLIA_LINK_TOKEN_ADDRESS");
             ccipRouter = vm.envAddress("SEPOLIA_CCIP_ROUTER_ADDRESS");
@@ -56,16 +65,7 @@ contract DeployCrossChainIndexFactoryStorage is Script {
             owner,
             abi.encodeCall(
                 CrossChainIndexFactoryStorage.initialize,
-                (
-                    chainSelector,
-                    linkToken,
-                    ccipRouter,
-                    weth,
-                    swapRouterV3,
-                    factoryV3,
-                    swapRouterV2,
-                    priceFeed
-                )
+                (chainSelector, linkToken, ccipRouter, weth, swapRouterV3, factoryV3, swapRouterV2, priceFeed)
             )
         );
 

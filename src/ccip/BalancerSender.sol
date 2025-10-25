@@ -30,8 +30,7 @@ contract BalancerSender is Initializable, CCIPReceiver, ProposableOwnableUpgrade
 
     uint64 public currentChainSelector;
     IWETH public weth;
-    uint public reweightCalled;
-
+    uint256 public reweightCalled;
 
     event MessageSent(bytes32 messageId);
     event AskValuesCompleted(uint256 time);
@@ -40,8 +39,7 @@ contract BalancerSender is Initializable, CCIPReceiver, ProposableOwnableUpgrade
 
     modifier onlyMainChainBalancer() {
         require(
-        msg.sender == mainChainStorage.mainChainBalancer() ||
-            msg.sender == mainChainStorage.mainChainBalancer2(),
+            msg.sender == mainChainStorage.mainChainBalancer() || msg.sender == mainChainStorage.mainChainBalancer2(),
             "Only factory balancer can call this function"
         );
         _;
@@ -113,9 +111,8 @@ contract BalancerSender is Initializable, CCIPReceiver, ProposableOwnableUpgrade
     }
 
     function withdrawLink() external onlyOwner {
-        IERC20(mainChainStorage.linkToken()).transfer(
-            msg.sender, IERC20(mainChainStorage.linkToken()).balanceOf(address(this))
-        );
+        IERC20(mainChainStorage.linkToken())
+            .transfer(msg.sender, IERC20(mainChainStorage.linkToken()).balanceOf(address(this)));
     }
 
     /**
@@ -173,7 +170,7 @@ contract BalancerSender is Initializable, CCIPReceiver, ProposableOwnableUpgrade
         address crossChainIndexFactoryBalancer = mainChainStorage.crossChainFactoryBalancerBySelector(chainSelector);
 
         address[] memory tokenAddresses = functionsOracle.allCurrentChainSelectorTokens(_indexToken, chainSelector);
-        
+
         bytes memory data = abi.encode(
             2,
             _indexToken,
@@ -223,7 +220,8 @@ contract BalancerSender is Initializable, CCIPReceiver, ProposableOwnableUpgrade
         uint256 chainValue,
         uint256[] memory oracleTokenShares
     ) public onlyMainChainBalancer {
-        uint256 chainCurrentRealShare = (chainValue * 100e18) / indexFactoryBalancer.getGlobalPortfolioValueByProviderNonce(1, nonce);
+        uint256 chainCurrentRealShare = (chainValue * 100e18)
+            / indexFactoryBalancer.getGlobalPortfolioValueByProviderNonce(1, nonce);
         mainChainStorage.increaseReweightExtraPercentage(nonce, chainCurrentRealShare - oracleChainSelectorTotalShares);
         address crossChainIndexFactoryBalancer = mainChainStorage.crossChainFactoryBalancerBySelector(chainSelector);
 
@@ -289,7 +287,9 @@ contract BalancerSender is Initializable, CCIPReceiver, ProposableOwnableUpgrade
         tokensToSendArray[0].token = mainChainStorage.crossChainToken(_chainSelector);
         tokensToSendArray[0].amount = crossChainTokenAmount;
 
-        sendToken(_chainSelector, data, crossChainIndexFactoryBalancer, tokensToSendArray, MessageSender.PayFeesIn.Native);
+        sendToken(
+            _chainSelector, data, crossChainIndexFactoryBalancer, tokensToSendArray, MessageSender.PayFeesIn.Native
+        );
     }
 
     /**
@@ -356,9 +356,9 @@ contract BalancerSender is Initializable, CCIPReceiver, ProposableOwnableUpgrade
     function _handleCompleteFirstReweight(uint256 nonce) internal {
         // get total chainSelectors
         mainChainStorage.increaseReweightTotalExtraCompletedChains(nonce, 1);
-        if(
-            mainChainStorage.totalReweightExtraCompletedChains(nonce) ==
-            mainChainStorage.totalReweightExtraPendingChains(nonce)
+        if (
+            mainChainStorage.totalReweightExtraCompletedChains(nonce)
+                == mainChainStorage.totalReweightExtraPendingChains(nonce)
         ) {
             // MainChainBalancer(mainChainStorage.mainChainBalancer()).completeFirstReweightAction(nonce);
             emit FirstReweightActionCompleted(block.timestamp);
@@ -368,9 +368,9 @@ contract BalancerSender is Initializable, CCIPReceiver, ProposableOwnableUpgrade
     function _handleCompleteSecondReweight(uint256 nonce) internal {
         // get total chainSelectors
         mainChainStorage.increaseReweightTotalLowerCompletedChains(nonce, 1);
-        if(
-            mainChainStorage.totalReweightLowerCompletedChains(nonce) ==
-            mainChainStorage.totalReweightLowerPendingChains(nonce)
+        if (
+            mainChainStorage.totalReweightLowerCompletedChains(nonce)
+                == mainChainStorage.totalReweightLowerPendingChains(nonce)
         ) {
             MainChainBalancer(mainChainStorage.mainChainBalancer()).completeSecondReweightAction(nonce);
             unpauseMainChainFactory();
@@ -383,12 +383,12 @@ contract BalancerSender is Initializable, CCIPReceiver, ProposableOwnableUpgrade
      * @param any2EvmMessage The received message.
      */
     function _ccipReceive(Client.Any2EVMMessage memory any2EvmMessage) internal override {
-    // bytes32 messageId = any2EvmMessage.messageId; // fetch the messageId
+        // bytes32 messageId = any2EvmMessage.messageId; // fetch the messageId
         uint64 sourceChainSelector = any2EvmMessage.sourceChainSelector; // fetch the source chain identifier (aka selector)
         address sender = abi.decode(any2EvmMessage.sender, (address)); // abi-decoding of the sender address
         require(
-            sender == mainChainStorage.crossChainFactoryBySelector(sourceChainSelector) ||
-            sender == mainChainStorage.crossChainFactoryBalancerBySelector(sourceChainSelector),
+            sender == mainChainStorage.crossChainFactoryBySelector(sourceChainSelector)
+                || sender == mainChainStorage.crossChainFactoryBalancerBySelector(sourceChainSelector),
             "Invalid sender for the factory balancer ccip recieve"
         );
         (
@@ -404,7 +404,7 @@ contract BalancerSender is Initializable, CCIPReceiver, ProposableOwnableUpgrade
             any2EvmMessage.data, (uint256, address[], address[], bytes[], bytes[], uint256, uint256[], uint256[])
         ); // abi-decoding of the sent string message
         // no-op references to avoid unused local warnings
-        if (_tokenAddresses2.length + _tokenPaths.length + _tokenPaths2.length + _value2.length == 2**256 - 1) {
+        if (_tokenAddresses2.length + _tokenPaths.length + _tokenPaths2.length + _value2.length == 2 ** 256 - 1) {
             revert("unreachable");
         }
         if (any2EvmMessage.destTokenAmounts.length > 0) {

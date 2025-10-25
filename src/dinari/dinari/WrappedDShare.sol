@@ -22,7 +22,6 @@ import {SafeERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeE
 // slither-disable-next-line missing-inheritance
 contract WrappedDShare is Initializable, ERC4626, OwnableUpgradeable, ReentrancyGuardUpgradeable {
     /// ------------------- Types ------------------- ///
-
     using SafeERC20 for IERC20;
 
     event NameSet(string name);

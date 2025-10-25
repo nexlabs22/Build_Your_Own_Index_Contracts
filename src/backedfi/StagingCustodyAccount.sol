@@ -187,9 +187,10 @@ contract StagingCustodyAccount is Initializable, ReentrancyGuardUpgradeable, Own
                 IERC20(tokenAddress).safeTransfer(vault, balance);
             }
             uint256 newValue = backedFiStorage.getTokenValue(_indexToken, tokenAddress, price);
-            backedFiStorage.indexFactory().handleCompleteIssuance(
-                backedFiStorage.indexFactory().issuanceNonce(), _indexToken, tokenAddress, oldValue, newValue
-            );
+            backedFiStorage.indexFactory()
+                .handleCompleteIssuance(
+                    backedFiStorage.indexFactory().issuanceNonce(), _indexToken, tokenAddress, oldValue, newValue
+                );
 
             unchecked {
                 ++i;
@@ -210,7 +211,9 @@ contract StagingCustodyAccount is Initializable, ReentrancyGuardUpgradeable, Own
         nonReentrant
         onlyOwnerOrOperator
     {
-        if (_roundId < 1 || _roundId > backedFiStorage.redemptionRoundId(_indexToken)) revert InvalidRoundId();
+        if (_roundId < 1 || _roundId > backedFiStorage.redemptionRoundId(_indexToken)) {
+            revert InvalidRoundId();
+        }
         uint256 prev = _roundId - 1;
         if (_roundId > 1) {
             // require(!backedFiStorage.redemptionRoundActive(_indexToken, prev), "Prev redemption round active");
@@ -306,9 +309,10 @@ contract StagingCustodyAccount is Initializable, ReentrancyGuardUpgradeable, Own
             if (usdcOut != 0) {
                 usdc.safeTransfer(address(orderManager), usdcOut);
 
-                backedFiStorage.indexFactory().handleCompleteRedemption(
-                    backedFiStorage.indexFactory().redemptionNonce(), _indexToken, asset, usdcOut
-                );
+                backedFiStorage.indexFactory()
+                    .handleCompleteRedemption(
+                        backedFiStorage.indexFactory().redemptionNonce(), _indexToken, asset, usdcOut
+                    );
             }
 
             unchecked {

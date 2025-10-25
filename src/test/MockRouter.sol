@@ -77,9 +77,8 @@ contract MockRouter {
 
         if (message.tokenAmounts.length > 0 && destinationChainSelector >= 0) {
             for (uint256 i = 0; i < message.tokenAmounts.length; i++) {
-                IERC20(message.tokenAmounts[i].token).transferFrom(
-                    msg.sender, targetAddress, message.tokenAmounts[i].amount
-                );
+                IERC20(message.tokenAmounts[i].token)
+                    .transferFrom(msg.sender, targetAddress, message.tokenAmounts[i].amount);
             }
         }
 

@@ -137,7 +137,12 @@ contract DeployDinariAll is Script {
             owner,
             abi.encodeCall(
                 DinariFactoryProcessor.initialize,
-                (cfg.indexFactoryStorageProxy, proxies.storageProxy, cfg.functionsOracleProxy, cfg.coreOrderManagerProxy)
+                (
+                    cfg.indexFactoryStorageProxy,
+                    proxies.storageProxy,
+                    cfg.functionsOracleProxy,
+                    cfg.coreOrderManagerProxy
+                )
             )
         );
 

@@ -32,7 +32,9 @@ contract DeployOrderManager is Script {
         vm.startBroadcast(deployerPrivateKey);
 
         address proxy = Upgrades.deployTransparentProxy(
-            "OrderManager.sol", owner, abi.encodeCall(OrderManager.initialize, (usdcToken, indexFactoryProxy, indexFactoryStorageProxy))
+            "OrderManager.sol",
+            owner,
+            abi.encodeCall(OrderManager.initialize, (usdcToken, indexFactoryProxy, indexFactoryStorageProxy))
         );
 
         address proxyAdmin = Upgrades.getAdminAddress(proxy);

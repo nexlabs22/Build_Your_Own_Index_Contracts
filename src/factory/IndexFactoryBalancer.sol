@@ -124,20 +124,20 @@ contract IndexFactoryBalancer is Initializable, OwnableUpgradeable, PausableUpgr
         uint64[] memory currentProviderIndexes =
             functionsOracle.getCurrentProviderIndexes(_indexToken, currentFilledCount);
         for (uint256 i = 0; i < currentProviderIndexes.length; i++) {
-            uint256 realProviderMarketShare = (
-                providerTotalValueByNonce[_updatePortfolioNonce][currentProviderIndexes[i]] * 100e18
-            ) / portfolioTotalValueByNonce[_updatePortfolioNonce];
+            uint256 realProviderMarketShare =
+                (providerTotalValueByNonce[_updatePortfolioNonce][currentProviderIndexes[i]] * 100e18)
+                    / portfolioTotalValueByNonce[_updatePortfolioNonce];
             uint256 targetProviderMarketShare = functionsOracle.getOracleProviderIndexTotalShares(
                 _indexToken, oracleFilledCount, currentProviderIndexes[i]
             );
 
             if (realProviderMarketShare >= targetProviderMarketShare) {
-                reweightExtraPercentageByNonce[_updatePortfolioNonce] +=
-                    realProviderMarketShare - targetProviderMarketShare;
+                reweightExtraPercentageByNonce[_updatePortfolioNonce] += realProviderMarketShare
+                    - targetProviderMarketShare;
                 if (currentProviderIndexes[i] == 1) {
-                    uint256 targetPortfolioValue = (
-                        providerTotalValueByNonce[_updatePortfolioNonce][1] * SHARE_DENOMINATOR
-                    ) / targetProviderMarketShare;
+                    uint256 targetPortfolioValue =
+                        (providerTotalValueByNonce[_updatePortfolioNonce][1] * SHARE_DENOMINATOR)
+                            / targetProviderMarketShare;
                     reweightCCIP(_indexToken, targetPortfolioValue, 0);
                 }
             }
@@ -165,9 +165,9 @@ contract IndexFactoryBalancer is Initializable, OwnableUpgradeable, PausableUpgr
         uint64[] memory currentProviderIndexes =
             functionsOracle.getCurrentProviderIndexes(_indexToken, currentFilledCount);
         for (uint256 i = 0; i < currentProviderIndexes.length; i++) {
-            uint256 realProviderMarketShare = (
-                providerTotalValueByNonce[_updatePortfolioNonce][currentProviderIndexes[i]] * 100e18
-            ) / portfolioTotalValueByNonce[_updatePortfolioNonce];
+            uint256 realProviderMarketShare =
+                (providerTotalValueByNonce[_updatePortfolioNonce][currentProviderIndexes[i]] * 100e18)
+                    / portfolioTotalValueByNonce[_updatePortfolioNonce];
             uint256 targetProviderMarketShare = functionsOracle.getOracleProviderIndexTotalShares(
                 _indexToken, oracleFilledCount, currentProviderIndexes[i]
             );
@@ -218,11 +218,7 @@ contract IndexFactoryBalancer is Initializable, OwnableUpgradeable, PausableUpgr
         return providerUpdateNonce;
     }
 
-    function completeDinariAskValues(uint256 _updateProviderNonce, uint256 _value)
-        external
-        whenNotPaused
-        nonReentrant
-    {
+    function completeDinariAskValues(uint256 _updateProviderNonce, uint256 _value) external whenNotPaused nonReentrant {
         require(_value > 0, "Zero total value");
         uint8 providerIndex = dinariBalancer.dinariStorage().providerIndex();
 

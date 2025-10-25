@@ -185,14 +185,12 @@ contract CCIPDeployer is
     function deployContracts() public returns (IndexToken, Vault, FunctionsOracle, IndexFactoryStorage) {
         IndexToken indexTokenImpl = new IndexToken();
         indexToken = IndexToken(
-            payable(
-                address(
+            payable(address(
                     new ERC1967Proxy(
                         address(indexTokenImpl),
                         abi.encodeCall(IndexToken.initialize, ("Anti Inflation", "ANFI", 1e18, feeReceiver, 1000000e18))
                     )
-                )
-            )
+                ))
         );
 
         Vault vaultImpl = new Vault();
@@ -202,25 +200,21 @@ contract CCIPDeployer is
 
         FunctionsOracle functionsOracleImpl = new FunctionsOracle();
         functionsOracle = FunctionsOracle(
-            payable(
-                address(
+            payable(address(
                     new ERC1967Proxy(
                         address(functionsOracleImpl),
                         abi.encodeCall(FunctionsOracle.initialize, (address(oracle), jobId))
                     )
-                )
-            )
+                ))
         );
 
         IndexFactoryStorage indexFactoryStorageImpl = new IndexFactoryStorage();
         indexFactoryStorage = IndexFactoryStorage(
-            payable(
-                address(
+            payable(address(
                     new ERC1967Proxy(
                         address(indexFactoryStorageImpl), abi.encodeCall(IndexFactoryStorage.initialize, ())
                     )
-                )
-            )
+                ))
         );
 
         return (indexToken, vault, functionsOracle, indexFactoryStorage);
@@ -228,21 +222,24 @@ contract CCIPDeployer is
 
     function deployContracts2()
         public
-        returns (Vault, MainChainStorage, CrossChainIndexFactory, CrossChainIndexFactoryBalancer, CrossChainIndexFactoryStorage)
+        returns (
+            Vault,
+            MainChainStorage,
+            CrossChainIndexFactory,
+            CrossChainIndexFactoryBalancer,
+            CrossChainIndexFactoryStorage
+        )
     {
         Vault crossChainVaultImpl = new Vault();
         crossChainVault = Vault(
-            payable(
-                address(
+            payable(address(
                     new ERC1967Proxy(address(crossChainVaultImpl), abi.encodeCall(Vault.initialize, (address(this))))
-                )
-            )
+                ))
         );
 
         CrossChainIndexFactoryStorage crossChainIndexFactoryStorageImpl = new CrossChainIndexFactoryStorage();
         crossChainIndexFactoryStorage = CrossChainIndexFactoryStorage(
-            payable(
-                address(
+            payable(address(
                     new ERC1967Proxy(
                         address(crossChainIndexFactoryStorageImpl),
                         abi.encodeCall(
@@ -259,14 +256,12 @@ contract CCIPDeployer is
                             )
                         )
                     )
-                )
-            )
+                ))
         );
 
         CrossChainIndexFactory crossChainIndexFactoryImpl = new CrossChainIndexFactory();
         crossChainIndexFactory = CrossChainIndexFactory(
-            payable(
-                address(
+            payable(address(
                     new ERC1967Proxy(
                         address(crossChainIndexFactoryImpl),
                         abi.encodeCall(
@@ -274,14 +269,12 @@ contract CCIPDeployer is
                             (address(crossChainIndexFactoryStorage), address(mockRouter), address(link))
                         )
                     )
-                )
-            )
+                ))
         );
 
         CrossChainIndexFactoryBalancer crossChainIndexFactoryBalancerImpl = new CrossChainIndexFactoryBalancer();
         crossChainIndexFactoryBalancer = CrossChainIndexFactoryBalancer(
-            payable(
-                address(
+            payable(address(
                     new ERC1967Proxy(
                         address(crossChainIndexFactoryBalancerImpl),
                         abi.encodeCall(
@@ -289,14 +282,12 @@ contract CCIPDeployer is
                             (address(crossChainIndexFactoryStorage), address(mockRouter), address(link))
                         )
                     )
-                )
-            )
+                ))
         );
 
         MainChainStorage mainChainStorageImpl = new MainChainStorage();
         mainChainStorage = MainChainStorage(
-            payable(
-                address(
+            payable(address(
                     new ERC1967Proxy(
                         address(mainChainStorageImpl),
                         abi.encodeCall(
@@ -314,11 +305,16 @@ contract CCIPDeployer is
                             )
                         )
                     )
-                )
-            )
+                ))
         );
 
-        return (crossChainVault, mainChainStorage, crossChainIndexFactory, crossChainIndexFactoryBalancer, crossChainIndexFactoryStorage);
+        return (
+            crossChainVault,
+            mainChainStorage,
+            crossChainIndexFactory,
+            crossChainIndexFactoryBalancer,
+            crossChainIndexFactoryStorage
+        );
     }
 
     function deployContracts3()
@@ -327,19 +323,17 @@ contract CCIPDeployer is
     {
         OrderManager orderManagerImpl = new OrderManager();
         orderManager = OrderManager(
-            payable(
-                address(
+            payable(address(
                     new ERC1967Proxy(
-                        address(orderManagerImpl), abi.encodeCall(OrderManager.initialize, (address(usdc), address(0), address(0)))
+                        address(orderManagerImpl),
+                        abi.encodeCall(OrderManager.initialize, (address(usdc), address(0), address(0)))
                     )
-                )
-            )
+                ))
         );
 
         CoreSender coreSenderImpl = new CoreSender();
         coreSender = CoreSender(
-            payable(
-                address(
+            payable(address(
                     new ERC1967Proxy(
                         address(coreSenderImpl),
                         abi.encodeCall(
@@ -356,14 +350,12 @@ contract CCIPDeployer is
                             )
                         )
                     )
-                )
-            )
+                ))
         );
 
         IndexFactory indexFactoryImpl = new IndexFactory();
         IndexFactory indexFactory = IndexFactory(
-            payable(
-                address(
+            payable(address(
                     new ERC1967Proxy(
                         address(indexFactoryImpl),
                         abi.encodeCall(
@@ -371,14 +363,12 @@ contract CCIPDeployer is
                             (address(orderManager), address(functionsOracle), address(indexFactoryStorage))
                         )
                     )
-                )
-            )
+                ))
         );
 
         MainChainFactory mainChainFactoryImpl = new MainChainFactory();
         MainChainFactory mainChainFactory = MainChainFactory(
-            payable(
-                address(
+            payable(address(
                     new ERC1967Proxy(
                         address(mainChainFactoryImpl),
                         abi.encodeCall(
@@ -395,14 +385,12 @@ contract CCIPDeployer is
                             )
                         )
                     )
-                )
-            )
+                ))
         );
 
         BalancerSender balancerSenderImpl = new BalancerSender();
         balancerSender = BalancerSender(
-            payable(
-                address(
+            payable(address(
                     new ERC1967Proxy(
                         address(balancerSenderImpl),
                         abi.encodeCall(
@@ -417,24 +405,16 @@ contract CCIPDeployer is
                             )
                         )
                     )
-                )
-            )
+                ))
         );
-
-        
 
         return (orderManager, coreSender, indexFactory, mainChainFactory, balancerSender);
     }
 
-
-    function deployContracts4()
-        public
-        returns (MainChainBalancer, MainChainBalancer2, IndexFactoryBalancer)
-    {
+    function deployContracts4() public returns (MainChainBalancer, MainChainBalancer2, IndexFactoryBalancer) {
         MainChainBalancer mainChainBalancerImpl = new MainChainBalancer();
         MainChainBalancer mainChainBalancer = MainChainBalancer(
-            payable(
-                address(
+            payable(address(
                     new ERC1967Proxy(
                         address(mainChainBalancerImpl),
                         abi.encodeCall(
@@ -449,14 +429,12 @@ contract CCIPDeployer is
                             )
                         )
                     )
-                )
-            )
+                ))
         );
 
         MainChainBalancer2 mainChainBalancer2Impl = new MainChainBalancer2();
         MainChainBalancer2 mainChainBalancer2 = MainChainBalancer2(
-            payable(
-                address(
+            payable(address(
                     new ERC1967Proxy(
                         address(mainChainBalancer2Impl),
                         abi.encodeCall(
@@ -471,25 +449,27 @@ contract CCIPDeployer is
                             )
                         )
                     )
-                )
-            )
+                ))
         );
 
         IndexFactoryBalancer indexFactoryBalancerImpl = new IndexFactoryBalancer();
         IndexFactoryBalancer indexFactoryBalancer = IndexFactoryBalancer(
-            payable(
-                address(
+            payable(address(
                     new ERC1967Proxy(
                         address(indexFactoryBalancerImpl),
                         abi.encodeCall(
                             IndexFactoryBalancer.initialize,
-                            (address(functionsOracle), address(indexFactoryStorage), address(mainChainBalancer), address(mainChainBalancer2), address(0))
+                            (
+                                address(functionsOracle),
+                                address(indexFactoryStorage),
+                                address(mainChainBalancer),
+                                address(mainChainBalancer2),
+                                address(0)
+                            )
                         )
                     )
-                )
-            )
+                ))
         );
-
 
         return (mainChainBalancer, mainChainBalancer2, indexFactoryBalancer);
     }
@@ -611,7 +591,6 @@ contract CCIPDeployer is
         link.transfer(address(crossChainIndexFactory), 10e18);
         link.transfer(address(crossChainIndexFactoryBalancer), 10e18);
 
-
         // set corsender gas limit and balancer sender gas limit
     }
 
@@ -662,14 +641,14 @@ contract CCIPDeployer is
         (link, oracle, ethPriceOracle, mockRouter) = deployInternalContracts();
 
         (indexToken, vault, functionsOracle, indexFactoryStorage) = deployContracts();
-        (crossChainVault, mainChainStorage, crossChainIndexFactory, crossChainIndexFactoryBalancer, crossChainIndexFactoryStorage) = deployContracts2();
         (
-            orderManager,
-            coreSender,
-            factory,
-            mainChainFactory,
-            balancerSender
-        ) = deployContracts3();
+            crossChainVault,
+            mainChainStorage,
+            crossChainIndexFactory,
+            crossChainIndexFactoryBalancer,
+            crossChainIndexFactoryStorage
+        ) = deployContracts2();
+        (orderManager, coreSender, factory, mainChainFactory, balancerSender) = deployContracts3();
         (
             mainChainBalancer,
             mainChainBalancer2,
@@ -713,9 +692,8 @@ contract CCIPDeployer is
         uint256[] memory amounts = new uint256[](2);
         amounts[0] = address(tokens[0]) == address(token0) ? amount0 : amount1;
         amounts[1] = address(tokens[1]) == address(token1) ? amount1 : amount0;
-        INonfungiblePositionManager(positionManager).createAndInitializePoolIfNecessary(
-            address(tokens[0]), address(tokens[1]), 3000, encodePriceSqrt(1, 1)
-        );
+        INonfungiblePositionManager(positionManager)
+            .createAndInitializePoolIfNecessary(address(tokens[0]), address(tokens[1]), 3000, encodePriceSqrt(1, 1));
         address poolAddress = IUniswapV3Factory2(factory).getPool(address(tokens[0]), address(tokens[1]), 3000);
         tokens[0].approve(positionManager, amounts[0]);
         tokens[1].approve(positionManager, amounts[1]);
@@ -749,9 +727,10 @@ contract CCIPDeployer is
         uint256[] memory amounts = new uint256[](2);
         amounts[0] = address(token0) < address(weth) ? amount0 : amount1;
         amounts[1] = address(token0) > address(weth) ? amount0 : amount1;
-        INonfungiblePositionManager(positionManager).createAndInitializePoolIfNecessary(
-            address(tokens[0]), address(tokens[1]), 3000, encodePriceSqrt(amounts[1] / 1e10, amounts[0] / 1e10)
-        );
+        INonfungiblePositionManager(positionManager)
+            .createAndInitializePoolIfNecessary(
+                address(tokens[0]), address(tokens[1]), 3000, encodePriceSqrt(amounts[1] / 1e10, amounts[0] / 1e10)
+            );
         address poolAddress = IUniswapV3Factory2(factory).getPool(address(tokens[0]), address(tokens[1]), 3000);
         IWETH(weth).deposit{value: amount1}();
         tokens[0].approve(positionManager, amounts[0]);

@@ -235,9 +235,8 @@ contract DinariFactory is Initializable, OwnableUpgradeable, PausableUpgradeable
         dinariStorage.setBuyRequestPayedAmountById(_indexToken, _requestId, _amount);
         dinariStorage.setIssuanceRequestId(_indexToken, _issuanceNonce, _tokenAddress, _requestId);
         dinariStorage.setIssuanceRequesterByNonce(_indexToken, _issuanceNonce, msg.sender);
-        uint256 wrappedDsharesBalance = IERC20(dinariStorage.wrappedDshareAddress(_tokenAddress)).balanceOf(
-            factoryStorage.indexTokenToVault(_indexToken)
-        );
+        uint256 wrappedDsharesBalance = IERC20(dinariStorage.wrappedDshareAddress(_tokenAddress))
+            .balanceOf(factoryStorage.indexTokenToVault(_indexToken));
         uint256 dShareBalance =
             WrappedDShare(dinariStorage.wrappedDshareAddress(_tokenAddress)).previewRedeem(wrappedDsharesBalance);
         dinariStorage.setIssuanceTokenPrimaryBalance(_indexToken, _issuanceNonce, _tokenAddress, dShareBalance);
@@ -262,16 +261,14 @@ contract DinariFactory is Initializable, OwnableUpgradeable, PausableUpgradeable
         // require(_inputAmount > 0, "Invalid input amount");
         uint256 orderProcessorFee = dinariStorage.calculateIssuanceFee(_indexToken, _inputAmount);
         uint256 quantityIn = orderProcessorFee + _inputAmount;
-        IERC20(dinariStorage.usdc()).safeTransferFrom(
-            msg.sender, address(dinariStorage.dinariOrderManager()), quantityIn
-        );
+        IERC20(dinariStorage.usdc())
+            .safeTransferFrom(msg.sender, address(dinariStorage.dinariOrderManager()), quantityIn);
 
         dinariStorage.increaseIssuanceNonce(_indexToken);
         uint256 issuanceNonce = dinariStorage.issuanceNonce(_indexToken);
         dinariStorage.setIssuanceInputAmount(_indexToken, issuanceNonce, _inputAmount);
 
-        (uint256 totalMarketShare, address[] memory underlyingAssets, uint256[] memory underlyingMarketShares) =
-        functionsOracle.getCurrentProviderIndexData(
+        (uint256 totalMarketShare, address[] memory underlyingAssets, uint256[] memory underlyingMarketShares) = functionsOracle.getCurrentProviderIndexData(
             _indexToken, functionsOracle.currentFilledCount(_indexToken), dinariStorage.providerIndex()
         );
 
@@ -315,9 +312,8 @@ contract DinariFactory is Initializable, OwnableUpgradeable, PausableUpgradeable
         for (uint256 i; i < underlyingAssets.length; i++) {
             address tokenAddress = underlyingAssets[i];
             uint256 amount = _burnPercent
-                * IERC20(dinariStorage.wrappedDshareAddress(tokenAddress)).balanceOf(
-                    factoryStorage.indexTokenToVault(_indexToken)
-                ) / 100e18;
+                * IERC20(dinariStorage.wrappedDshareAddress(tokenAddress))
+                    .balanceOf(factoryStorage.indexTokenToVault(_indexToken)) / 100e18;
 
             (uint256 requestId, uint256 assetAmount) =
                 requestSellOrder(_indexToken, tokenAddress, amount, address(dinariStorage.dinariOrderManager()));

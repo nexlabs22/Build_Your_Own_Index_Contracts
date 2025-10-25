@@ -268,7 +268,10 @@ contract MainChainStorage is Initializable, ProposableOwnableUpgradeable {
         crossChainFactoryBySelector[_chainSelector] = _crossChainFactoryAddress;
     }
 
-    function setCrossChainFactoryBalancer(address _crossChainFactoryBalancerAddress, uint64 _chainSelector) public onlyOwner {
+    function setCrossChainFactoryBalancer(address _crossChainFactoryBalancerAddress, uint64 _chainSelector)
+        public
+        onlyOwner
+    {
         crossChainFactoryBalancerBySelector[_chainSelector] = _crossChainFactoryBalancerAddress;
     }
 
@@ -381,20 +384,31 @@ contract MainChainStorage is Initializable, ProposableOwnableUpgradeable {
         redemptionData[_redemptionNonce].completedTokensCount++;
     }
 
-    function increaseReweightTotalExtraPendingChains(uint256 _reweightNonce, uint256 _count) public onlyMainChainBalancer {
+    function increaseReweightTotalExtraPendingChains(uint256 _reweightNonce, uint256 _count)
+        public
+        onlyMainChainBalancer
+    {
         totalReweightExtraPendingChains[_reweightNonce] += _count;
     }
 
-    function increaseReweightTotalLowerPendingChains(uint256 _reweightNonce, uint256 _count) public onlyMainChainBalancer {
+    function increaseReweightTotalLowerPendingChains(uint256 _reweightNonce, uint256 _count)
+        public
+        onlyMainChainBalancer
+    {
         totalReweightLowerPendingChains[_reweightNonce] += _count;
     }
 
-    function increaseReweightTotalExtraCompletedChains(uint256 _reweightNonce, uint256 _count) public onlyMainChainBalancer {
+    function increaseReweightTotalExtraCompletedChains(uint256 _reweightNonce, uint256 _count)
+        public
+        onlyMainChainBalancer
+    {
         totalReweightExtraCompletedChains[_reweightNonce] += _count;
     }
 
-
-    function increaseReweightTotalLowerCompletedChains(uint256 _reweightNonce, uint256 _count) public onlyMainChainBalancer {
+    function increaseReweightTotalLowerCompletedChains(uint256 _reweightNonce, uint256 _count)
+        public
+        onlyMainChainBalancer
+    {
         totalReweightLowerCompletedChains[_reweightNonce] += _count;
     }
 
@@ -512,10 +526,7 @@ contract MainChainStorage is Initializable, ProposableOwnableUpgradeable {
         portfolioTotalValueByNonce[_updatePortfolioNonce] += _totalValue;
     }
 
-    function increaseExtraWethByNonce(uint256 _updatePortfolioNonce, uint256 _extraWeth)
-        public
-        onlyMainChainBalancer
-    {
+    function increaseExtraWethByNonce(uint256 _updatePortfolioNonce, uint256 _extraWeth) public onlyMainChainBalancer {
         extraWethByNonce[_updatePortfolioNonce] += _extraWeth;
     }
 
@@ -714,7 +725,8 @@ contract MainChainStorage is Initializable, ProposableOwnableUpgradeable {
             address tokenAddress = functionsOracle.currentList(_indexToken, i);
             if (functionsOracle.tokenChainSelector(tokenAddress) == currentChainSelector) {
                 if (tokenAddress == address(weth)) {
-                    totalValue += IERC20(tokenAddress).balanceOf(address(indexFactoryStorage.indexTokenToVault(_indexToken)));
+                    totalValue += IERC20(tokenAddress)
+                        .balanceOf(address(indexFactoryStorage.indexTokenToVault(_indexToken)));
                 } else {
                     (address[] memory path, uint24[] memory fees) = functionsOracle.getToETHPathData(tokenAddress);
                     uint256 value = getAmountOut(
@@ -753,9 +765,8 @@ contract MainChainStorage is Initializable, ProposableOwnableUpgradeable {
     {
         uint256 lastAmount = amountIn;
         for (uint256 i = 0; i < path.length - 1; i++) {
-            lastAmount = IPriceOracle(priceOracle).estimateAmountOut(
-                address(factoryV3), path[i], path[i + 1], uint128(lastAmount), fees[i]
-            );
+            lastAmount = IPriceOracle(priceOracle)
+                .estimateAmountOut(address(factoryV3), path[i], path[i + 1], uint128(lastAmount), fees[i]);
         }
         amountOut = lastAmount;
     }

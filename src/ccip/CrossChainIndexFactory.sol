@@ -45,6 +45,7 @@ contract CrossChainIndexFactory is
         uint256[] percentages;
         uint256[] extraValues;
     }
+
     struct Message {
         uint64 sourceChainSelector; // The chain selector of the source chain.
         address sender; // The address of the sender.
@@ -52,8 +53,6 @@ contract CrossChainIndexFactory is
         address token; // received token.
         uint256 amount; // received amount.
     }
-
-    
 
     CrossChainIndexFactoryStorage public factoryStorage;
 
@@ -180,9 +179,11 @@ contract CrossChainIndexFactory is
         return messageId;
     }
 
-    function _decodeReceive(
-        Client.Any2EVMMessage memory any2EvmMessage
-    ) internal pure returns( DecodedMessage memory m) {
+    function _decodeReceive(Client.Any2EVMMessage memory any2EvmMessage)
+        internal
+        pure
+        returns (DecodedMessage memory m)
+    {
         (
             uint256 _actionType,
             address _indexToken,
@@ -266,7 +267,7 @@ contract CrossChainIndexFactory is
         Vault vault;
         IWETH weth;
     }
-    
+
     struct HandleIssuanceInputs {
         address indexToken;
         Client.EVMTokenAmount[] tokenAmounts;
@@ -280,19 +281,22 @@ contract CrossChainIndexFactory is
     }
 
     function _handleIssuance(HandleIssuanceInputs memory input) private {
-        
         HandleIssuanceLocalVars memory vars;
         vars.vault = vault(input.indexToken);
         vars.weth = weth();
 
         vars.wethAmount = swap(
-            toETHPath(input.tokenAmounts[0].token), toETHFees(input.tokenAmounts[0].token), input.tokenAmounts[0].amount, address(this)
+            toETHPath(input.tokenAmounts[0].token),
+            toETHFees(input.tokenAmounts[0].token),
+            input.tokenAmounts[0].amount,
+            address(this)
         );
         vars.oldTokenValues = new uint256[](input.targetAddresses.length);
         vars.newTokenValues = new uint256[](input.targetAddresses.length);
         for (uint256 i = 0; i < input.targetAddresses.length; i++) {
             uint256 wethToSwap = (vars.wethAmount * input.percentages[i]) / input.extraValues[0];
-            (address[] memory _fromETHPath, uint24[] memory _fromETHFees) = PathHelpers.decodePathBytes(input.targetPaths[i]);
+            (address[] memory _fromETHPath, uint24[] memory _fromETHFees) =
+                PathHelpers.decodePathBytes(input.targetPaths[i]);
             uint256 oldTokenValue;
             uint256 newTokenValue;
             if (input.targetAddresses[i] == address(vars.weth)) {
@@ -300,11 +304,14 @@ contract CrossChainIndexFactory is
                 vars.weth.transfer(address(vars.vault), wethToSwap);
                 newTokenValue = IERC20(input.targetAddresses[i]).balanceOf(address(vars.vault));
             } else {
-                oldTokenValue = factoryStorage.getTokenCurrentValue(input.indexToken, input.targetAddresses[i], _fromETHPath, _fromETHFees);
+                oldTokenValue = factoryStorage.getTokenCurrentValue(
+                    input.indexToken, input.targetAddresses[i], _fromETHPath, _fromETHFees
+                );
                 swap(_fromETHPath, _fromETHFees, wethToSwap, address(vars.vault));
-                newTokenValue = factoryStorage.getTokenCurrentValue(input.indexToken, input.targetAddresses[i], _fromETHPath, _fromETHFees);
+                newTokenValue = factoryStorage.getTokenCurrentValue(
+                    input.indexToken, input.targetAddresses[i], _fromETHPath, _fromETHFees
+                );
             }
-
 
             vars.oldTokenValues[i] = factoryStorage.convertEthToUsd(oldTokenValue);
             vars.newTokenValues[i] = factoryStorage.convertEthToUsd(newTokenValue);
@@ -322,12 +329,14 @@ contract CrossChainIndexFactory is
             vars.newTokenValues
         );
 
-        bytes32 messageId = sendMessage(input.sourceChainSelector, address(input.sender), vars.data, MessageSender.PayFeesIn.Native);
+        bytes32 messageId =
+            sendMessage(input.sourceChainSelector, address(input.sender), vars.data, MessageSender.PayFeesIn.Native);
         factoryStorage.setIssuanceMessageIdByNonce(input.nonce, messageId);
         emit Issuanced(messageId, input.nonce, block.timestamp);
     }
 
     uint256 public receivedCount;
+
     struct HandleRedemptionInputs {
         address indexToken;
         address[] targetAddresses;
@@ -354,7 +363,8 @@ contract CrossChainIndexFactory is
         for (uint256 i = 0; i < input.targetAddresses.length; i++) {
             uint256 swapAmount =
                 (input.extraValues[0] * IERC20(address(input.targetAddresses[i])).balanceOf(address(vars.v))) / 100e18;
-            (address[] memory fromETHPath0, uint24[] memory fromETHFees0) = PathHelpers.decodePathBytes(input.targetPaths[i]);
+            (address[] memory fromETHPath0, uint24[] memory fromETHFees0) =
+                PathHelpers.decodePathBytes(input.targetPaths[i]);
             if (address(input.targetAddresses[i]) == address(factoryStorage.weth())) {
                 vars.v.withdrawFunds(address(weth()), address(this), swapAmount);
                 vars.wethSwapAmountOut += swapAmount;
@@ -368,7 +378,11 @@ contract CrossChainIndexFactory is
                     address(this)
                 );
 
-                vars.newTokenValues[0] += factoryStorage.getTokenCurrentValue(input.indexToken, input.targetAddresses[i], fromETHPath0, fromETHFees0);
+                vars.newTokenValues[
+                    0
+                ] += factoryStorage.getTokenCurrentValue(
+                    input.indexToken, input.targetAddresses[i], fromETHPath0, fromETHFees0
+                );
             }
         }
         uint256 crossChainTokenAmount = swap(
@@ -384,7 +398,14 @@ contract CrossChainIndexFactory is
         vars.indexTokens[0] = input.indexToken;
         uint256[] memory zeroArr = new uint256[](0);
         bytes memory data = abi.encode(
-            1, input.targetAddresses, vars.indexTokens, new bytes[](0), new bytes[](0), input.nonce, vars.newTokenValues, zeroArr
+            1,
+            input.targetAddresses,
+            vars.indexTokens,
+            new bytes[](0),
+            new bytes[](0),
+            input.nonce,
+            vars.newTokenValues,
+            zeroArr
         );
         bytes32 messageId =
             sendToken(input.sourceChainSelector, data, input.sender, tokensToSendArray, MessageSender.PayFeesIn.Native);
@@ -393,7 +414,6 @@ contract CrossChainIndexFactory is
         emit Redemption(messageId, input.nonce, block.timestamp);
     }
 
-    
     function sendMessage(
         uint64 destinationChainSelector,
         address receiver,
@@ -402,7 +422,7 @@ contract CrossChainIndexFactory is
     ) public returns (bytes32) {
         // Validate input parameters
         require(destinationChainSelector > 0, "Invalid destination chain selector");
-    require(receiver != address(0), "Invalid receiver address");
+        require(receiver != address(0), "Invalid receiver address");
         require(_data.length > 0, "Data cannot be empty");
 
         // bytes32 data;

@@ -79,10 +79,7 @@ contract IndexFactory is Initializable, OwnableUpgradeable, PausableUpgradeable,
         _;
     }
 
-    function initialize(address _orderManager, address _functionsOracle, address _factoryStorage)
-        external
-        initializer
-    {
+    function initialize(address _orderManager, address _functionsOracle, address _factoryStorage) external initializer {
         require(_orderManager != address(0), "Invalid address for _orderManager");
         require(_functionsOracle != address(0), "Invalid address for _functionsOracle");
         orderManager = OrderManager(_orderManager);

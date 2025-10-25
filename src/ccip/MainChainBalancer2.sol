@@ -18,11 +18,7 @@ import "../factory/IndexFactoryStorage.sol";
 /// @author NEX Labs Protocol
 /// @notice The main token contract for Index Token (NEX Labs Protocol)
 /// @dev This contract uses an upgradeable pattern
-contract MainChainBalancer2 is
-    Initializable,
-    ProposableOwnableUpgradeable,
-    PausableUpgradeable
-{
+contract MainChainBalancer2 is Initializable, ProposableOwnableUpgradeable, PausableUpgradeable {
     MainChainStorage public mainChainStorage;
     FunctionsOracle public functionsOracle;
     BalancerSender public balancerSender;
@@ -31,12 +27,8 @@ contract MainChainBalancer2 is
     uint64 public currentChainSelector;
     uint256 public reweightCalled;
 
-
-
     IWETH public weth;
     address public usdcAddress;
-
-
 
     event RequestedAskValues(uint256 time);
     event RequestedFirstReweightAction(uint256 time);
@@ -57,10 +49,7 @@ contract MainChainBalancer2 is
     }
 
     modifier onlyOwnerOrOperator() {
-        require(
-            msg.sender == owner() || functionsOracle.isOperator(msg.sender),
-            "Caller is not the owner or operator"
-        );
+        require(msg.sender == owner() || functionsOracle.isOperator(msg.sender), "Caller is not the owner or operator");
         _;
     }
 
@@ -83,10 +72,7 @@ contract MainChainBalancer2 is
     ) external initializer {
         // Validate input parameters
         require(_currentChainSelector > 0, "Invalid chain selector");
-        require(
-            _mainChainStorage != address(0),
-            "Invalid factory storage address"
-        );
+        require(_mainChainStorage != address(0), "Invalid factory storage address");
         require(_weth != address(0), "Invalid WETH address");
         __Ownable_init(msg.sender);
         //set chain selector
@@ -112,9 +98,7 @@ contract MainChainBalancer2 is
         mainChainStorage = MainChainStorage(_mainChainStorage);
     }
 
-    function setIndexFactoryBalancer(
-        address _indexFactoryBalancer
-    ) public onlyOwner {
+    function setIndexFactoryBalancer(address _indexFactoryBalancer) public onlyOwner {
         indexFactoryBalancer = IndexFactoryBalancer(_indexFactoryBalancer);
     }
 
@@ -126,15 +110,11 @@ contract MainChainBalancer2 is
         functionsOracle = FunctionsOracle(_functionsOracle);
     }
 
-    function setBalancerSender(
-        address payable _balancerSender
-    ) public onlyOwner {
+    function setBalancerSender(address payable _balancerSender) public onlyOwner {
         balancerSender = BalancerSender(_balancerSender);
     }
 
-    function setIndexFactoryStorage(
-        address _indexFactoryStorage
-    ) public onlyOwner {
+    function setIndexFactoryStorage(address _indexFactoryStorage) public onlyOwner {
         indexFactoryStorage = IndexFactoryStorage(_indexFactoryStorage);
     }
 
@@ -148,107 +128,72 @@ contract MainChainBalancer2 is
         return mainChainStorage.updatePortfolioNonce();
     }
 
-    function _updateCheckValuesCurrentChainMappings(
-        uint256 value,
-        address tokenAddress
-    ) internal {
+    function _updateCheckValuesCurrentChainMappings(uint256 value, address tokenAddress) internal {
         mainChainStorage.increasePortfolioTotalValueByNonce(
-                mainChainStorage.updatePortfolioNonce(),
-                mainChainStorage.convertEthToUsd(value)
-            );
-            mainChainStorage.increaseTokenValueByNonce(
-                mainChainStorage.updatePortfolioNonce(),
-                tokenAddress,
-                mainChainStorage.convertEthToUsd(value)
-            );
-            mainChainStorage.increaseUpdatedTokensValueCount(
-                mainChainStorage.updatePortfolioNonce()
-            );
-            mainChainStorage.increaseChainValueByNonce(
-                mainChainStorage.updatePortfolioNonce(),
-                currentChainSelector,
-                mainChainStorage.convertEthToUsd(value)
-            );
-            // inform factory about the value
-            indexFactoryBalancer.completeAskValueCCIP(
-                mainChainStorage.updatePortfolioNonce(),
-                mainChainStorage.convertEthToUsd(value)
-            );
-    }
-
-    function _checkValueCurrentChainValues(
-        address _indexToken,
-        address tokenAddress
-    ) internal view returns(uint256 value) {
-        (
-                address[] memory toETHPath,
-                uint24[] memory toETHFees
-            ) = functionsOracle.getToETHPathData(tokenAddress);
-            if (tokenAddress == address(weth)) {
-                value = IERC20(tokenAddress).balanceOf(address(
-                    indexFactoryStorage.indexTokenToVault(_indexToken)
-                ));
-            } else {
-                value = mainChainStorage.getAmountOut(
-                    toETHPath,
-                    toETHFees,
-                    IERC20(tokenAddress).balanceOf(address(
-                        indexFactoryStorage.indexTokenToVault(_indexToken)
-                    ))
-                );
-            }
-    }
-
-    function _checkValuesCurrentChain(
-        address _indexToken,
-        uint64 chainSelector,
-        uint256 chainSelectorTokensCount
-    ) internal {
-        address[] memory tokens = functionsOracle.allCurrentChainSelectorTokens(
-            _indexToken,
-            chainSelector
+            mainChainStorage.updatePortfolioNonce(), mainChainStorage.convertEthToUsd(value)
         );
+        mainChainStorage.increaseTokenValueByNonce(
+            mainChainStorage.updatePortfolioNonce(), tokenAddress, mainChainStorage.convertEthToUsd(value)
+        );
+        mainChainStorage.increaseUpdatedTokensValueCount(mainChainStorage.updatePortfolioNonce());
+        mainChainStorage.increaseChainValueByNonce(
+            mainChainStorage.updatePortfolioNonce(), currentChainSelector, mainChainStorage.convertEthToUsd(value)
+        );
+        // inform factory about the value
+        indexFactoryBalancer.completeAskValueCCIP(
+            mainChainStorage.updatePortfolioNonce(), mainChainStorage.convertEthToUsd(value)
+        );
+    }
+
+    function _checkValueCurrentChainValues(address _indexToken, address tokenAddress)
+        internal
+        view
+        returns (uint256 value)
+    {
+        (address[] memory toETHPath, uint24[] memory toETHFees) = functionsOracle.getToETHPathData(tokenAddress);
+        if (tokenAddress == address(weth)) {
+            value = IERC20(tokenAddress).balanceOf(address(indexFactoryStorage.indexTokenToVault(_indexToken)));
+        } else {
+            value = mainChainStorage.getAmountOut(
+                toETHPath,
+                toETHFees,
+                IERC20(tokenAddress).balanceOf(address(indexFactoryStorage.indexTokenToVault(_indexToken)))
+            );
+        }
+    }
+
+    function _checkValuesCurrentChain(address _indexToken, uint64 chainSelector, uint256 chainSelectorTokensCount)
+        internal
+    {
+        address[] memory tokens = functionsOracle.allCurrentChainSelectorTokens(_indexToken, chainSelector);
         for (uint256 j = 0; j < chainSelectorTokensCount; j++) {
             address tokenAddress = tokens[j];
             uint256 value = _checkValueCurrentChainValues(_indexToken, tokenAddress);
             _updateCheckValuesCurrentChainMappings(value, tokenAddress);
-            
         }
     }
 
-    function _checkValuesOtherChains(
-        address _indexToken,
-        uint64 chainSelector
-    ) internal {
+    function _checkValuesOtherChains(address _indexToken, uint64 chainSelector) internal {
         balancerSender.sendAskValues(_indexToken, chainSelector);
     }
 
     /**
      * @dev Requests values for the portfolio.
      */
-    function askValues(
-        address _indexToken
-    ) public whenNotPaused returns (uint256) {
+    function askValues(address _indexToken) public whenNotPaused returns (uint256) {
         // pauseMainChainFactory();
         mainChainStorage.increaseUpdatePortfolioNonce();
 
-        uint256 totalChains = functionsOracle.currentChainSelectorsCount(
-            _indexToken
-        );
+        uint256 totalChains = functionsOracle.currentChainSelectorsCount(_indexToken);
         uint256 latestCount = functionsOracle.currentFilledCount(_indexToken);
 
         for (uint256 i = 0; i < totalChains; i++) {
-            (, , uint64[] memory chainSelectors) = functionsOracle
-                .getCurrentData(_indexToken, latestCount);
+            (,, uint64[] memory chainSelectors) = functionsOracle.getCurrentData(_indexToken, latestCount);
             uint64 chainSelector = chainSelectors[i];
-            uint256 chainSelectorTokensCount = functionsOracle
-                .currentChainSelectorTokensCount(_indexToken, chainSelector);
+            uint256 chainSelectorTokensCount =
+                functionsOracle.currentChainSelectorTokensCount(_indexToken, chainSelector);
             if (chainSelector == currentChainSelector) {
-                _checkValuesCurrentChain(
-                    _indexToken,
-                    chainSelector,
-                    chainSelectorTokensCount
-                );
+                _checkValuesCurrentChain(_indexToken, chainSelector, chainSelectorTokensCount);
             } else {
                 _checkValuesOtherChains(_indexToken, chainSelector);
             }
