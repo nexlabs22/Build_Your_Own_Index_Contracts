@@ -191,6 +191,22 @@ contract FunctionsOracle is Initializable, FunctionsClient, ConfirmedOwner {
         _initData(_indexTokens, _tokens, _marketShares);
     }
 
+    function mockFulfillRequest(
+        address[] memory _indexTokens,
+        address[] memory _tokens,
+        uint256[] memory _marketShares
+    ) public onlyOwnerOrOperator {
+        _initData(_indexTokens, _tokens, _marketShares);
+    }
+
+    function mockFulfillRequest(
+        address[] memory _indexTokens,
+        address[] memory _tokens,
+        uint256[] memory _marketShares
+    ) public onlyOwnerOrOperator {
+        _initData(_indexTokens, _tokens, _marketShares);
+    }
+
     function _initMainOracleData(address indexToken, address token, uint256 marketShares) internal {
         uint256 oracleFilledCount0 = oracleFilledCount[indexToken];
         oracleData[indexToken][oracleFilledCount0].tokens.push(token);
@@ -357,6 +373,38 @@ contract FunctionsOracle is Initializable, FunctionsClient, ConfirmedOwner {
             }
         }
         totalCurrentList[_indexToken] = totalOracleList[_indexToken];
+    }
+
+    function updateOnlyProviderIndexes(address[] memory _tokens, uint64[] memory _providerIndexes)
+        public
+        onlyOwnerOrOperator
+    {
+        require(
+            _tokens.length == _providerIndexes.length,
+            "The length of the tokens and providerIndexes arrays should be the same"
+        );
+        for (uint256 i = 0; i < _tokens.length; i++) {
+            address tokenAddress = _tokens[i];
+            uint64 providerIndex = _providerIndexes[i];
+            require(providerIndex > 0, "Provider index is zero");
+            tokenProviderIndex[tokenAddress] = providerIndex;
+        }
+    }
+
+    function updateOnlyProviderIndexes(address[] memory _tokens, uint64[] memory _providerIndexes)
+        public
+        onlyOwnerOrOperator
+    {
+        require(
+            _tokens.length == _providerIndexes.length,
+            "The length of the tokens and providerIndexes arrays should be the same"
+        );
+        for (uint256 i = 0; i < _tokens.length; i++) {
+            address tokenAddress = _tokens[i];
+            uint64 providerIndex = _providerIndexes[i];
+            require(providerIndex > 0, "Provider index is zero");
+            tokenProviderIndex[tokenAddress] = providerIndex;
+        }
     }
 
     function updatePathData(uint64[] memory providerIndexes, uint64[] memory chainSelectors, bytes[] memory pathBytes)

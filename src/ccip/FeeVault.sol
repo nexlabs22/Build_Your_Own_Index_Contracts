@@ -133,6 +133,17 @@ contract FeeVault is Initializable, ProposableOwnableUpgradeable, ReentrancyGuar
         outputAmount = SwapHelpers.swap(swapRouterV3, swapRouterV2, path, fees, amountIn, amountOutMinimum, _recipient);
     }
 
+    function depositFunds() external payable {
+        require(msg.value > 0, "NexVault: amount must be greater than 0");
+        weth.deposit{value: msg.value}();
+    }
+
+    /**
+     * @dev Withdraws funds from the vault.
+     * @param _token The address of the token to withdraw (address(0) for ETH).
+     * @param _to The address to send the withdrawn funds to.
+     * @param _amount The amount of funds to withdraw.
+     */
     function withdrawFunds(address _token, address _to, uint256 _amount) external onlyOperator {
         require(_to != address(0), "NexVault: invalid address");
         require(_amount > 0, "NexVault: amount must be greater than 0");
