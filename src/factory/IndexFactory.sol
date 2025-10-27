@@ -195,6 +195,7 @@ contract IndexFactory is Initializable, OwnableUpgradeable, PausableUpgradeable,
         if (crossChainFee > 0) {
             IERC20(orderManager.usdcAddress()).safeTransferFrom(msg.sender, address(this), crossChainFee);
         }
+        factoryStorage.setRedemptionRequester(indexToken, redemptionNonce, msg.sender);
         // Pull and burn
         IERC20(indexToken).safeTransferFrom(msg.sender, address(this), amount);
         uint256 burnPercent = _computeBurnPercent(indexToken, amount);
@@ -235,7 +236,6 @@ contract IndexFactory is Initializable, OwnableUpgradeable, PausableUpgradeable,
             }
         }
 
-        factoryStorage.setRedemptionRequester(indexToken, redemptionNonce, msg.sender);
         redemptionNonce += 1;
         return orderNonce;
     }

@@ -155,6 +155,92 @@ contract CCIPFactoryTest is Test, CCIPDeployer {
         // oracle.fulfillOracleFundingRateRequest(requestId, assetList, tokenShares, swapFees, chains);
     }
 
+
+    function updateOracleListSameChain() public {
+        address[] memory indexTokens = new address[](5);
+        indexTokens[0] = address(indexToken);
+        indexTokens[1] = address(indexToken);
+        indexTokens[2] = address(indexToken);
+        indexTokens[3] = address(indexToken);
+        indexTokens[4] = address(indexToken);
+
+        address[] memory assetList = new address[](5);
+        assetList[0] = address(token0);
+        assetList[1] = address(token1);
+        assetList[2] = address(token2);
+        assetList[3] = address(token3);
+        assetList[4] = address(token4);
+
+        uint24[] memory feesData = new uint24[](1);
+        feesData[0] = 3000;
+
+        bytes[] memory pathData = new bytes[](5);
+        //updating path data for token0
+        address[] memory path0 = new address[](2);
+        path0[0] = address(weth);
+        path0[1] = address(token0);
+        pathData[0] = abi.encode(path0, feesData);
+        //updating path data for token1
+        address[] memory path1 = new address[](2);
+        path1[0] = address(weth);
+        path1[1] = address(token1);
+        pathData[1] = abi.encode(path1, feesData);
+        //updating path data for token2
+        address[] memory path2 = new address[](2);
+        path2[0] = address(weth);
+        path2[1] = address(token2);
+        pathData[2] = abi.encode(path2, feesData);
+        //updating path data for token3
+        address[] memory path3 = new address[](2);
+        path3[0] = address(weth);
+        path3[1] = address(token3);
+        pathData[3] = abi.encode(path3, feesData);
+        //updating path data for token4
+        address[] memory path4 = new address[](2);
+        path4[0] = address(weth);
+        path4[1] = address(token4);
+        pathData[4] = abi.encode(path4, feesData);
+
+        // updating path data for usdc
+        address[] memory usdcPath = new address[](2);
+        usdcPath[0] = address(weth);
+        usdcPath[1] = address(usdc);
+
+        uint256[] memory tokenShares = new uint256[](5);
+        tokenShares[0] = 20e18;
+        tokenShares[1] = 20e18;
+        tokenShares[2] = 20e18;
+        tokenShares[3] = 20e18;
+        tokenShares[4] = 20e18;
+
+        uint64[] memory chains = new uint64[](5);
+        chains[0] = 1;
+        chains[1] = 1;
+        chains[2] = 1;
+        chains[3] = 1;
+        chains[4] = 1;
+
+        uint64[] memory providerIndex = new uint64[](5);
+        providerIndex[0] = 1;
+        providerIndex[1] = 1;
+        providerIndex[2] = 1;
+        providerIndex[3] = 1;
+        providerIndex[4] = 1;
+
+        //update path data
+        functionsOracle.updatePathData(providerIndex, chains, pathData);
+        functionsOracle.updateOnlyPathAndFee(address(usdc), usdcPath, feesData);
+
+        // request off-chain data
+        link.transfer(address(functionsOracle), 1e17);
+        bytes32 requestId = functionsOracle.requestAssetsData("console.log('Hello, World!');", 0, 0);
+        bytes memory data = abi.encode(indexTokens, assetList, tokenShares);
+        bool success = oracle.fulfillRequest(address(functionsOracle), requestId, data);
+        require(success, "oracle request failed");
+        // update path data
+        // oracle.fulfillOracleFundingRateRequest(requestId, assetList, tokenShares, swapFees, chains);
+    }
+
     function updateOracleList2() public {
         address[] memory indexTokens = new address[](5);
         indexTokens[0] = address(indexToken);
@@ -883,7 +969,7 @@ contract CCIPFactoryTest is Test, CCIPDeployer {
         assertEq(indexFactoryStorage.orderManager(), address(orderManager));
     }
 
-    function test_issuance() public {
+    function test_issuance1() public {
         updateOracleList();
 
         mockRouter.setFee(1e16);
@@ -942,6 +1028,74 @@ contract CCIPFactoryTest is Test, CCIPDeployer {
         console.log("token2 balance after redemption", IERC20(token2).balanceOf(address(vault)));
         console.log("token3 balance after redemption", IERC20(token3).balanceOf(address(vault)));
         console.log("token4 balance after redemption", IERC20(token4).balanceOf(address(crossChainVault)));
+        console.log(
+            "redemptionCompletedAssetsCount", indexFactoryStorage.redemptionCompletedAssetsCount(address(indexToken), 0)
+        );
+        console.log("issuanceCalled", factory.issuanceCalled());
+
+        /**
+         */
+    }
+
+    function test_issuance2() public {
+        updateOracleListSameChain();
+
+        mockRouter.setFee(1e16);
+        // check issuance fee
+        uint256 crossChainFeeInWETH = mainChainFactory.getIssuanceFee(address(indexToken), address(usdc), 1000e16);
+        // console.log("issuance fee", issuanceFee);
+        uint256 crossChainFee = factory.getCrossChainFee(address(indexToken), address(usdc), 1000e16);
+
+        // transfer issuance fee to the core sender using call to forward all gas
+        (bool successCore,) = payable(address(coreSender)).call{value: crossChainFeeInWETH}("");
+        require(successCore, "coreSender transfer failed");
+        // transfer issuance fee to crossChainIndexFactory using call to forward all gas
+        (bool successCross,) = payable(address(crossChainIndexFactory)).call{value: crossChainFeeInWETH}("");
+        require(successCross, "crossChainIndexFactory transfer failed");
+        usdc.approve(address(factory), 1001e16 + crossChainFee);
+        factory.issuanceIndexTokens(address(indexToken), 1000e16);
+        mockRouter.executeAllMessages();
+
+        console.log("send count", coreSender.sentCount());
+        console.log("token0 balance after issuance", IERC20(token0).balanceOf(address(vault)));
+        console.log("token1 balance after issuance", IERC20(token1).balanceOf(address(vault)));
+        console.log("token2 balance after issuance", IERC20(token2).balanceOf(address(vault)));
+        console.log("token3 balance after issuance", IERC20(token3).balanceOf(address(vault)));
+        console.log("token4 balance after issuance", IERC20(token4).balanceOf(address(vault)));
+        console.log("issuance complete token count", mainChainStorage.getIssuanceCompletedTokensCount(1));
+        console.log("index token balance after issuance", indexToken.balanceOf(address(this)));
+
+        uint64[] memory currentProviderIndexes = functionsOracle.getCurrentProviderIndexes(address(indexToken), 1);
+        console.log("currentProviderIndexes length", currentProviderIndexes.length);
+        console.log("issuance called", factory.issuanceCalled());
+        console.log("issuance called", orderManager.issuanceCalled());
+        console.log("order nonce", orderManager.getOrderNonce());
+        console.log("order nonce mapping", orderManager.providerNonceToBuyOrderNonce(address(token3), 1, 1));
+        console.log("issuance nonce", orderManager.orderNonceToIssuanceNonce(1));
+
+        // transfer issuance fee to the core sender using call to forward all gas
+        (bool successCore2,) = payable(address(coreSender)).call{value: crossChainFeeInWETH}("");
+        require(successCore2, "coreSender transfer failed");
+        // transfer issuance fee to crossChainIndexFactory using call to forward all gas
+        (bool successCross2,) = payable(address(crossChainIndexFactory)).call{value: crossChainFeeInWETH}("");
+        require(successCross2, "crossChainIndexFactory transfer failed");
+        uint256 burnAmount = indexToken.balanceOf(address(this));
+        usdc.approve(address(factory), crossChainFee);
+        indexToken.approve(address(factory), burnAmount);
+        // redeem all index tokens
+        factory.redemption(address(indexToken), indexToken.balanceOf(address(this)));
+        address[] memory currentChainSelectorTokens =
+            functionsOracle.allCurrentChainSelectorTokens(address(indexToken), 1);
+        mockRouter.executeAllMessages();
+
+        // assertEq(currentChainSelectorTokens.length, 4);
+        console.log("redemptionTokensCount", coreSender.redemptionTokensCount());
+        console.log("receive count", crossChainIndexFactory.receivedCount());
+        console.log("token0 balance after redemption", IERC20(token0).balanceOf(address(vault)));
+        console.log("token1 balance after redemption", IERC20(token1).balanceOf(address(vault)));
+        console.log("token2 balance after redemption", IERC20(token2).balanceOf(address(vault)));
+        console.log("token3 balance after redemption", IERC20(token3).balanceOf(address(vault)));
+        console.log("token4 balance after redemption", IERC20(token4).balanceOf(address(vault)));
         console.log(
             "redemptionCompletedAssetsCount", indexFactoryStorage.redemptionCompletedAssetsCount(address(indexToken), 0)
         );
