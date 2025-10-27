@@ -26,7 +26,12 @@ contract CallIndexFactoryOrders is Script {
         address indexToken = 0x4e835FDB96830626e5Ba490f43CFb7274C146691;
         uint256 id = 56363541050082005171475772922014067549853542647048762960790269805762203907207;
 
+        uint256 pk = vm.envUint("PRIVATE_KEY");
+        vm.startBroadcast(pk);
         DinariFactoryProcessor(orderProcessor).multical(indexToken, id);
+        vm.stopBroadcast();
+
+        console.log("multical sent");
     }
 
     function _callIssuance() internal {

@@ -107,7 +107,14 @@ contract IndexFactory is Initializable, OwnableUpgradeable, PausableUpgradeable,
     }
 
     function getDinariFee(address _indexToken, uint256 _amount) public view returns (uint256) {
-        return orderManager.getDinariFee(_indexToken, _amount);
+        (, address[] memory underlyingAssets,) =
+            functionsOracle.getCurrentProviderIndexData(_indexToken, functionsOracle.currentFilledCount(_indexToken), 2);
+
+        if (underlyingAssets.length > 0) {
+            return orderManager.getDinariFee(_indexToken, _amount);
+        }
+
+        return 0;
     }
 
     // =========================
