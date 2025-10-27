@@ -10,7 +10,8 @@ import {MainChainFactory} from "../ccip/MainChainFactory.sol";
 import {IndexFactoryStorage} from "../factory/IndexFactoryStorage.sol";
 import {DinariFactory} from "../dinari/DinariFactory.sol";
 
-contract OrderManager is Initializable, OwnableUpgradeable {
+/// @custom:oz-upgrades-from OrderManager
+contract OrderManagerV2 is Initializable, OwnableUpgradeable {
     using SafeERC20 for IERC20;
 
     struct OrderNonceInfo {
@@ -74,7 +75,7 @@ contract OrderManager is Initializable, OwnableUpgradeable {
     );
 
     modifier onlyOperator() {
-        require(isOperator[msg.sender], "OrderManager: caller is not an operator");
+        require(isOperator[msg.sender], "NexVault: caller is not an operator");
         _;
     }
 

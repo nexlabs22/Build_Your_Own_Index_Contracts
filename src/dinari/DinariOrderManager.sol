@@ -26,7 +26,6 @@ contract DinariOrderManager is Initializable, OwnableUpgradeable, PausableUpgrad
     event FundsWithdrawn(address token, address to, uint256 amount);
 
     struct Request {
-        address indexToken;
         address requester; // sender of the request.
         uint256 amount; // amount of token to mint/burn.
         address[] depositAddresses; // issuer's asset address in mint, merchant's asset address in burn.
@@ -42,8 +41,8 @@ contract DinariOrderManager is Initializable, OwnableUpgradeable, PausableUpgrad
 
     mapping(address => bool) public isOperator;
 
-    event BuyRequest(address indexed indexToken, uint256 indexed id, uint256 time, uint256 inutAmount);
-    event SellRequest(address indexed indexToken, uint256 indexed id, uint256 time, uint256 inutAmount);
+    event BuyRequest(uint256 indexed id, uint256 time, uint256 inutAmount);
+    event SellRequest(uint256 indexed id, uint256 time, uint256 inutAmount);
 
     error ZeroUsdcAddress();
     error ZeroIssuerAddress();
@@ -114,7 +113,7 @@ contract DinariOrderManager is Initializable, OwnableUpgradeable, PausableUpgrad
         return fees;
     }
 
-    function requestBuyOrder(address _indexToken, address _token, uint256 _orderAmount, address _receiver)
+    function requestBuyOrder(address _token, uint256 _orderAmount, address _receiver)
         external
         nonReentrant
         whenNotPaused
@@ -142,17 +141,17 @@ contract DinariOrderManager is Initializable, OwnableUpgradeable, PausableUpgrad
 
         uint256 id = issuer.createOrderStandardFees(order);
         // orderInstanceById[id] = order;
-        emit BuyRequest(_indexToken, id, block.timestamp, _orderAmount);
+        emit BuyRequest(id, block.timestamp, _orderAmount);
         return id;
         // return 1;
     }
 
-    function requestBuyOrderFromCurrentBalance(
-        address _indexToken,
-        address _token,
-        uint256 _orderAmount,
-        address _receiver
-    ) external nonReentrant whenNotPaused returns (uint256) {
+    function requestBuyOrderFromCurrentBalance(address _token, uint256 _orderAmount, address _receiver)
+        external
+        nonReentrant
+        whenNotPaused
+        returns (uint256)
+    {
         // require(_token != address(0), "invalid token address");
         if (_token == address(0)) revert ZeroTokenAddress();
         // require(_receiver != address(0), "invalid address");
@@ -173,7 +172,7 @@ contract DinariOrderManager is Initializable, OwnableUpgradeable, PausableUpgrad
 
         uint256 id = issuer.createOrderStandardFees(order);
         // orderInstanceById[id] = order;
-        emit BuyRequest(_indexToken, id, block.timestamp, _orderAmount);
+        emit BuyRequest(id, block.timestamp, _orderAmount);
         return id;
         // return 1;
     }

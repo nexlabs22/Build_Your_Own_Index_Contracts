@@ -24,7 +24,7 @@ contract UpgradeDinariFactory is Script {
             revert("Unsupported target chain");
         }
 
-        Upgrades.upgradeProxy(proxyAddress, "DinariFactory.sol", "", owner);
+        Upgrades.upgradeProxy(proxyAddress, "DinariFactoryV2.sol", "", owner);
 
         address newImpl = Upgrades.getImplementationAddress(proxyAddress);
         console.log("DinariFactory proxy upgraded to new implementation at:", newImpl);

@@ -14,12 +14,14 @@ import {IndexFactoryStorage} from "./IndexFactoryStorage.sol";
 import {IndexToken} from "../token/IndexToken.sol";
 import {Vault} from "../vault/Vault.sol";
 import {FeeCalculation} from "../libraries/FeeCalculation.sol";
+import "forge-std/console.sol";
 
 error ZeroAmount();
 error ZeroAddress();
 error WrongETHAmount();
 
-contract IndexFactory is Initializable, OwnableUpgradeable, PausableUpgradeable, ReentrancyGuardUpgradeable {
+/// @custom:oz-upgrades-from IndexFactoryV2
+contract IndexFactoryV3 is Initializable, OwnableUpgradeable, PausableUpgradeable, ReentrancyGuardUpgradeable {
     using SafeERC20 for IERC20;
 
     struct CreateBuyOrderInput {
@@ -128,6 +130,7 @@ contract IndexFactory is Initializable, OwnableUpgradeable, PausableUpgradeable,
         uint256 dinariFee = getDinariFee(indexToken, amount);
         uint256 crossChainFee = getCrossChainFee(indexToken, usdc, amount);
         uint256 providersFee = dinariFee + crossChainFee;
+        // uint256 crossChainFee = 0;
         _collectUsdcAndFee(usdc, amount, usdcFee, providersFee);
         factoryStorage.setIssuanceRequester(indexToken, issuanceNonce, msg.sender);
 
@@ -185,6 +188,7 @@ contract IndexFactory is Initializable, OwnableUpgradeable, PausableUpgradeable,
         _validateRedemptionInputs(indexToken, amount);
         // transfer cross chain fee
         uint256 crossChainFee = getCrossChainFee(indexToken, orderManager.usdcAddress(), amount);
+        // uint256 crossChainFee = 0;
         if (crossChainFee > 0) {
             IERC20(orderManager.usdcAddress()).safeTransferFrom(msg.sender, address(this), crossChainFee);
         }
@@ -248,10 +252,13 @@ contract IndexFactory is Initializable, OwnableUpgradeable, PausableUpgradeable,
         // storing data in the mapping
         factoryStorage.setOldTokenValue(_indexToken, _underlyingTokenAddress, _issuanceNonce, _oldTokenValue);
         factoryStorage.setNewTokenValue(_indexToken, _underlyingTokenAddress, _issuanceNonce, _newTokenValue);
+        console.log("_underlyingTokenAddress: ", _underlyingTokenAddress);
 
         // incrementing issuance completed count
         factoryStorage.incrementIssuanceCompletedAssetsCount(_indexToken, _issuanceNonce);
         // calling complete issuance
+        // console.log("_oldTokenValue: ", factoryStorage.oldTokenValue(_indexToken, _underlyingTokenAddress, ));
+        console.log("_newTokenValue: ", _newTokenValue);
         if (
             factoryStorage.issuanceCompletedAssetsCount(_indexToken, _issuanceNonce)
                 == functionsOracle.totalCurrentList(_indexToken)
@@ -292,6 +299,7 @@ contract IndexFactory is Initializable, OwnableUpgradeable, PausableUpgradeable,
 
         for (uint256 i = 0; i < functionsOracle.totalCurrentList(_indexToken); i++) {
             address _underlyingTokenAddress = functionsOracle.currentList(_indexToken, i);
+            console.log("underlying assets: ", _underlyingTokenAddress);
             totalOldValues += factoryStorage.oldTokenValue(_indexToken, _underlyingTokenAddress, _issuanceNonce);
             totalNewValues += factoryStorage.newTokenValue(_indexToken, _underlyingTokenAddress, _issuanceNonce);
         }

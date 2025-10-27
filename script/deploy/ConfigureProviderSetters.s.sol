@@ -28,6 +28,13 @@ contract ConfigureProviderSetters is Script {
 
         vm.startBroadcast(deployerPrivateKey);
 
+        // set operator in order manager => mainchain factory
+        // set operator in order manager => core sender
+        // set operator in dinari order manager => factory processor
+        // set operator in dinari order manager => dinari factory
+        // set minter in index token => global index factory
+        // set price decimal in dinari storage => 18
+
         _configureDinari(targetChain);
         _configureBackedFi(targetChain);
         _configureCcip(targetChain);

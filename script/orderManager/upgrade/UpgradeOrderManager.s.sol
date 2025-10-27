@@ -23,7 +23,7 @@ contract UpgradeOrderManager is Script {
             revert("Unsupported target chain");
         }
 
-        Upgrades.upgradeProxy(proxyAddress, "OrderManager.sol", "", owner);
+        Upgrades.upgradeProxy(proxyAddress, "OrderManagerV2.sol", "", owner);
 
         address implAddr = Upgrades.getImplementationAddress(proxyAddress);
         console.log("OrderManager proxy upgraded to new implementation at:", implAddr);

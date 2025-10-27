@@ -167,7 +167,7 @@ contract DinariBalancer is Initializable, OwnableUpgradeable, PausableUpgradeabl
         order.paymentTokenQuantity = _orderAmount;
 
         DinariOrderManager dinariOrderManager = dinariStorage.dinariOrderManager();
-        uint256 id = dinariOrderManager.requestBuyOrderFromCurrentBalance(_indexToken, _token, _orderAmount, _receiver);
+        uint256 id = dinariOrderManager.requestBuyOrderFromCurrentBalance(_token, _orderAmount, _receiver);
         dinariStorage.setOrderInstanceById(_indexToken, id, order);
         return id;
     }
