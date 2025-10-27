@@ -18,8 +18,8 @@ contract CallIndexFactoryOrders is Script {
 
     function run() external {
         // _callIssuance();
-        _multical();
-        // _callRedemption();
+        // _multical();
+        _callRedemption();
     }
 
     function _multical() internal {
@@ -60,18 +60,17 @@ contract CallIndexFactoryOrders is Script {
 
     function _callRedemption() internal {
         address factory = _indexFactory();
-        string memory jsonPath = vm.envString("INDEX_FACTORY_REDEMPTION_JSON");
-        string memory json = vm.readFile(jsonPath);
-
-        address indexToken = abi.decode(json.parseRaw(".indexToken"), (address));
-        uint256 amount = abi.decode(json.parseRaw(".amount"), (uint256));
-
+        // Dinari
+        address indexToken = 0x4e835FDB96830626e5Ba490f43CFb7274C146691;
+        // uint256 amount = 30e6;
+        uint256 amount = IERC20(indexToken).balanceOf(0x11a8E23DAfbE058e9758c899dAEe0e43f287A96D);
         console.log("Calling redemption on:", factory);
         console.log("Index token:", indexToken);
         console.log("Amount:", amount);
 
         uint256 pk = vm.envUint("PRIVATE_KEY");
         vm.startBroadcast(pk);
+        IERC20(indexToken).approve(address(factory), amount);
         uint256 orderNonce = IndexFactory(factory).redemption(indexToken, amount);
         vm.stopBroadcast();
 

@@ -34,6 +34,7 @@ contract ConfigureProviderSetters is Script {
         // set operator in dinari order manager => dinari factory
         // set minter in index token => global index factory
         // set price decimal in dinari storage => 18
+        // set dinari factory in vaults as operator
 
         _configureDinari(targetChain);
         _configureBackedFi(targetChain);
