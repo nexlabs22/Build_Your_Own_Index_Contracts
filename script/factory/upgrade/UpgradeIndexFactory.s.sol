@@ -23,7 +23,7 @@ contract UpgradeIndexFactory is Script {
             revert("Unsupported target chain");
         }
 
-        Upgrades.upgradeProxy(proxyAddress, "IndexFactoryV4.sol", "", owner);
+        Upgrades.upgradeProxy(proxyAddress, "IndexFactoryV5.sol", "", owner);
 
         address implAddr = Upgrades.getImplementationAddress(proxyAddress);
         console.log("IndexFactory proxy upgraded to new implementation at:", implAddr);

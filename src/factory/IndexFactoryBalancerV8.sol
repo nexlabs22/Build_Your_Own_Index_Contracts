@@ -16,7 +16,8 @@ import {Vault} from "../vault/Vault.sol";
 import {FeeCalculation} from "../libraries/FeeCalculation.sol";
 import {DinariBalancer} from "../dinari/DinariBalancer.sol";
 
-contract IndexFactoryBalancer is Initializable, OwnableUpgradeable, PausableUpgradeable, ReentrancyGuardUpgradeable {
+/// @custom:oz-upgrades-from IndexFactoryBalancerV7
+contract IndexFactoryBalancerV8 is Initializable, OwnableUpgradeable, PausableUpgradeable, ReentrancyGuardUpgradeable {
     using SafeERC20 for IERC20;
 
     FunctionsOracle public functionsOracle;

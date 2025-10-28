@@ -16,7 +16,8 @@ import {Vault} from "../vault/Vault.sol";
 import {FeeCalculation} from "../libraries/FeeCalculation.sol";
 import {DinariBalancer} from "../dinari/DinariBalancer.sol";
 
-contract IndexFactoryBalancer is Initializable, OwnableUpgradeable, PausableUpgradeable, ReentrancyGuardUpgradeable {
+/// @custom:oz-upgrades-from IndexFactoryBalancerV6
+contract IndexFactoryBalancerV7 is Initializable, OwnableUpgradeable, PausableUpgradeable, ReentrancyGuardUpgradeable {
     using SafeERC20 for IERC20;
 
     FunctionsOracle public functionsOracle;
@@ -213,6 +214,7 @@ contract IndexFactoryBalancer is Initializable, OwnableUpgradeable, PausableUpgr
     }
 
     function askValuesDinari(address _indexToken) internal whenNotPaused returns (uint256) {
+        // uint8 providerIndex = dinariBalancer.dinariStorage().providerIndex();
         uint256 providerUpdateNonce = dinariBalancer.rebalanceNonce(_indexToken);
         providerNonceToGlobalNonce[2][providerUpdateNonce] = updatePortfolioNonce;
         dinariBalancer.askValues(_indexToken);
@@ -221,14 +223,14 @@ contract IndexFactoryBalancer is Initializable, OwnableUpgradeable, PausableUpgr
 
     function completeDinariAskValues(uint256 _updateProviderNonce, uint256 _value) external whenNotPaused {
         require(_value > 0, "Zero total value");
-        // uint8 providerIndex = dinariBalancer.dinariStorage().providerIndex();
+        uint8 providerIndex = dinariBalancer.dinariStorage().providerIndex();
 
-        uint256 _updatePortfolioNonce = providerNonceToGlobalNonce[2][_updateProviderNonce];
+        uint256 _updatePortfolioNonce = providerNonceToGlobalNonce[providerIndex][_updateProviderNonce];
         if (_updatePortfolioNonce == 0) {
             revert("Invalid provider nonce");
         }
         portfolioTotalValueByNonce[_updatePortfolioNonce] += _value;
-        providerTotalValueByNonce[_updatePortfolioNonce][2] += _value;
+        providerTotalValueByNonce[_updatePortfolioNonce][providerIndex] += _value;
     }
 
     function firstRebalanceDinari(address _indexToken) internal {
@@ -236,9 +238,9 @@ contract IndexFactoryBalancer is Initializable, OwnableUpgradeable, PausableUpgr
     }
 
     function askValuesBackedFi(address _indexToken) internal whenNotPaused returns (uint256 orderNonce) {
-        // uint8 providerIndex = dinariBalancer.dinariStorage().providerIndex();
+        uint8 providerIndex = dinariBalancer.dinariStorage().providerIndex();
         uint256 providerUpdateNonce = dinariBalancer.askValues(_indexToken);
-        providerNonceToGlobalNonce[3][providerUpdateNonce] = updatePortfolioNonce;
+        providerNonceToGlobalNonce[providerIndex][providerUpdateNonce] = updatePortfolioNonce;
         return providerUpdateNonce;
     }
 

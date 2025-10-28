@@ -24,7 +24,7 @@ contract UpgradeMainChainBalancer is Script {
             revert("Unsupported target chain");
         }
 
-        Upgrades.upgradeProxy(proxyAddress, "MainChainBalancer.sol", "", owner);
+        Upgrades.upgradeProxy(proxyAddress, "MainChainBalancerV2.sol", "", owner);
 
         address newImpl = Upgrades.getImplementationAddress(proxyAddress);
         console.log("MainChainBalancer proxy upgraded to new implementation at:", newImpl);

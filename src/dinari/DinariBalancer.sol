@@ -277,10 +277,10 @@ contract DinariBalancer is Initializable, OwnableUpgradeable, PausableUpgradeabl
     ) internal {
         uint256 tokenValue = tokenValueByNonce[indexToken][nonce][token];
 
-        uint256 providerTotal = globalBalancer.getGlobalPortfolioValueByProviderNonce(
+        uint256 globalTotal = globalBalancer.getGlobalPortfolioValueByProviderNonce(
             dinariStorage.providerIndex(), rebalanceNonce[indexToken]
         );
-        uint256 currentPct = providerTotal == 0 ? 0 : (tokenValue * 100e18) / providerTotal;
+        uint256 currentPct = globalTotal == 0 ? 0 : (tokenValue * 100e18) / globalTotal;
 
         uint256 targetPct = functionsOracle.tokenOracleMarketShare(indexToken, token);
 
@@ -303,12 +303,12 @@ contract DinariBalancer is Initializable, OwnableUpgradeable, PausableUpgradeabl
             _addProviderSurplus(indexToken, nonce, estValueToSell);
         } else if (currentPct < targetPct) {
             uint256 shortagePct = targetPct - currentPct;
-            if ((portfolioValue * shortagePct) / 100e18 > minimumOrderAmount) {
+            if ((globalTotal * shortagePct) / 100e18 > minimumOrderAmount) {
                 tokenShortagePercentByNonce[indexToken][nonce][token] = shortagePct;
                 totalShortagePercentByNonce[indexToken][nonce] += shortagePct;
             }
 
-            uint256 targetUsd = (portfolioValue * targetPct) / 100e18;
+            uint256 targetUsd = (globalTotal * targetPct) / 100e18;
             if (targetUsd > tokenValue) {
                 providerShortageUsdByNonce[indexToken][nonce] += (targetUsd - tokenValue);
             }
@@ -475,8 +475,6 @@ contract DinariBalancer is Initializable, OwnableUpgradeable, PausableUpgradeabl
             if (ask > 0) {
                 granted = _requestUsdcFromGlobal(_indexToken, _rebalanceNonce, ask);
             }
-
-            // _requestUsdcFromGlobal(_indexToken, _rebalanceNonce, _maxUsdcFromGlobal);
         }
 
         uint256 totalShortagePercent = totalShortagePercentByNonce[_indexToken][_rebalanceNonce];

@@ -23,7 +23,7 @@ contract UpgradeFunctionsOracle is Script {
             revert("Unsupported target chain");
         }
 
-        Upgrades.upgradeProxy(functionOracleProxyAddress, "FunctionsOracleV3.sol", "", owner);
+        Upgrades.upgradeProxy(functionOracleProxyAddress, "FunctionsOracleV5.sol", "", owner);
 
         address implAddr = Upgrades.getImplementationAddress(functionOracleProxyAddress);
         console.log("FunctionsOracle proxy upgraded to new implementation at:", implAddr);

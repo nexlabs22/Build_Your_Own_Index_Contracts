@@ -37,6 +37,10 @@ contract ConfigureProviderSetters is Script {
         // set dinari factory in vaults as operator
         // set crosschain factory balance in main chain storage
         // set core sender and balancer sender gas limit
+        // set IndexFactoryStorage address in main chain balancer
+        // set IndexFactoryBalancer address in MainChainBalancer2
+        // set IndexFactoryBalancer as operator in FunctionsOracle
+        // set MainChainBalancer in vault contracts
 
         // crosschain
         // set crosschain factory in crosschain storage
