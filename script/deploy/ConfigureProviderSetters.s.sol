@@ -41,6 +41,8 @@ contract ConfigureProviderSetters is Script {
         // set IndexFactoryBalancer address in MainChainBalancer2
         // set IndexFactoryBalancer as operator in FunctionsOracle
         // set MainChainBalancer in vault contracts
+        // set dinari balancer in order manager
+        // set dinari factory in dinari storage !!!!!! it was set with IndexFactory balancer before
 
         // crosschain
         // set crosschain factory in crosschain storage

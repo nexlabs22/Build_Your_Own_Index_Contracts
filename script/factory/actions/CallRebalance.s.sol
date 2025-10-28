@@ -26,7 +26,7 @@ contract CallRebalance is Script {
         vm.startBroadcast(pk);
 
         askValues();
-        // firstRebalance();
+        firstRebalance();
 
         vm.stopBroadcast();
     }
@@ -36,6 +36,6 @@ contract CallRebalance is Script {
     }
 
     function firstRebalance() public {
-        IndexFactoryBalancer(indexFactoryBalancer).firstReweightAction(indexToken, 2);
+        IndexFactoryBalancer(indexFactoryBalancer).firstReweightAction(indexToken, 5);
     }
 }
