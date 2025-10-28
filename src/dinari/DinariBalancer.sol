@@ -78,6 +78,10 @@ contract DinariBalancer is Initializable, OwnableUpgradeable, PausableUpgradeabl
     event GlobalUsdcRequested(address indexed indexToken, uint256 indexed nonce, uint256 requested, uint256 granted);
 
     uint256 public minimumOrderAmount;
+    mapping(address => mapping(uint256 => mapping(address => uint256))) public tokenExtraPercentByNonce;
+    mapping(address => mapping(uint256 => uint256)) public totalExtraPercentByNonce;
+    mapping(address => mapping(uint256 => uint256)) public dedicatedUSDCAmountByNonce;
+
 
     modifier onlyOwnerOrOperator() {
         if (msg.sender != owner() && !functionsOracle.isOperator(msg.sender)) revert UnauthorizedCaller();
@@ -223,42 +227,7 @@ contract DinariBalancer is Initializable, OwnableUpgradeable, PausableUpgradeabl
         return (id, orderAmount);
     }
 
-    function _sellOverweightedAssets(address _indexToken, uint256 _rebalanceNonce, uint256 _portfolioValue) internal {
-        (, address[] memory underlyingAssets,) = functionsOracle.getCurrentProviderIndexData(
-            _indexToken, functionsOracle.currentFilledCount(_indexToken), dinariStorage.providerIndex()
-        );
-
-        address vault = globalStorage.indexTokenToVault(_indexToken);
-
-        for (uint256 i; i < underlyingAssets.length; i++) {
-            // address tokenAddress = functionsOracle.currentList(i);
-            address tokenAddress = underlyingAssets[i];
-            uint256 tokenValue = tokenValueByNonce[_indexToken][_rebalanceNonce][tokenAddress];
-            address wrappedDshare = dinariStorage.wrappedDshareAddress(tokenAddress);
-
-            uint256 tokenBalance = IERC20(wrappedDshare).balanceOf(vault);
-            uint256 tokenValuePercent = (tokenValue * 100e18) / _portfolioValue;
-            if (tokenValuePercent > functionsOracle.tokenOracleMarketShare(_indexToken, tokenAddress)) {
-                uint256 amount = tokenBalance
-                    - ((tokenBalance * functionsOracle.tokenOracleMarketShare(_indexToken, tokenAddress))
-                        / tokenValuePercent);
-                if (tokenValue * amount / tokenBalance > minimumOrderAmount) {
-                    (uint256 requestId_,) =
-                        requestSellOrder(_indexToken, tokenAddress, amount, address(dinariStorage.dinariOrderManager()));
-                    actionInfoById[_indexToken][requestId_] = ActionInfo(5, _rebalanceNonce);
-                    rebalanceRequestId[_indexToken][_rebalanceNonce][tokenAddress] = requestId_;
-                    rebalanceSellAssetAmountById[_indexToken][requestId_] = amount;
-                }
-            } else {
-                uint256 shortagePercent =
-                    functionsOracle.tokenOracleMarketShare(_indexToken, tokenAddress) - tokenValuePercent;
-                if ((_portfolioValue * shortagePercent) / 100e18 > minimumOrderAmount) {
-                    tokenShortagePercentByNonce[_indexToken][_rebalanceNonce][tokenAddress] = shortagePercent;
-                    totalShortagePercentByNonce[_indexToken][_rebalanceNonce] += shortagePercent;
-                }
-            }
-        }
-    }
+    
 
     function _recordSell(address indexToken, uint256 nonce, address token, uint256 requestId, uint256 assetAmount)
         internal
@@ -285,6 +254,8 @@ contract DinariBalancer is Initializable, OwnableUpgradeable, PausableUpgradeabl
         uint256 targetPct = functionsOracle.tokenOracleMarketShare(indexToken, token);
 
         if (currentPct > targetPct) {
+            tokenExtraPercentByNonce[indexToken][nonce][token] = currentPct - targetPct;
+            totalExtraPercentByNonce[indexToken][nonce] += (currentPct - targetPct);
             address wrapped = dinariStorage.wrappedDshareAddress(token);
             uint256 wrappedBalance = IERC20(wrapped).balanceOf(vault);
             if (wrappedBalance == 0) return;
@@ -319,12 +290,21 @@ contract DinariBalancer is Initializable, OwnableUpgradeable, PausableUpgradeabl
         providerSurplusUsdByNonce[indexToken][nonce] += value;
     }
 
-    function firstRebalanceAction(address _indexToken) public nonReentrant onlyOwnerOrOperator returns (uint256) {
+    function _withdrawDedicatedUSDC(address _indexToken, uint256 _nonce, uint256 _dedicatedUSDCAmount) internal {
+        if(_dedicatedUSDCAmount > 0) {
+            IERC20 usdc = IERC20(dinariStorage.usdc());
+            usdc.safeTransferFrom(address(msg.sender), address(this), _dedicatedUSDCAmount);
+            dedicatedUSDCAmountByNonce[_indexToken][_nonce] = _dedicatedUSDCAmount;
+        }
+    }
+
+    function firstRebalanceAction(address _indexToken, uint256 _dedicatedUSDCAmount) public nonReentrant onlyOwnerOrOperator returns (uint256) {
         uint256 nonce = rebalanceNonce[_indexToken];
         uint8 providerIndex = dinariStorage.providerIndex();
 
         providerSurplusUsdByNonce[_indexToken][nonce] = 0;
         providerShortageUsdByNonce[_indexToken][nonce] = 0;
+        _withdrawDedicatedUSDC(_indexToken, nonce, _dedicatedUSDCAmount);
 
         uint256 portfolioValue;
         (, address[] memory underlyingAssets,) = functionsOracle.getCurrentProviderIndexData(
@@ -378,9 +358,11 @@ contract DinariBalancer is Initializable, OwnableUpgradeable, PausableUpgradeabl
 
     function _forwardToGlobalBalancer(address _indexToken, uint256 _rebalanceNonce, uint256 amount) internal {
         if (amount == 0) return;
-        IERC20(address(dinariStorage.usdc())).safeTransfer(address(globalBalancer), amount);
-        usdcForwardedByNonce[_indexToken][_rebalanceNonce] += amount;
-
+        IERC20 usdc = IERC20(dinariStorage.usdc());
+        usdc.approve(address(globalBalancer), amount);
+        globalBalancer.completeFirstReweightAction(dinariStorage.providerIndex(), _rebalanceNonce, amount);
+        // IERC20(address(dinariStorage.usdc())).safeTransfer(address(globalBalancer), amount);
+        // usdcForwardedByNonce[_indexToken][_rebalanceNonce] += amount;
         // globalBalancer.registerProviderSurplus(_indexToken, dinariStorage.providerIndex(), _rebalanceNonce, amount);
     }
 
@@ -435,7 +417,7 @@ contract DinariBalancer is Initializable, OwnableUpgradeable, PausableUpgradeabl
         }
     }
 
-    function secondRebalanceAction(address _indexToken, uint256 _rebalanceNonce, uint256 _maxUsdcFromGlobal)
+    function secondRebalanceAction(address _indexToken, uint256 _rebalanceNonce)
         public
         nonReentrant
         onlyOwnerOrOperator
@@ -468,22 +450,34 @@ contract DinariBalancer is Initializable, OwnableUpgradeable, PausableUpgradeabl
         uint256 pulled = _withdrawUsdcFromIssuer(usdcOwed);
         usdcRealizedByNonce[_indexToken][_rebalanceNonce] += pulled;
 
-        uint256 granted = 0;
-        if (_maxUsdcFromGlobal > 0) {
-            uint256 shortageUsd = providerShortageUsdByNonce[_indexToken][_rebalanceNonce];
-            uint256 ask = shortageUsd < _maxUsdcFromGlobal ? shortageUsd : _maxUsdcFromGlobal;
-            if (ask > 0) {
-                granted = _requestUsdcFromGlobal(_indexToken, _rebalanceNonce, ask);
-            }
-        }
-
+        // uint256 granted = 0;
+        // if (_maxUsdcFromGlobal > 0) {
+        //     uint256 shortageUsd = providerShortageUsdByNonce[_indexToken][_rebalanceNonce];
+        //     uint256 ask = shortageUsd < _maxUsdcFromGlobal ? shortageUsd : _maxUsdcFromGlobal;
+        //     if (ask > 0) {
+        //         granted = _requestUsdcFromGlobal(_indexToken, _rebalanceNonce, ask);
+        //     }
+        // }
+        uint256 granted = dedicatedUSDCAmountByNonce[_indexToken][_rebalanceNonce];
         uint256 totalShortagePercent = totalShortagePercentByNonce[_indexToken][_rebalanceNonce];
-        if (totalShortagePercent > 0) {
+        uint256 totalExtraPercent = totalExtraPercentByNonce[_indexToken][_rebalanceNonce];
+        if (totalShortagePercent >= totalExtraPercent) {
             uint256 budget = pulled + granted;
             if (budget > 0) {
                 uint256 spent = _buyUnderweightedAssets(_indexToken, _rebalanceNonce, totalShortagePercent, budget);
                 usdcSpentByNonce[_indexToken][_rebalanceNonce] += spent;
             }
+        } else {
+            uint256 budget = pulled * totalShortagePercent / totalExtraPercent;
+            if (budget > 0) {
+                uint256 spent = _buyUnderweightedAssets(_indexToken, _rebalanceNonce, totalShortagePercent, budget);
+                usdcSpentByNonce[_indexToken][_rebalanceNonce] += spent;
+            }
+            if( pulled > budget ) {
+                uint256 remaining = pulled - budget;
+                _forwardToGlobalBalancer(_indexToken, _rebalanceNonce, remaining);
+            }
+
         }
 
         // uint256 totalShortagePercent = totalShortagePercentByNonce[_indexToken][_rebalanceNonce];
@@ -493,18 +487,18 @@ contract DinariBalancer is Initializable, OwnableUpgradeable, PausableUpgradeabl
         //     usdcSpentByNonce[_indexToken][_rebalanceNonce] += spent;
         // }
 
-        uint256 realized = usdcRealizedByNonce[_indexToken][_rebalanceNonce];
-        uint256 already = usdcForwardedByNonce[_indexToken][_rebalanceNonce];
-        uint256 sendable = realized > (usdcSpentByNonce[_indexToken][_rebalanceNonce] + already)
-            ? realized - usdcSpentByNonce[_indexToken][_rebalanceNonce] - already
-            : 0;
+        // uint256 realized = usdcRealizedByNonce[_indexToken][_rebalanceNonce];
+        // uint256 already = usdcForwardedByNonce[_indexToken][_rebalanceNonce];
+        // uint256 sendable = realized > (usdcSpentByNonce[_indexToken][_rebalanceNonce] + already)
+        //     ? realized - usdcSpentByNonce[_indexToken][_rebalanceNonce] - already
+        //     : 0;
 
-        uint256 currentBalance = IERC20(address(dinariStorage.usdc())).balanceOf(address(this));
-        if (sendable > currentBalance) sendable = currentBalance;
+        // uint256 currentBalance = IERC20(address(dinariStorage.usdc())).balanceOf(address(this));
+        // if (sendable > currentBalance) sendable = currentBalance;
 
-        if (sendable > 0) {
-            _forwardToGlobalBalancer(_indexToken, _rebalanceNonce, sendable);
-        }
+        // if (sendable > 0) {
+        //     _forwardToGlobalBalancer(_indexToken, _rebalanceNonce, sendable);
+        // }
 
         emit SecondRebalanceAction(providerIndex, _indexToken, _rebalanceNonce, block.timestamp);
     }
@@ -665,12 +659,12 @@ contract DinariBalancer is Initializable, OwnableUpgradeable, PausableUpgradeabl
         return false;
     }
 
-    function multical(address _indexToken, uint256 _requestId, uint256 _maxUsdcFromGlobal) public {
+    function multical(address _indexToken, uint256 _requestId) public {
         // require(_requestId > 0, "Invalid request id");
         if (_requestId == 0) revert InvalidRequestId();
         ActionInfo memory actionInfo = actionInfoById[_indexToken][_requestId];
         if (actionInfo.actionType == 5) {
-            secondRebalanceAction(_indexToken, actionInfo.nonce, _maxUsdcFromGlobal);
+            secondRebalanceAction(_indexToken, actionInfo.nonce);
         } else if (actionInfo.actionType == 6) {
             completeRebalanceActions(_indexToken, actionInfo.nonce);
         }

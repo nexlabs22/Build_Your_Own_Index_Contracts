@@ -137,7 +137,7 @@ contract IndexFactoryBalancer is Initializable, OwnableUpgradeable, PausableUpgr
                             / targetProviderMarketShare;
                     reweightCCIP(_indexToken, targetPortfolioValue, 0);
                 } else if (currentProviderIndexes[i] == 2) {
-                    firstRebalanceDinari(_indexToken);
+                    firstRebalanceDinari(_indexToken, 0);
                 }
             }
         }
@@ -180,7 +180,7 @@ contract IndexFactoryBalancer is Initializable, OwnableUpgradeable, PausableUpgr
                     // reweightCalled = extraUSDCAmount;
                     reweightCCIP(_indexToken, targetPortfolioValue, extraUSDCAmount);
                 } else if (currentProviderIndexes[i] == 2) {
-                    firstRebalanceDinari(_indexToken);
+                    firstRebalanceDinari(_indexToken, extraUSDCAmount);
                 }
             }
         }
@@ -232,8 +232,8 @@ contract IndexFactoryBalancer is Initializable, OwnableUpgradeable, PausableUpgr
         providerTotalValueByNonce[_updatePortfolioNonce][2] += _value;
     }
 
-    function firstRebalanceDinari(address _indexToken) internal {
-        DinariBalancer(dinariBalancer).firstRebalanceAction(_indexToken);
+    function firstRebalanceDinari(address _indexToken, uint256 _dedicatedUSDCAmount) internal {
+        DinariBalancer(dinariBalancer).firstRebalanceAction(_indexToken, _dedicatedUSDCAmount);
     }
 
     function askValuesBackedFi(address _indexToken) internal whenNotPaused returns (uint256 orderNonce) {
