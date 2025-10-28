@@ -422,6 +422,7 @@ contract BalancerSender is Initializable, CCIPReceiver, ProposableOwnableUpgrade
                 emit AskValuesCompleted(block.timestamp);
             }
         } else if (actionType == 3) {
+            if(any2EvmMessage.destTokenAmounts.length > 0) {
             Client.EVMTokenAmount[] memory tokenAmounts = any2EvmMessage.destTokenAmounts;
             address token = tokenAmounts[0].token;
             uint256 amount = tokenAmounts[0].amount;
@@ -430,10 +431,10 @@ contract BalancerSender is Initializable, CCIPReceiver, ProposableOwnableUpgrade
             mainChainStorage.increaseExtraWethByNonce(nonce, wethAmount);
             mainChainStorage.increasePendingExtraWethByNonce(nonce, wethAmount);
             weth.transfer(mainChainStorage.mainChainBalancer(), wethAmount);
+            }
             _handleCompleteFirstReweight(nonce);
         } else if (actionType == 4) {
             _handleCompleteSecondReweight(nonce);
-            // functionsOracle.updateCurrentList();
         }
     }
 }

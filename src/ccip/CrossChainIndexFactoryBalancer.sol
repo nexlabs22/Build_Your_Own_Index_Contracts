@@ -190,7 +190,7 @@ contract CrossChainIndexFactoryBalancer is
             receiver,
             tokensToSendDetails,
             payFeesIn,
-            2_000_000
+            factoryStorage.balancerGasLimit()
         );
         emit MessageSent(messageId);
         return messageId;
@@ -378,16 +378,7 @@ contract CrossChainIndexFactoryBalancer is
             inputData.sender,
             inputData.nonce
         );
-
-        uint256 crossChainTokenAmount = swap(
-            fromETHPath(factoryStorage.crossChainToken(inputData.sourceChainSelector)),
-            fromETHFees(factoryStorage.crossChainToken(inputData.sourceChainSelector)),
-            extraWethAmount,
-            address(this)
-        );
-        Client.EVMTokenAmount[] memory tokensToSendArray = new Client.EVMTokenAmount[](1);
-        tokensToSendArray[0].token = factoryStorage.crossChainToken(inputData.sourceChainSelector);
-        tokensToSendArray[0].amount = crossChainTokenAmount;
+        
         uint256[] memory zeroArr = new uint256[](0);
         bytes memory encodedData = abi.encode(
             3,
@@ -399,6 +390,16 @@ contract CrossChainIndexFactoryBalancer is
             zeroArr,
             zeroArr
         );
+        if (extraWethAmount > 0) {
+        uint256 crossChainTokenAmount = swap(
+                fromETHPath(factoryStorage.crossChainToken(inputData.sourceChainSelector)),
+                fromETHFees(factoryStorage.crossChainToken(inputData.sourceChainSelector)),
+                extraWethAmount,
+                address(this)
+            );
+        Client.EVMTokenAmount[] memory tokensToSendArray = new Client.EVMTokenAmount[](1);
+        tokensToSendArray[0].token = factoryStorage.crossChainToken(inputData.sourceChainSelector);
+        tokensToSendArray[0].amount = crossChainTokenAmount;
         sendToken(
             inputData.sourceChainSelector,
             encodedData,
@@ -406,6 +407,14 @@ contract CrossChainIndexFactoryBalancer is
             tokensToSendArray,
             MessageSender.PayFeesIn.Native
         );
+        } else {
+        sendMessage(
+            inputData.sourceChainSelector,
+            inputData.sender,
+            encodedData,
+            MessageSender.PayFeesIn.Native
+        );
+        }
     }
 
     struct SwapFirstReweightActionVars {
@@ -632,9 +641,7 @@ contract CrossChainIndexFactoryBalancer is
         require(receiver != address(0), "Invalid receiver address");
         require(_data.length > 0, "Data cannot be empty");
 
-        // bytes32 data;
-
-        // return data;
+        
 
         return MessageSender.sendMessage(
             factoryStorage.i_router(),
@@ -643,7 +650,7 @@ contract CrossChainIndexFactoryBalancer is
             receiver,
             _data,
             payFeesIn,
-            2_000_000
+            factoryStorage.balancerGasLimit()
         );
     }
 }

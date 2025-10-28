@@ -173,7 +173,7 @@ contract CrossChainIndexFactory is
             receiver,
             tokensToSendDetails,
             payFeesIn,
-            2_000_000
+            factoryStorage.factoryGasLimit()
         );
         emit MessageSent(messageId);
         return messageId;
@@ -436,7 +436,7 @@ contract CrossChainIndexFactory is
             receiver,
             _data,
             payFeesIn,
-            2_000_000
+            factoryStorage.factoryGasLimit()
         );
     }
 }
