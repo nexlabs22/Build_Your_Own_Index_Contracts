@@ -16,7 +16,8 @@ import {Vault} from "../vault/Vault.sol";
 import {FeeCalculation} from "../libraries/FeeCalculation.sol";
 import {DinariBalancer} from "../dinari/DinariBalancer.sol";
 
-contract IndexFactoryBalancer is Initializable, OwnableUpgradeable, PausableUpgradeable, ReentrancyGuardUpgradeable {
+/// @custom:oz-upgrades-from IndexFactoryBalancerV8
+contract IndexFactoryBalancerV9 is Initializable, OwnableUpgradeable, PausableUpgradeable, ReentrancyGuardUpgradeable {
     using SafeERC20 for IERC20;
 
     FunctionsOracle public functionsOracle;
@@ -212,7 +213,7 @@ contract IndexFactoryBalancer is Initializable, OwnableUpgradeable, PausableUpgr
         providerTotalValueByNonce[_updatePortfolioNonce][1] += _value;
     }
 
-    function askValuesDinari(address _indexToken) internal whenNotPaused returns (uint256) {
+    function askValuesDinari(address _indexToken) internal whenNotPaused nonReentrant returns (uint256) {
         uint8 providerIndex = dinariBalancer.dinariStorage().providerIndex();
         uint256 providerUpdateNonce = dinariBalancer.rebalanceNonce(_indexToken);
         providerNonceToGlobalNonce[providerIndex][providerUpdateNonce + 1] = updatePortfolioNonce;

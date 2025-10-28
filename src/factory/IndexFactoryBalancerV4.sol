@@ -16,7 +16,8 @@ import {Vault} from "../vault/Vault.sol";
 import {FeeCalculation} from "../libraries/FeeCalculation.sol";
 import {DinariBalancer} from "../dinari/DinariBalancer.sol";
 
-contract IndexFactoryBalancer is Initializable, OwnableUpgradeable, PausableUpgradeable, ReentrancyGuardUpgradeable {
+/// @custom:oz-upgrades-from IndexFactoryBalancerV3
+contract IndexFactoryBalancerV4 is Initializable, OwnableUpgradeable, PausableUpgradeable, ReentrancyGuardUpgradeable {
     using SafeERC20 for IERC20;
 
     FunctionsOracle public functionsOracle;
@@ -97,6 +98,9 @@ contract IndexFactoryBalancer is Initializable, OwnableUpgradeable, PausableUpgr
     // === External Functions ==
     // =========================
     function askValues(address _indexToken) external whenNotPaused nonReentrant {
+        // uint8 dinariProviderIndex = dinariBalancer.dinariStorage().providerIndex();
+        uint8 dinariProviderIndex;
+
         uint256 currentFilledCount = functionsOracle.currentFilledCount(_indexToken);
 
         uint64[] memory currentProviderIndexes =
@@ -105,7 +109,7 @@ contract IndexFactoryBalancer is Initializable, OwnableUpgradeable, PausableUpgr
         for (uint256 i = 0; i < currentProviderIndexes.length; i++) {
             if (currentProviderIndexes[i] == 1) {
                 askValueCCIP(_indexToken);
-            } else if (currentProviderIndexes[i] == 2) {
+            } else if (currentProviderIndexes[i] == dinariProviderIndex) {
                 askValuesDinari(_indexToken);
             }
         }
@@ -212,7 +216,7 @@ contract IndexFactoryBalancer is Initializable, OwnableUpgradeable, PausableUpgr
         providerTotalValueByNonce[_updatePortfolioNonce][1] += _value;
     }
 
-    function askValuesDinari(address _indexToken) internal whenNotPaused returns (uint256) {
+    function askValuesDinari(address _indexToken) internal whenNotPaused nonReentrant returns (uint256) {
         uint8 providerIndex = dinariBalancer.dinariStorage().providerIndex();
         uint256 providerUpdateNonce = dinariBalancer.rebalanceNonce(_indexToken);
         providerNonceToGlobalNonce[providerIndex][providerUpdateNonce + 1] = updatePortfolioNonce;
@@ -220,26 +224,26 @@ contract IndexFactoryBalancer is Initializable, OwnableUpgradeable, PausableUpgr
         return providerUpdateNonce + 1;
     }
 
-    function completeDinariAskValues(uint256 _updateProviderNonce, uint256 _value) external whenNotPaused {
+    function completeDinariAskValues(uint256 _updateProviderNonce, uint256 _value) external whenNotPaused nonReentrant {
         require(_value > 0, "Zero total value");
-        // uint8 providerIndex = dinariBalancer.dinariStorage().providerIndex();
+        uint8 providerIndex = dinariBalancer.dinariStorage().providerIndex();
 
-        uint256 _updatePortfolioNonce = providerNonceToGlobalNonce[2][_updateProviderNonce];
+        uint256 _updatePortfolioNonce = providerNonceToGlobalNonce[providerIndex][_updateProviderNonce];
         if (_updatePortfolioNonce == 0) {
             revert("Invalid provider nonce");
         }
         portfolioTotalValueByNonce[_updatePortfolioNonce] += _value;
-        providerTotalValueByNonce[_updatePortfolioNonce][2] += _value;
+        providerTotalValueByNonce[_updatePortfolioNonce][providerIndex] += _value;
     }
 
     function firstRebalanceDinari(address _indexToken) internal {
         DinariBalancer(dinariBalancer).firstRebalanceAction(_indexToken);
     }
 
-    function askValuesBackedFi(address _indexToken) internal whenNotPaused returns (uint256 orderNonce) {
-        // uint8 providerIndex = dinariBalancer.dinariStorage().providerIndex();
+    function askValuesBackedFi(address _indexToken) internal whenNotPaused nonReentrant returns (uint256 orderNonce) {
+        uint8 providerIndex = dinariBalancer.dinariStorage().providerIndex();
         uint256 providerUpdateNonce = dinariBalancer.askValues(_indexToken);
-        providerNonceToGlobalNonce[3][providerUpdateNonce] = updatePortfolioNonce;
+        providerNonceToGlobalNonce[providerIndex][providerUpdateNonce] = updatePortfolioNonce;
         return providerUpdateNonce;
     }
 
@@ -261,6 +265,7 @@ contract IndexFactoryBalancer is Initializable, OwnableUpgradeable, PausableUpgr
 
     function provideUsdc(address indexToken, uint8 providerIndex, uint256 nonce, address to, uint256 amount)
         external
+        nonReentrant
         whenNotPaused
         returns (uint256 granted)
     {

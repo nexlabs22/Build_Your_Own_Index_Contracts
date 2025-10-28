@@ -15,6 +15,8 @@ contract ConfigureCrossChainSetters is Script {
 
         vm.startBroadcast(deployerPrivateKey);
 
+        // set gas llimit in crosschain factory storage
+
         _configureCrossChainContracts(targetChain);
 
         vm.stopBroadcast();

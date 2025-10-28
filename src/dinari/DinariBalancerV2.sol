@@ -34,7 +34,8 @@ error InvalidRequestId();
 
 /// @title DinariBalancer
 /// @author NEX Labs Protocol
-contract DinariBalancer is Initializable, OwnableUpgradeable, PausableUpgradeable, ReentrancyGuardUpgradeable {
+/// @custom:oz-upgrades-from DinariBalancer
+contract DinariBalancerV2 is Initializable, OwnableUpgradeable, PausableUpgradeable, ReentrancyGuardUpgradeable {
     using SafeERC20 for IERC20;
 
     struct ActionInfo {
@@ -123,6 +124,10 @@ contract DinariBalancer is Initializable, OwnableUpgradeable, PausableUpgradeabl
     function setFunctionsOracle(address _functionsOracle) public onlyOwner returns (bool) {
         functionsOracle = FunctionsOracle(_functionsOracle);
         return true;
+    }
+
+    function setIndexFactoryBalancer(address _indexFactoryBalancer) public onlyOwner returns (bool) {
+        globalBalancer = IndexFactoryBalancer(_indexFactoryBalancer);
     }
 
     function getAmountAfterFee(uint24 percentageFeeRate, uint256 orderValue) internal pure returns (uint256) {

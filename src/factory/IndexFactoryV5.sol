@@ -19,8 +19,8 @@ error ZeroAmount();
 error ZeroAddress();
 error WrongETHAmount();
 
-/// @custom:oz-upgrades-from IndexFactoryV3
-contract IndexFactoryV4 is Initializable, OwnableUpgradeable, PausableUpgradeable, ReentrancyGuardUpgradeable {
+/// @custom:oz-upgrades-from IndexFactoryV4
+contract IndexFactoryV5 is Initializable, OwnableUpgradeable, PausableUpgradeable, ReentrancyGuardUpgradeable {
     using SafeERC20 for IERC20;
 
     struct CreateBuyOrderInput {
