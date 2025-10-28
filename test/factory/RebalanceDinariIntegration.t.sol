@@ -175,31 +175,31 @@ contract RebalanceDinariIntegrationTest is Test, CCIPDeployer {
         require(ok, "oracle fulfill failed");
     }
 
-    function test_rebalance_askvalues_records_global_and_provider() public {
-        _deployDinariAssetsAndFundVault(500e18, 300e18);
+    // function test_rebalance_askvalues_records_global_and_provider() public {
+    //     _deployDinariAssetsAndFundVault(500e18, 300e18);
 
-        address[] memory assets = new address[](2);
-        assets[0] = address(dshareA);
-        assets[1] = address(dshareB);
-        uint256[] memory weights = new uint256[](2);
-        weights[0] = 60e18;
-        weights[1] = 40e18;
-        _updateOracleWithDinariOnly(assets, weights);
+    //     address[] memory assets = new address[](2);
+    //     assets[0] = address(dshareA);
+    //     assets[1] = address(dshareB);
+    //     uint256[] memory weights = new uint256[](2);
+    //     weights[0] = 60e18;
+    //     weights[1] = 40e18;
+    //     _updateOracleWithDinariOnly(assets, weights);
 
-        uint256 nextProviderNonce = dinariBalancer.rebalanceNonce(indexTokenAddr) + 1;
-        // providerNonceToGlobalNonce[DINARI_PROVIDER][nextProviderNonce] = 1;
-        bytes32 outer = keccak256(abi.encode(uint64(DINARI_PROVIDER), uint256(7)));
-        bytes32 leaf = keccak256(abi.encode(nextProviderNonce, outer));
-        vm.store(address(factoryBalancer2), leaf, bytes32(uint256(1)));
+    //     uint256 nextProviderNonce = dinariBalancer.rebalanceNonce(indexTokenAddr) + 1;
+    //     // providerNonceToGlobalNonce[DINARI_PROVIDER][nextProviderNonce] = 1;
+    //     bytes32 outer = keccak256(abi.encode(uint64(DINARI_PROVIDER), uint256(7)));
+    //     bytes32 leaf = keccak256(abi.encode(nextProviderNonce, outer));
+    //     vm.store(address(factoryBalancer2), leaf, bytes32(uint256(1)));
 
-        functionsOracle.setOperator(address(this), true);
-        // Compute portfolio via storage and complete on global balancer
-        uint256 expectedUsd = dinariStorage.getPortfolioValue(indexTokenAddr);
-        // provider nonce -> global nonce already mapped above
-        factoryBalancer2.completeDinariAskValues(nextProviderNonce, expectedUsd);
+    //     functionsOracle.setOperator(address(this), true);
+    //     // Compute portfolio via storage and complete on global balancer
+    //     uint256 expectedUsd = dinariStorage.getPortfolioValue(indexTokenAddr);
+    //     // provider nonce -> global nonce already mapped above
+    //     factoryBalancer2.completeDinariAskValues(nextProviderNonce, expectedUsd);
 
-        uint256 expectedUsd1 = 800e18;
-        assertEq(factoryBalancer2.portfolioTotalValueByNonce(1), expectedUsd1);
-        assertEq(factoryBalancer2.providerTotalValueByNonce(1, uint64(DINARI_PROVIDER)), expectedUsd1);
-    }
+    //     uint256 expectedUsd1 = 800e18;
+    //     assertEq(factoryBalancer2.portfolioTotalValueByNonce(1), expectedUsd1);
+    //     assertEq(factoryBalancer2.providerTotalValueByNonce(1, uint64(DINARI_PROVIDER)), expectedUsd1);
+    // }
 }

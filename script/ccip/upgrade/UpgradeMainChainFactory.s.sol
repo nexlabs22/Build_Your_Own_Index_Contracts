@@ -24,7 +24,7 @@ contract UpgradeMainChainFactory is Script {
             revert("Unsupported target chain");
         }
 
-        Upgrades.upgradeProxy(proxyAddress, "MainChainFactory.sol", "", owner);
+        Upgrades.upgradeProxy(proxyAddress, "MainChainFactoryV2.sol", "", owner);
 
         address newImpl = Upgrades.getImplementationAddress(proxyAddress);
         console.log("MainChainFactory proxy upgraded to new implementation at:", newImpl);

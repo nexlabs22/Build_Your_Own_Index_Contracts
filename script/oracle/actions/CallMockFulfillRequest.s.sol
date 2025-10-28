@@ -38,13 +38,26 @@ contract CallMockFulfillRequest is Script {
         // marketShares[4] = 20e18;
 
         // CCIP
+        // address[] memory indexTokens = new address[](2);
+        // indexTokens[0] = 0x3A1696F9A7b3140dB3e328654f914c07e55Ee793;
+        // indexTokens[1] = 0x3A1696F9A7b3140dB3e328654f914c07e55Ee793;
+
+        // address[] memory tokens = new address[](2);
+        // tokens[0] = 0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14; // WETH
+        // tokens[1] = 0x6Ea5aD162d5b74Bc9e4C3e4eEB18AE6861407221; // WBTC
+
+        // uint256[] memory marketShares = new uint256[](2);
+        // marketShares[0] = 40e18;
+        // marketShares[1] = 60e18;
+
+        // CCIP CrossChain
         address[] memory indexTokens = new address[](2);
-        indexTokens[0] = 0x3A1696F9A7b3140dB3e328654f914c07e55Ee793;
-        indexTokens[1] = 0x3A1696F9A7b3140dB3e328654f914c07e55Ee793;
+        indexTokens[0] = 0x7f878aD42333E07F122b9f6E1C778C5353e9f1B4;
+        indexTokens[1] = 0x7f878aD42333E07F122b9f6E1C778C5353e9f1B4;
 
         address[] memory tokens = new address[](2);
-        tokens[0] = 0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14; // WETH
-        tokens[1] = 0x6Ea5aD162d5b74Bc9e4C3e4eEB18AE6861407221; // WBTC
+        tokens[0] = 0xf4A357354fab7DEAC6fAa1992d84138704C01f45; // XRP
+        tokens[1] = 0x0C3711069cf889Fc47B3Da3700fFFDc2e16A4DaD; // XAUT
 
         uint256[] memory marketShares = new uint256[](2);
         marketShares[0] = 40e18;

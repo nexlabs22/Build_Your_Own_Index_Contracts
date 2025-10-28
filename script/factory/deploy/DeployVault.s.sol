@@ -24,9 +24,9 @@ contract DeployVault is Script {
 
         address proxyAdmin = Upgrades.getAdminAddress(proxy);
 
-        console.log("NexVault implementation deployed at:", address(nexVaultImplementation));
-        console.log("NexVault proxy deployed at:", address(proxy));
-        console.log("ProxyAdmin for NexVault deployed at:", address(proxyAdmin));
+        console.log("Vault implementation deployed at:", address(nexVaultImplementation));
+        console.log("Vault proxy deployed at:", address(proxy));
+        console.log("ProxyAdmin for Vault deployed at:", address(proxyAdmin));
 
         vm.stopBroadcast();
     }

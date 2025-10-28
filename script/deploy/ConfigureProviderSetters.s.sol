@@ -35,6 +35,14 @@ contract ConfigureProviderSetters is Script {
         // set minter in index token => global index factory
         // set price decimal in dinari storage => 18
         // set dinari factory in vaults as operator
+        // set crosschain factory balance in main chain storage
+        // set core sender and balancer sender gas limit
+
+        // crosschain
+        // set crosschain factory in crosschain storage
+        // set crosschain factory balancer in crosschain storage
+        // set price oracle in crosschain storage
+        // set verified factory in crosschain storage => core sender and balancer sender
 
         _configureDinari(targetChain);
         _configureBackedFi(targetChain);

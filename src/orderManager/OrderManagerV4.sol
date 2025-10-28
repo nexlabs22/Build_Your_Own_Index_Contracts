@@ -10,7 +10,8 @@ import {MainChainFactory} from "../ccip/MainChainFactory.sol";
 import {IndexFactoryStorage} from "../factory/IndexFactoryStorage.sol";
 import {DinariFactory} from "../dinari/DinariFactory.sol";
 
-contract OrderManager is Initializable, OwnableUpgradeable {
+/// @custom:oz-upgrades-from OrderManagerV3
+contract OrderManagerV4 is Initializable, OwnableUpgradeable {
     using SafeERC20 for IERC20;
 
     struct OrderNonceInfo {

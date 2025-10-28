@@ -24,7 +24,8 @@ contract CallIndexFactoryOrders is Script {
 
     function _multical() internal {
         address indexToken = 0x4e835FDB96830626e5Ba490f43CFb7274C146691;
-        uint256 id = 56363541050082005171475772922014067549853542647048762960790269805762203907207;
+        // uint256 id = 56363541050082005171475772922014067549853542647048762960790269805762203907207;
+        uint256 id = 69440554077137204197358502522389177234787938694285949050586132758478051844846;
 
         uint256 pk = vm.envUint("PRIVATE_KEY");
         vm.startBroadcast(pk);
@@ -41,8 +42,12 @@ contract CallIndexFactoryOrders is Script {
         // address indexToken = 0x4e835FDB96830626e5Ba490f43CFb7274C146691;
         // uint256 amount = 30e6;
 
-        // CCIP
-        address indexToken = 0x3A1696F9A7b3140dB3e328654f914c07e55Ee793;
+        // // CCIP
+        // address indexToken = 0x3A1696F9A7b3140dB3e328654f914c07e55Ee793;
+        // uint256 amount = 30e6;
+
+        // CCIP CrossChain
+        address indexToken = 0x7f878aD42333E07F122b9f6E1C778C5353e9f1B4;
         uint256 amount = 30e6;
 
         console.log("Calling issuanceIndexTokens on:", factory);
@@ -60,10 +65,19 @@ contract CallIndexFactoryOrders is Script {
 
     function _callRedemption() internal {
         address factory = _indexFactory();
-        // Dinari
-        address indexToken = 0x4e835FDB96830626e5Ba490f43CFb7274C146691;
-        // uint256 amount = 30e6;
+        // // Dinari
+        // address indexToken = 0x4e835FDB96830626e5Ba490f43CFb7274C146691;
+        // // uint256 amount = 30e6;
+        // uint256 amount = IERC20(indexToken).balanceOf(0x11a8E23DAfbE058e9758c899dAEe0e43f287A96D);
+
+        // CCIP
+        // address indexToken = 0x3A1696F9A7b3140dB3e328654f914c07e55Ee793;
+        // uint256 amount = IERC20(indexToken).balanceOf(0x11a8E23DAfbE058e9758c899dAEe0e43f287A96D);
+
+        // CCIP CrossChain
+        address indexToken = 0x7f878aD42333E07F122b9f6E1C778C5353e9f1B4;
         uint256 amount = IERC20(indexToken).balanceOf(0x11a8E23DAfbE058e9758c899dAEe0e43f287A96D);
+
         console.log("Calling redemption on:", factory);
         console.log("Index token:", indexToken);
         console.log("Amount:", amount);

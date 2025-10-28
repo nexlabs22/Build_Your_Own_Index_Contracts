@@ -10,7 +10,8 @@ import {MainChainFactory} from "../ccip/MainChainFactory.sol";
 import {IndexFactoryStorage} from "../factory/IndexFactoryStorage.sol";
 import {DinariFactory} from "../dinari/DinariFactory.sol";
 
-contract OrderManager is Initializable, OwnableUpgradeable {
+/// @custom:oz-upgrades-from OrderManagerV2
+contract OrderManagerV3 is Initializable, OwnableUpgradeable {
     using SafeERC20 for IERC20;
 
     struct OrderNonceInfo {
@@ -96,7 +97,7 @@ contract OrderManager is Initializable, OwnableUpgradeable {
 
     function getCCIPFeeInUsdc(address indexToken, address usdc, uint256 amount) external view returns (uint256) {
         uint256 feeInWETH = mainChainFactory.getIssuanceFee(indexToken, usdc, amount);
-        uint256 feeInUSDC = factoryStorage.convertEthToUsd(feeInWETH) / 1e12;
+        uint256 feeInUSDC = factoryStorage.convertEthToUsd(feeInWETH);
         return feeInUSDC;
     }
 
