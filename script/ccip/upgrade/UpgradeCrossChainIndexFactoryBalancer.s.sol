@@ -7,28 +7,29 @@ import {ProxyAdmin} from "@openzeppelin/contracts/proxy/transparent/ProxyAdmin.s
 import {ITransparentUpgradeableProxy} from "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
 import "openzeppelin-foundry-upgrades/Upgrades.sol";
 
-contract UpgradeDinariBalancer is Script {
+contract UpgradeCrossChainIndexFactoryBalancer is Script {
     function run() external {
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
         vm.startBroadcast(deployerPrivateKey);
 
-        string memory targetChain = "sepolia";
+        string memory targetChain = "arbitrum_sepolia";
         address proxyAddress;
         address owner = vm.addr(deployerPrivateKey);
 
-        if (keccak256(bytes(targetChain)) == keccak256("sepolia")) {
-            proxyAddress = vm.envAddress("SEPOLIA_DINARI_BALANCER_PROXY_ADDRESS");
+        if (keccak256(bytes(targetChain)) == keccak256("arbitrum_sepolia")) {
+            proxyAddress = vm.envAddress("ARBITRUM_SEPOLIA_CROSS_CHAIN_FACTORY_BALANCER_PROXY_ADDRESS");
         } else if (keccak256(bytes(targetChain)) == keccak256("arbitrum_mainnet")) {
-            proxyAddress = vm.envAddress("ARBITRUM_DINARI_BALANCER_PROXY_ADDRESS");
+            proxyAddress = vm.envAddress("");
         } else {
             revert("Unsupported target chain");
         }
 
-        Upgrades.upgradeProxy(proxyAddress, "DinariBalancerV2.sol", "", owner);
+        Upgrades.upgradeProxy(proxyAddress, "CrossChainIndexFactoryBalancerV2.sol", "", owner);
 
         address newImpl = Upgrades.getImplementationAddress(proxyAddress);
-        console.log("DinariBalancer proxy upgraded to new implementation at:", newImpl);
+        console.log("CrossChainIndexFactoryBalancer proxy upgraded to new implementation at:", newImpl);
 
         vm.stopBroadcast();
     }
 }
+

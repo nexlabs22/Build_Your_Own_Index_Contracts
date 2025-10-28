@@ -24,7 +24,7 @@ contract UpgradeBalancerSender is Script {
             revert("Unsupported target chain");
         }
 
-        Upgrades.upgradeProxy(proxyAddress, "BalancerSender.sol", "", owner);
+        Upgrades.upgradeProxy(proxyAddress, "BalancerSenderV2.sol", "", owner);
 
         address newImpl = Upgrades.getImplementationAddress(proxyAddress);
         console.log("BalancerSender proxy upgraded to new implementation at:", newImpl);
