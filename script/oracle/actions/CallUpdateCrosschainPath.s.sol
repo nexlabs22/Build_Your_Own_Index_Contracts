@@ -19,8 +19,9 @@ contract CallUpdateCrosschainPath is Script, Test {
         // string memory targetChain = "sepolia";
         // string memory targetChain = "arbitrum_mainnet";
 
-        _fillMockAssetsListTestnet();
+        // _fillMockAssetsListTestnet();
         // _fillMockAssetsListUSDCWETH();
+        _fillMockAssetsListTestnetCrossChain();
 
         vm.stopBroadcast();
 
@@ -69,6 +70,40 @@ contract CallUpdateCrosschainPath is Script, Test {
         address[] memory path1 = new address[](2);
         path1[0] = wethAddress;
         path1[1] = btc;
+        pathData[1] = abi.encode(path1, feesData);
+
+        FunctionsOracle(functionsOracleProxy).updatePathData(providerIndex, chainSelectors, pathData);
+        console.log("Called mockFillAssetsList() [testnet style].");
+    }
+
+    function _fillMockAssetsListTestnetCrossChain() internal {
+        uint64 mainChainSelector = 3478487238524512106; // arb sepolia
+
+        address wethAddress = 0xE591bf0A0CF924A0674d7792db046B23CEbF5f34; // arb sepolia
+
+        address ripple = 0xf4A357354fab7DEAC6fAa1992d84138704C01f45; // arb sepolia
+        address xaut = 0x0C3711069cf889Fc47B3Da3700fFFDc2e16A4DaD; // arb sepolia
+
+        uint64[] memory providerIndex = new uint64[](2);
+        providerIndex[0] = 1;
+        providerIndex[1] = 1;
+
+        uint24[] memory feesData = new uint24[](1);
+        feesData[0] = 3000;
+
+        uint64[] memory chainSelectors = new uint64[](2);
+        chainSelectors[0] = mainChainSelector;
+        chainSelectors[1] = mainChainSelector;
+
+        bytes[] memory pathData = new bytes[](2);
+        address[] memory path = new address[](2);
+        path[0] = wethAddress;
+        path[1] = ripple;
+        pathData[0] = abi.encode(path, feesData);
+
+        address[] memory path1 = new address[](2);
+        path1[0] = wethAddress;
+        path1[1] = xaut;
         pathData[1] = abi.encode(path1, feesData);
 
         FunctionsOracle(functionsOracleProxy).updatePathData(providerIndex, chainSelectors, pathData);
