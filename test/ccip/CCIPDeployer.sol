@@ -556,7 +556,8 @@ contract CCIPDeployer is
         mainChainStorage.setBalancerSender(address(balancerSender));
         mainChainStorage.setMainChainBalancer(address(mainChainBalancer));
         mainChainStorage.setMainChainBalancer2(address(mainChainBalancer2));
-        mainChainStorage.setCoreSenderAndBalancerSenderGasLimits(2000000, 2000000);
+    // Increase CCIP gas limits to avoid OutOfGas during complex reweight flows in tests
+    mainChainStorage.setCoreSenderAndBalancerSenderGasLimits(5_000_000, 5_000_000);
         mainChainStorage.setIssuanceAndRedemptionFeePercentages(20, 20);
         mainChainStorage.setIsCrossChainFeeSponsered(false);
         vault.setOperator(address(mainChainFactory), true);
@@ -571,7 +572,8 @@ contract CCIPDeployer is
         crossChainIndexFactoryStorage.setVerifiedFactory(address(coreSender), 1, true);
         crossChainIndexFactoryStorage.setVerifiedFactory(address(balancerSender), 1, true);
         crossChainIndexFactoryStorage.setIndexTokenToVault(address(indexToken), address(crossChainVault));
-        crossChainIndexFactoryStorage.setGasLimits(2000000, 2000000);
+    // Align factory-side CCIP gas limits with the higher threshold
+    crossChainIndexFactoryStorage.setGasLimits(5_000_000, 5_000_000);
 
         crossChainVault.setOperator(address(crossChainIndexFactory), true);
         crossChainVault.setOperator(address(crossChainIndexFactoryBalancer), true);
