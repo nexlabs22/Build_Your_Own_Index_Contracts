@@ -78,6 +78,9 @@ contract CrossChainIndexFactoryStorage is
     mapping(address => uint256) public totalSentAmount;
     mapping(address => uint256) public totalReceivedAmount;
 
+    uint256 public balancerGasLimit;
+    uint256 public factoryGasLimit;
+
     modifier onlyFactory() {
         require(
             msg.sender == crossChainFactory || msg.sender == crossChainFactoryBalancer,
@@ -185,6 +188,11 @@ contract CrossChainIndexFactoryStorage is
 
     function setCcipRouter(address _router) public onlyOwner {
         i_router = _router;
+    }
+
+    function setGasLimits(uint256 _factoryGasLimit, uint256 _balancerGasLimit) public onlyOwner {
+        factoryGasLimit = _factoryGasLimit;
+        balancerGasLimit = _balancerGasLimit;
     }
 
     function setCrossChainToken(

@@ -204,7 +204,7 @@ contract MainChainBalancer is Initializable, ProposableOwnableUpgradeable, Pausa
 
         if (
             (chainValue * 100e18) / indexFactoryBalancer.getGlobalPortfolioValueByProviderNonce(1, nonce)
-                > _oracleChainSelectorTotalShares
+                >= _oracleChainSelectorTotalShares
         ) {
             mainChainStorage.increaseReweightTotalExtraPendingChains(nonce, 1);
             if (_chainSelector == currentChainSelector) {

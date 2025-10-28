@@ -571,6 +571,7 @@ contract CCIPDeployer is
         crossChainIndexFactoryStorage.setVerifiedFactory(address(coreSender), 1, true);
         crossChainIndexFactoryStorage.setVerifiedFactory(address(balancerSender), 1, true);
         crossChainIndexFactoryStorage.setIndexTokenToVault(address(indexToken), address(crossChainVault));
+        crossChainIndexFactoryStorage.setGasLimits(2000000, 2000000);
 
         crossChainVault.setOperator(address(crossChainIndexFactory), true);
         crossChainVault.setOperator(address(crossChainIndexFactoryBalancer), true);
@@ -587,9 +588,10 @@ contract CCIPDeployer is
         // mockRouter.setFactoryChainSelector(2, address(crossChainFeeReceiver));
 
         link.transfer(address(coreSender), 10e18);
+        link.transfer(address(balancerSender), 10e18);
         // link.transfer(address(factory), 10e18);
-        link.transfer(address(crossChainIndexFactory), 10e18);
-        link.transfer(address(crossChainIndexFactoryBalancer), 10e18);
+        link.transfer(address(crossChainIndexFactory), 20e18);
+        link.transfer(address(crossChainIndexFactoryBalancer), 20e18);
 
         // set corsender gas limit and balancer sender gas limit
     }
