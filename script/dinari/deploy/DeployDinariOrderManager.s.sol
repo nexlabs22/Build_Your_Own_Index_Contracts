@@ -18,15 +18,21 @@ contract DeployDinariOrderManager is Script {
         address usdcToken;
         uint8 usdcDecimals;
         address issuer;
+        address dinariFactoryProcessor;
+        address dinariFactory;
 
         if (keccak256(bytes(targetChain)) == keccak256("sepolia")) {
             usdcToken = vm.envAddress("SEPOLIA_USDC_ADDRESS");
             usdcDecimals = uint8(vm.envUint("SEPOLIA_USDC_DECIMALS"));
             issuer = vm.envAddress("SEPOLIA_DINARI_ISSUER_ADDRESS");
+            dinariFactoryProcessor = vm.envAddress("SEPOLIA_DINARI_FACTORY_PROCESSOR_PROXY_ADDRESS");
+            dinariFactory = vm.envAddress("SEPOLIA_DINARI_FACTORY_PROXY_ADDRESS");
         } else if (keccak256(bytes(targetChain)) == keccak256("arbitrum_mainnet")) {
             usdcToken = vm.envAddress("ARBITRUM_USDC_ADDRESS");
             usdcDecimals = uint8(vm.envUint("ARBITRUM_USDC_DECIMALS"));
             issuer = vm.envAddress("ARBITRUM_DINARI_ISSUER_ADDRESS");
+            dinariFactoryProcessor = vm.envAddress("ARBITRUM_DINARI_FACTORY_PROCESSOR_PROXY_ADDRESS");
+            dinariFactory = vm.envAddress("ARBITRUM_DINARI_FACTORY_PROXY_ADDRESS");
         } else {
             revert("Unsupported target chain");
         }
@@ -41,6 +47,9 @@ contract DeployDinariOrderManager is Script {
 
         dinariOrderManager = DinariOrderManager(proxy);
         address adminAddr = Upgrades.getAdminAddress(proxy);
+
+        DinariOrderManager(proxy).setOperator(dinariFactoryProcessor, true);
+        DinariOrderManager(proxy).setOperator(dinariFactory, true);
 
         console.log("DinariOrderManager implementation deployed at:", address(dinariOrderManager));
         console.log("DinariOrderManager proxy deployed at:", proxy);

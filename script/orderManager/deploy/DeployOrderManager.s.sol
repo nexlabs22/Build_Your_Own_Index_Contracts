@@ -16,15 +16,21 @@ contract DeployOrderManager is Script {
         address usdcToken;
         address indexFactoryProxy;
         address indexFactoryStorageProxy;
+        address mainChainFactoryProxy;
+        address coreSenderProxy;
 
         if (keccak256(bytes(targetChain)) == keccak256("sepolia")) {
             usdcToken = vm.envAddress("SEPOLIA_USDC_ADDRESS");
             indexFactoryProxy = vm.envAddress("SEPOLIA_INDEX_FACTORY_PROXY_ADDRESS");
             indexFactoryStorageProxy = vm.envAddress("SEPOLIA_INDEX_FACTORY_STORAGE_PROXY_ADDRESS");
+            mainChainFactoryProxy = vm.envAddress("SEPOLIA_MAIN_CHAIN_FACTORY_PROXY_ADDRESS");
+            coreSenderProxy = vm.envAddress("SEPOLIA_CORE_SENDER_PROXY_ADDRESS");
         } else if (keccak256(bytes(targetChain)) == keccak256("arbitrum_mainnet")) {
             usdcToken = vm.envAddress("ARBITRUM_USDC_ADDRESS");
             indexFactoryProxy = vm.envAddress("ARBITRUM_INDEX_FACTORY_PROXY_ADDRESS");
             indexFactoryStorageProxy = vm.envAddress("ARBITRUM_INDEX_FACTORY_STORAGE_PROXY_ADDRESS");
+            mainChainFactoryProxy = vm.envAddress("ARBITRUM_MAIN_CHAIN_FACTORY_PROXY_ADDRESS");
+            coreSenderProxy = vm.envAddress("ARBITRUM_CORE_SENDER_PROXY_ADDRESS");
         } else {
             revert("Unsupported target chain");
         }
@@ -40,6 +46,9 @@ contract DeployOrderManager is Script {
         address proxyAdmin = Upgrades.getAdminAddress(proxy);
         console.log("OrderManager proxy deployed at:", proxy);
         console.log("OrderManager ProxyAdmin:", proxyAdmin);
+
+        OrderManager(proxy).setOperator(mainChainFactoryProxy, true);
+        OrderManager(proxy).setOperator(coreSenderProxy, true);
 
         vm.stopBroadcast();
     }

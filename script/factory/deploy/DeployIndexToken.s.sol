@@ -12,8 +12,8 @@ import {IndexToken} from "../../../src/token/IndexToken.sol";
 contract DeployIndexToken is Script {
     function run() external {
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
-        string memory tokenName = "CCIP Stock BYOI";
-        string memory tokenSymbol = "CCIP Stock BYOI";
+        string memory tokenName = "Meme Coin Portfolio";
+        string memory tokenSymbol = "MEME PORTFOLIO";
 
         string memory targetChain = "sepolia";
         // string memory targetChain = "arbitrum_mainnet";

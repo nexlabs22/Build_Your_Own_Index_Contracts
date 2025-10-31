@@ -20,6 +20,7 @@ import {MainChainBalancer} from "../../src/ccip/MainChainBalancer.sol";
 import {MainChainBalancer2} from "../../src/ccip/MainChainBalancer2.sol";
 import {MainChainFactory} from "../../src/ccip/MainChainFactory.sol";
 import {CrossChainIndexFactoryBalancer} from "../../src/ccip/CrossChainIndexFactoryBalancer.sol";
+import {OrderManager} from "../../src/orderManager/OrderManager.sol";
 
 contract ConfigureProviderSetters is Script {
     function run() external {
@@ -61,7 +62,7 @@ contract ConfigureProviderSetters is Script {
         string memory prefix = _chainPrefix(targetChain);
         address storageProxy = vm.envAddress(string.concat(prefix, "_DINARI_STORAGE_PROXY_ADDRESS"));
         address factoryProxy = vm.envAddress(string.concat(prefix, "_DINARI_FACTORY_PROXY_ADDRESS"));
-        address indexFactoryBalancer = vm.envAddress(string.concat(prefix, "_INDEX_FACTORY_BALANCER_PROXY_ADDRESS"));
+        // address indexFactoryBalancer = vm.envAddress(string.concat(prefix, "_INDEX_FACTORY_BALANCER_PROXY_ADDRESS"));
         address factoryProcessorProxy = vm.envAddress(string.concat(prefix, "_DINARI_FACTORY_PROCESSOR_PROXY_ADDRESS"));
         address orderManagerProxy = vm.envAddress(string.concat(prefix, "_DINARI_ORDER_MANAGER_PROXY_ADDRESS"));
         address functionsOracle = vm.envAddress(string.concat(prefix, "_FUNCTIONS_ORACLE_PROXY_ADDRESS"));
@@ -74,11 +75,13 @@ contract ConfigureProviderSetters is Script {
 
         DinariStorage storageContract = DinariStorage(storageProxy);
         storageContract.setFactory(factoryProxy);
-        storageContract.setFactoryBalancer(indexFactoryBalancer);
+        // storageContract.setFactoryBalancer(indexFactoryBalancer);
         storageContract.setFactoryProcessor(factoryProcessorProxy);
         storageContract.setOrderManager(orderManagerProxy);
         storageContract.setFunctionsOracle(functionsOracle);
         storageContract.setIssuer(issuer);
+        storageContract.setFactoryBalancer(dinariBalancerProxy);
+        storageContract.setFactory(factoryProxy);
 
         DinariFactory factoryContract = DinariFactory(factoryProxy);
         factoryContract.setFunctionsOracle(functionsOracle);
@@ -93,6 +96,8 @@ contract ConfigureProviderSetters is Script {
         DinariOrderManager orderManager = DinariOrderManager(orderManagerProxy);
         orderManager.setIssuer(issuer);
         orderManager.setUsdcAddress(usdcToken, usdcDecimals);
+        orderManager.setOperator(factoryProcessorProxy, true);
+        orderManager.setOperator(factoryProxy, true);
 
         console.log("Configured DinariStorage setters");
     }
@@ -136,12 +141,14 @@ contract ConfigureProviderSetters is Script {
         address functionsOracle = vm.envAddress(string.concat(prefix, "_FUNCTIONS_ORACLE_PROXY_ADDRESS"));
         address balancerSenderProxy = vm.envAddress(string.concat(prefix, "_BALANCER_SENDER_PROXY_ADDRESS"));
         address indexFactoryStorage = vm.envAddress(string.concat(prefix, "_INDEX_FACTORY_STORAGE_PROXY_ADDRESS"));
+        address indexFactoryBalancer = vm.envAddress(string.concat(prefix, "_INDEX_FACTORY_BALANCER_PROXY_ADDRESS"));
 
         MainChainBalancer2 mcb2 = MainChainBalancer2(mainChainBalancer2Proxy);
         mcb2.setMainChainStorage(mainChainStorageProxy);
         mcb2.setFunctionsOracle(functionsOracle);
         mcb2.setBalancerSender(payable(balancerSenderProxy));
         mcb2.setIndexFactoryStorage(indexFactoryStorage);
+        mcb2.setIndexFactoryBalancer(indexFactoryBalancer);
     }
 
     function _configureCrossChainIndexFactoryBalancer(string memory prefix) internal {
@@ -162,8 +169,8 @@ contract ConfigureProviderSetters is Script {
         address mainChainBalancer2Proxy = vm.envAddress(string.concat(prefix, "_MAIN_CHAIN_BALANCER2_PROXY_ADDRESS"));
         // address crossChainFactoryProxy =
         //     vm.envAddress(string.concat(prefix, "_CROSS_CHAIN_INDEX_FACTORY_PROXY_ADDRESS"));
-        // address crossChainFactoryBalancerProxy =
-        //     vm.envAddress(string.concat(prefix, "_CROSS_CHAIN_INDEX_FACTORY_BALANCER_PROXY_ADDRESS"));
+        address crossChainFactoryBalancerProxy =
+            vm.envAddress(string.concat(prefix, "_CROSS_CHAIN_FACTORY_BALANCER_PROXY_ADDRESS"));
         uint64 chainSelector = uint64(vm.envUint(string.concat(prefix, "_CCIP_CHAIN_SELECTOR")));
         // address vault = vm.envAddress(string.concat(prefix, "_VAULT_PROXY_ADDRESS"));
         address functionsOracle = vm.envAddress(string.concat(prefix, "_FUNCTIONS_ORACLE_PROXY_ADDRESS"));
@@ -176,7 +183,7 @@ contract ConfigureProviderSetters is Script {
         mcs.setMainChainBalancer2(mainChainBalancer2Proxy);
         // mcs.setVault(vault);
         // mcs.setCrossChainFactory(crossChainFactoryProxy, chainSelector);
-        // mcs.setCrossChainFactoryBalancer(crossChainFactoryBalancerProxy, chainSelector);
+        mcs.setCrossChainFactoryBalancer(crossChainFactoryBalancerProxy, chainSelector);
         mcs.setFunctionsOracle(functionsOracle);
         mcs.setMainChainFactory(mainChainFactoryProxy);
     }
@@ -188,10 +195,17 @@ contract ConfigureProviderSetters is Script {
             vm.envAddress(string.concat(prefix, "_CROSS_CHAIN_INDEX_FACTORY_PROXY_ADDRESS"));
         address crossChainFactoryBalancerProxy =
             vm.envAddress(string.concat(prefix, "_CROSS_CHAIN_INDEX_FACTORY_BALANCER_PROXY_ADDRESS"));
+        address priceOracle = vm.envAddress(string.concat(prefix, "_PRICE_ORACLE"));
+        address coreSenderProxy = vm.envAddress(string.concat(prefix, "_CORE_SENDER_PROXY_ADDRESS"));
+        address balancerSenderProxy = vm.envAddress(string.concat(prefix, "_BALANCER_SENDER_PROXY_ADDRESS"));
+        uint64 chainSelector = uint64(vm.envUint(string.concat(prefix, "_CCIP_CHAIN_SELECTOR")));
 
         CrossChainIndexFactoryStorage ccifs = CrossChainIndexFactoryStorage(crossChainStorageProxy);
         ccifs.setCrossChainFactory(crossChainFactoryProxy);
         ccifs.setCrossChainFactoryBalancer(crossChainFactoryBalancerProxy);
+        ccifs.setPriceOracle(priceOracle);
+        ccifs.setVerifiedFactory(coreSenderProxy, chainSelector, true);
+        ccifs.setVerifiedFactory(balancerSenderProxy, chainSelector, true);
         CrossChainIndexFactory(payable(crossChainFactoryProxy)).setCrossChainIndexFactoryStorage(crossChainStorageProxy);
     }
 
@@ -251,6 +265,16 @@ contract ConfigureProviderSetters is Script {
         mcf.setWethAddress(weth);
         mcf.setUsdcAddress(usdc);
         mcf.setIndexFactoryStorage(indexFactoryStorage);
+    }
+
+    function _configureOrderManager(string memory prefix) internal {
+        address orderManager = vm.envAddress(string.concat(prefix, "_ORDER_MANAGER_PROXY_ADDRESS"));
+        address mainChainFactoryProxy = vm.envAddress(string.concat(prefix, "_MAIN_CHAIN_FACTORY_PROXY_ADDRESS"));
+        address coreSenderProxy = vm.envAddress(string.concat(prefix, "_CORE_SENDER_PROXY_ADDRESS"));
+
+        OrderManager om = OrderManager(orderManager);
+        om.setOperator(mainChainFactoryProxy, true);
+        om.setOperator(coreSenderProxy, true);
     }
 
     function _chainPrefix(string memory targetChain) internal pure returns (string memory) {

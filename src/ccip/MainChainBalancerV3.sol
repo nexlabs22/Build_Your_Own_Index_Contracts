@@ -19,8 +19,8 @@ import "../factory/IndexFactoryStorage.sol";
 /// @notice The main token contract for Index Token (NEX Labs Protocol)
 /// @dev This contract uses an upgradeable pattern
 
-/// @custom:oz-upgrades-from MainChainBalancer
-contract MainChainBalancerV2 is Initializable, ProposableOwnableUpgradeable, PausableUpgradeable {
+/// @custom:oz-upgrades-from MainChainBalancerV2
+contract MainChainBalancerV3 is Initializable, ProposableOwnableUpgradeable, PausableUpgradeable {
     MainChainStorage public mainChainStorage;
     FunctionsOracle public functionsOracle;
     BalancerSender public balancerSender;
@@ -247,13 +247,13 @@ contract MainChainBalancerV2 is Initializable, ProposableOwnableUpgradeable, Pau
                 mainChainStorage.extraWethByNonce(nonce) - mainChainStorage.consumedExtraWethByNonce(nonce);
             reweightCalled = mainChainStorage.consumedExtraWethByNonce(nonce);
             uint256 outputAmount;
-            // if (remainedExtraWeth > 1000) {
-            //     (address[] memory toTokenPath, uint24[] memory toTokenFees) =
-            //         functionsOracle.getFromETHPathData(usdcAddress);
-            //     outputAmount = swap(toTokenPath, toTokenFees, remainedExtraWeth, address(this));
-            //     // approve to order manager
-            //     IERC20(usdcAddress).approve(address(indexFactoryBalancer), outputAmount);
-            // }
+            if (remainedExtraWeth > 1000) {
+                (address[] memory toTokenPath, uint24[] memory toTokenFees) =
+                    functionsOracle.getFromETHPathData(usdcAddress);
+                outputAmount = swap(toTokenPath, toTokenFees, remainedExtraWeth, address(this));
+                // approve to order manager
+                IERC20(usdcAddress).approve(address(indexFactoryBalancer), outputAmount);
+            }
             indexFactoryBalancer.completeFirstReweightAction(1, nonce, outputAmount);
         }
     }

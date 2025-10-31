@@ -116,7 +116,6 @@ contract DinariOrderManager is Initializable, OwnableUpgradeable, PausableUpgrad
     function requestBuyOrder(address _token, uint256 _orderAmount, address _receiver)
         external
         nonReentrant
-        whenNotPaused
         returns (uint256)
     {
         // require(_token != address(0), "invalid token address");

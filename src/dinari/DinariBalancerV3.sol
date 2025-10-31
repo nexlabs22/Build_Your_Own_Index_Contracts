@@ -34,7 +34,8 @@ error InvalidRequestId();
 
 /// @title DinariBalancer
 /// @author NEX Labs Protocol
-contract DinariBalancer is Initializable, OwnableUpgradeable, PausableUpgradeable, ReentrancyGuardUpgradeable {
+/// @custom:oz-upgrades-from DinariBalancerV2
+contract DinariBalancerV3 is Initializable, OwnableUpgradeable, PausableUpgradeable, ReentrancyGuardUpgradeable {
     using SafeERC20 for IERC20;
 
     struct ActionInfo {
@@ -368,10 +369,6 @@ contract DinariBalancer is Initializable, OwnableUpgradeable, PausableUpgradeabl
         // globalBalancer.registerProviderSurplus(_indexToken, dinariStorage.providerIndex(), _rebalanceNonce, amount);
     }
 
-    function setRequestId(address indexToken, uint256 nonce, address token, uint256 requestId) public onlyOwner {
-        rebalanceRequestId[indexToken][nonce][token] = requestId;
-    }
-
     function _placeBuyUnderweighted(
         address indexToken,
         uint256 nonce,
@@ -391,7 +388,6 @@ contract DinariBalancer is Initializable, OwnableUpgradeable, PausableUpgradeabl
             requestBuyOrder(indexToken, token, amountAfterFee, address(dinariStorage.dinariOrderManager()));
 
         actionInfoById[indexToken][requestId] = ActionInfo({actionType: 6, nonce: nonce});
-        rebalanceRequestId[indexToken][nonce][token] = requestId;
         rebalanceBuyPayedAmountById[indexToken][requestId] = amountAfterFee;
 
         return amountAfterFee;
@@ -553,9 +549,10 @@ contract DinariBalancer is Initializable, OwnableUpgradeable, PausableUpgradeabl
 
         (, address[] memory underlyingAssets,) = functionsOracle.getCurrentProviderIndexData(
             _indexToken, functionsOracle.currentFilledCount(_indexToken), dinariStorage.providerIndex()
-        ); // oracle filled count
+        );
 
         address vault = globalStorage.indexTokenToVault(_indexToken);
+        // require(vault != address(0), "vault not set");
         if (vault == address(0)) revert VaultNotSet();
 
         address orderManager = address(dinariStorage.dinariOrderManager());
@@ -563,24 +560,31 @@ contract DinariBalancer is Initializable, OwnableUpgradeable, PausableUpgradeabl
         for (uint256 i = 0; i < underlyingAssets.length; i++) {
             address token = underlyingAssets[i];
             uint256 requestId = rebalanceRequestId[_indexToken][_rebalanceNonce][token];
+            if (requestId == 0) continue;
 
-            if (requestId > 0) {
-                IOrderProcessor.Order memory order = dinariStorage.getOrderInstanceById(_indexToken, requestId);
-
-                if (!order.sell) {
-                    uint256 received = issuer.getReceivedAmount(requestId);
-                    if (received > 0) {
-                        DinariOrderManager(orderManager).withdrawFunds(token, address(this), received);
-                        address wrapped = dinariStorage.wrappedDshareAddress(token);
-                        IERC20(token).approve(wrapped, received);
-                        WrappedDShare(wrapped).deposit(received, vault);
-                    }
-                }
+            IOrderProcessor.Order memory order = dinariStorage.getOrderInstanceById(_indexToken, requestId);
+            if (order.sell) {
+                continue;
             }
 
-            // updatePendingTokenSellAmounts(_indexToken, _rebalanceNonce);
-            // functionsOracle.updateCurrentList(_indexToken);
-            // unpauseIndexFactory();
+            uint256 received = issuer.getReceivedAmount(requestId);
+            uint256 already = assetClaimedByRequestId[requestId];
+
+            if (received > already) {
+                uint256 claimable = received - already;
+
+                DinariOrderManager(orderManager).withdrawFunds(token, address(this), claimable);
+
+                address wrapped = dinariStorage.wrappedDshareAddress(token);
+                IERC20(token).approve(wrapped, claimable);
+                WrappedDShare(wrapped).deposit(claimable, vault);
+
+                assetClaimedByRequestId[requestId] = received;
+            }
+
+            updatePendingTokenSellAmounts(_indexToken, _rebalanceNonce);
+            functionsOracle.updateCurrentList(_indexToken);
+            unpauseIndexFactory();
 
             emit CompleteRebalanceActions(providerIndex, _indexToken, _rebalanceNonce, block.timestamp);
         }

@@ -1561,10 +1561,10 @@ contract CCIPFactoryTest is Test, CCIPDeployer {
         console.log("providerTotalValueByNonce", factoryBalancer.providerTotalValueByNonce(1, 1));
 
         updateOracleListOtherChain2();
-        // factoryBalancer.firstReweightAction(address(indexToken), 1);
-        // mockRouter.executeAllMessages();
-        // mainChainBalancer.secondReweightAction(address(indexToken));
-        // mockRouter.executeAllMessages();
+        factoryBalancer.firstReweightAction(address(indexToken), 1);
+        mockRouter.executeAllMessages();
+        mainChainBalancer.secondReweightAction(address(indexToken));
+        mockRouter.executeAllMessages();
         console.log("token0 value", token0.balanceOf(address(vault)));
         console.log("token1 value", token1.balanceOf(address(vault)));
         console.log("token2 value", token2.balanceOf(address(vault)));

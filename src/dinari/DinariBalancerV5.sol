@@ -34,7 +34,8 @@ error InvalidRequestId();
 
 /// @title DinariBalancer
 /// @author NEX Labs Protocol
-contract DinariBalancer is Initializable, OwnableUpgradeable, PausableUpgradeable, ReentrancyGuardUpgradeable {
+/// @custom:oz-upgrades-from DinariBalancerV4
+contract DinariBalancerV5 is Initializable, OwnableUpgradeable, PausableUpgradeable, ReentrancyGuardUpgradeable {
     using SafeERC20 for IERC20;
 
     struct ActionInfo {
@@ -368,10 +369,6 @@ contract DinariBalancer is Initializable, OwnableUpgradeable, PausableUpgradeabl
         // globalBalancer.registerProviderSurplus(_indexToken, dinariStorage.providerIndex(), _rebalanceNonce, amount);
     }
 
-    function setRequestId(address indexToken, uint256 nonce, address token, uint256 requestId) public onlyOwner {
-        rebalanceRequestId[indexToken][nonce][token] = requestId;
-    }
-
     function _placeBuyUnderweighted(
         address indexToken,
         uint256 nonce,
@@ -391,7 +388,6 @@ contract DinariBalancer is Initializable, OwnableUpgradeable, PausableUpgradeabl
             requestBuyOrder(indexToken, token, amountAfterFee, address(dinariStorage.dinariOrderManager()));
 
         actionInfoById[indexToken][requestId] = ActionInfo({actionType: 6, nonce: nonce});
-        rebalanceRequestId[indexToken][nonce][token] = requestId;
         rebalanceBuyPayedAmountById[indexToken][requestId] = amountAfterFee;
 
         return amountAfterFee;
