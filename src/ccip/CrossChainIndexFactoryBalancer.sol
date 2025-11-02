@@ -334,6 +334,7 @@ contract CrossChainIndexFactoryBalancer is
         }
         bytes memory data = abi.encode(
             2,
+            input.indexToken,
             input.targetAddresses,
             new address[](0),
             new bytes[](0),
@@ -382,6 +383,7 @@ contract CrossChainIndexFactoryBalancer is
         uint256[] memory zeroArr = new uint256[](0);
         bytes memory encodedData = abi.encode(
             3,
+            inputData.indexToken,
             inputData.currentTokens,
             inputData.oracleTokens,
             new bytes[](0),
@@ -556,7 +558,7 @@ contract CrossChainIndexFactoryBalancer is
         address[] memory zeroAddArr = new address[](0);
 
         bytes memory data = abi.encode(
-            4, zeroAddArr, zeroAddArr, new bytes[](0), new bytes[](0), inputData.nonce, zeroUintArr, zeroUintArr
+            4, inputData.indexToken, zeroAddArr, zeroAddArr, new bytes[](0), new bytes[](0), inputData.nonce, zeroUintArr, zeroUintArr
         );
         sendMessage(inputData.sourceChainSelector, inputData.sender, data, MessageSender.PayFeesIn.Native);
     }

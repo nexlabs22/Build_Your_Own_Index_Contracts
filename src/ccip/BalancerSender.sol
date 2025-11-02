@@ -33,9 +33,9 @@ contract BalancerSender is Initializable, CCIPReceiver, ProposableOwnableUpgrade
     uint256 public reweightCalled;
 
     event MessageSent(bytes32 messageId);
-    event AskValuesCompleted(uint256 time);
-    event FirstReweightActionCompleted(uint256 time);
-    event SecondReweightActionCompleted(uint256 time);
+    event AskValuesCompleted(address indexed indexToken, uint256 nonce, uint256 time);
+    event FirstReweightActionCompleted(address indexed indexToken, uint256 indexed nonce, uint256 time);
+    event SecondReweightActionCompleted(address indexed indexToken, uint256 indexed nonce, uint256 time);
 
     modifier onlyMainChainBalancer() {
         require(
@@ -120,12 +120,14 @@ contract BalancerSender is Initializable, CCIPReceiver, ProposableOwnableUpgrade
      */
     receive() external payable {}
 
-    function emitFirstReweightActionCompleted() external onlyMainChainBalancer {
-        emit FirstReweightActionCompleted(block.timestamp);
+    function emitFirstReweightActionCompleted(address _indexToken, uint256 _providerNonce) public onlyMainChainBalancer {
+        mainChainStorage.setRebalanceStatusByNonce(_providerNonce, MainChainStorage.RebalanceStatus.FirstRebalanceCompleted);
+        emit FirstReweightActionCompleted(_indexToken, _providerNonce, block.timestamp);
     }
 
-    function emitSecondReweightActionCompleted() external onlyMainChainBalancer {
-        emit SecondReweightActionCompleted(block.timestamp);
+    function emitSecondReweightActionCompleted(address _indexToken, uint256 _providerNonce) external onlyMainChainBalancer {
+        mainChainStorage.setRebalanceStatusByNonce(_providerNonce, MainChainStorage.RebalanceStatus.SecondRebalanceCompleted);
+        emit SecondReweightActionCompleted(_indexToken, _providerNonce, block.timestamp);
     }
 
     function pauseMainChainFactory() internal {
@@ -273,7 +275,6 @@ contract BalancerSender is Initializable, CCIPReceiver, ProposableOwnableUpgrade
         (address[] memory fromETHPath, uint24[] memory fromETHFees) =
             mainChainStorage.getFromETHPathData(mainChainStorage.crossChainToken(_chainSelector));
         uint256 crossChainTokenAmount = swap(fromETHPath, fromETHFees, _extraWethAmount, address(this));
-        reweightCalled = _oracleTokenShares.length;
         uint256[] memory extraData = new uint256[](2);
         extraData[0] = _portfolioValue;
         extraData[1] = _oracleChainSelectorTotalShares;
@@ -353,28 +354,31 @@ contract BalancerSender is Initializable, CCIPReceiver, ProposableOwnableUpgrade
         );
     }
 
-    function _handleCompleteFirstReweight(uint256 nonce) internal {
+    function _handleCompleteFirstReweight(address _indexToken, uint256 nonce) internal {
         // get total chainSelectors
         mainChainStorage.increaseReweightTotalExtraCompletedChains(nonce, 1);
         if (
             mainChainStorage.totalReweightExtraCompletedChains(nonce)
                 == mainChainStorage.totalReweightExtraPendingChains(nonce)
         ) {
-            // MainChainBalancer(mainChainStorage.mainChainBalancer()).completeFirstReweightAction(nonce);
-            emit FirstReweightActionCompleted(block.timestamp);
+            // MainChainBalancer(mainChainStorage.mainChainBalancer()).completeReweightAction(nonce);
+            // emit FirstReweightActionCompleted(_indexToken, nonce, block.timestamp);
+            // mainChainStorage.setRebalanceStatusByNonce(nonce, MainChainStorage.RebalanceStatus.FirstReweightCompleted);
+            // emitFirstReweightActionCompleted(_indexToken, nonce);
+            mainChainStorage.setRebalanceStatusByNonce(nonce, MainChainStorage.RebalanceStatus.FirstRebalanceCompleted);
+            emit FirstReweightActionCompleted(_indexToken, nonce, block.timestamp);
         }
     }
 
-    function _handleCompleteSecondReweight(uint256 nonce) internal {
+    function _handleCompleteSecondReweight(address _indexToken, uint256 nonce) internal {
         // get total chainSelectors
+        reweightCalled += 1;
         mainChainStorage.increaseReweightTotalLowerCompletedChains(nonce, 1);
         if (
             mainChainStorage.totalReweightLowerCompletedChains(nonce)
                 == mainChainStorage.totalReweightLowerPendingChains(nonce)
         ) {
-            MainChainBalancer(mainChainStorage.mainChainBalancer()).completeSecondReweightAction(nonce);
-            unpauseMainChainFactory();
-            emit SecondReweightActionCompleted(block.timestamp);
+            MainChainBalancer(mainChainStorage.mainChainBalancer()).completeSecondReweightAction(_indexToken, nonce);
         }
     }
 
@@ -393,6 +397,7 @@ contract BalancerSender is Initializable, CCIPReceiver, ProposableOwnableUpgrade
         );
         (
             uint256 actionType,
+            address _indexToken,
             address[] memory tokenAddresses,
             address[] memory _tokenAddresses2,
             bytes[] memory _tokenPaths,
@@ -401,7 +406,7 @@ contract BalancerSender is Initializable, CCIPReceiver, ProposableOwnableUpgrade
             uint256[] memory value1,
             uint256[] memory _value2
         ) = abi.decode(
-            any2EvmMessage.data, (uint256, address[], address[], bytes[], bytes[], uint256, uint256[], uint256[])
+            any2EvmMessage.data, (uint256, address, address[], address[], bytes[], bytes[], uint256, uint256[], uint256[])
         ); // abi-decoding of the sent string message
         // no-op references to avoid unused local warnings
         if (_tokenAddresses2.length + _tokenPaths.length + _tokenPaths2.length + _value2.length == 2 ** 256 - 1) {
@@ -413,13 +418,22 @@ contract BalancerSender is Initializable, CCIPReceiver, ProposableOwnableUpgrade
             );
         }
         if (actionType == 0) {} else if (actionType == 1) {} else if (actionType == 2) {
+            (, address[] memory underlyingAssets,) =
+            functionsOracle.getCurrentProviderIndexData(_indexToken, functionsOracle.currentFilledCount(_indexToken), 1);
             for (uint256 i = 0; i < value1.length; i++) {
                 mainChainStorage.increasePortfolioTotalValueByNonce(nonce, value1[i]);
                 mainChainStorage.increaseTokenValueByNonce(nonce, tokenAddresses[i], value1[i]);
                 mainChainStorage.increaseChainValueByNonce(nonce, sourceChainSelector, value1[i]);
                 mainChainStorage.increaseUpdatedTokensValueCount(nonce);
-                indexFactoryBalancer.completeAskValueCCIP(nonce, value1[i]);
-                emit AskValuesCompleted(block.timestamp);
+
+                if(
+                    mainChainStorage.updatedTokensValueCount(nonce)
+                        == underlyingAssets.length
+                ) {
+                    mainChainStorage.setRebalanceStatusByNonce(nonce, MainChainStorage.RebalanceStatus.AskValuesCompleted);
+                    indexFactoryBalancer.completeAskValueCCIP(_indexToken, nonce, mainChainStorage.portfolioTotalValueByNonce(nonce));
+                    emit AskValuesCompleted(_indexToken, nonce, block.timestamp);
+                }
             }
         } else if (actionType == 3) {
             if(any2EvmMessage.destTokenAmounts.length > 0) {
@@ -432,9 +446,9 @@ contract BalancerSender is Initializable, CCIPReceiver, ProposableOwnableUpgrade
             mainChainStorage.increasePendingExtraWethByNonce(nonce, wethAmount);
             weth.transfer(mainChainStorage.mainChainBalancer(), wethAmount);
             }
-            _handleCompleteFirstReweight(nonce);
+            _handleCompleteFirstReweight(_indexToken, nonce);
         } else if (actionType == 4) {
-            _handleCompleteSecondReweight(nonce);
+            _handleCompleteSecondReweight(_indexToken, nonce);
         }
     }
 }

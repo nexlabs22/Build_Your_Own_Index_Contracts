@@ -153,7 +153,7 @@ contract DinariBalancer is Initializable, OwnableUpgradeable, PausableUpgradeabl
 
         portfolioValueByNonce[_indexToken][nonce] = portfolioValue;
 
-        globalBalancer.completeDinariAskValues(nonce, portfolioValue);
+        globalBalancer.completeDinariAskValues(_indexToken, nonce, portfolioValue);
 
         emit AskValuesRequested(dinariStorage.providerIndex(), _indexToken, block.timestamp);
 
@@ -362,7 +362,7 @@ contract DinariBalancer is Initializable, OwnableUpgradeable, PausableUpgradeabl
         if (amount == 0) return;
         IERC20 usdc = IERC20(dinariStorage.usdc());
         usdc.approve(address(globalBalancer), amount);
-        globalBalancer.completeFirstReweightAction(dinariStorage.providerIndex(), _rebalanceNonce, amount);
+        globalBalancer.completeReweightAction(_indexToken, dinariStorage.providerIndex(), _rebalanceNonce, amount);
         // IERC20(address(dinariStorage.usdc())).safeTransfer(address(globalBalancer), amount);
         // usdcForwardedByNonce[_indexToken][_rebalanceNonce] += amount;
         // globalBalancer.registerProviderSurplus(_indexToken, dinariStorage.providerIndex(), _rebalanceNonce, amount);

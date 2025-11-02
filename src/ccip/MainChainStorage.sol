@@ -127,6 +127,7 @@ contract MainChainStorage is Initializable, ProposableOwnableUpgradeable {
 
     mapping(uint256 => uint256) public consumedExtraWethByNonce;
 
+
     modifier onlyIndexFactory() {
         require(msg.sender == mainChainFactory || msg.sender == coreSender, "Caller is not index factory contract.");
         _;
@@ -153,6 +154,15 @@ contract MainChainStorage is Initializable, ProposableOwnableUpgradeable {
 
     uint256 public issuanceFeePercentage;
     uint256 public redemptionFeePercentage;
+
+    enum RebalanceStatus {
+        None,
+        AskValuesCompleted,
+        FirstRebalanceCompleted,
+        SecondRebalanceCompleted
+    }
+
+    mapping(uint256 => RebalanceStatus) public rebalanceStatusByNonce;
 
     /**
      * @dev Initializes the contract with the given parameters.
@@ -265,6 +275,10 @@ contract MainChainStorage is Initializable, ProposableOwnableUpgradeable {
         fromETHFees[_crossChainToken] = _fromETHFees;
         toETHPath[_crossChainToken] = PathHelpers.reverseAddressArray(_fromETHPath);
         toETHFees[_crossChainToken] = PathHelpers.reverseUint24Array(_fromETHFees);
+    }
+
+    function setRebalanceStatusByNonce(uint256 _nonce, RebalanceStatus _status) public onlyMainChainBalancer {
+        rebalanceStatusByNonce[_nonce] = _status;
     }
 
     /**

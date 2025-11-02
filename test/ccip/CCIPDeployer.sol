@@ -536,6 +536,7 @@ contract CCIPDeployer is
         indexFactoryStorage.setUsdcAddress(address(usdc));
         indexFactoryStorage.setToUsdPriceFeed(address(ethPriceOracle));
         indexFactoryStorage.setIndexTokenToVault(address(indexToken), address(vault));
+        factoryBalancer.setBalancerSenderAddress(address(balancerSender));
         mainChainBalancer.setIndexFactoryBalancer(address(factoryBalancer));
         mainChainBalancer.setIndexFactoryStorage(address(indexFactoryStorage));
         mainChainBalancer2.setIndexFactoryBalancer(address(factoryBalancer));
@@ -557,7 +558,7 @@ contract CCIPDeployer is
         mainChainStorage.setMainChainBalancer(address(mainChainBalancer));
         mainChainStorage.setMainChainBalancer2(address(mainChainBalancer2));
     // Increase CCIP gas limits to avoid OutOfGas during complex reweight flows in tests
-    mainChainStorage.setCoreSenderAndBalancerSenderGasLimits(5_000_000, 5_000_000);
+        mainChainStorage.setCoreSenderAndBalancerSenderGasLimits(5_000_000, 5_000_000);
         mainChainStorage.setIssuanceAndRedemptionFeePercentages(20, 20);
         mainChainStorage.setIsCrossChainFeeSponsered(false);
         vault.setOperator(address(mainChainFactory), true);

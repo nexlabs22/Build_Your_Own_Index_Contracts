@@ -17,6 +17,8 @@ import "../../src/test/LinkToken.sol";
 import "../../src/test/MockV3Aggregator.sol";
 
 import "./CCIPDeployer.sol";
+import "../../src/factory/IndexFactoryBalancer.sol";
+
 
 contract CCIPFactoryTest is Test, CCIPDeployer {
     using stdStorage for StdStorage;
@@ -1464,7 +1466,6 @@ contract CCIPFactoryTest is Test, CCIPDeployer {
         console.log("token4 value", mainChainStorage.tokenValueByNonce(1, address(token4)));
         console.log("portfolioTotalValueByNonce", factoryBalancer.portfolioTotalValueByNonce(1));
         console.log("providerTotalValueByNonce", factoryBalancer.providerTotalValueByNonce(1, 1));
-
         updateOracleList2();
         factoryBalancer.firstReweightAction(address(indexToken), 1);
         mockRouter.executeAllMessages();
@@ -1609,8 +1610,8 @@ contract CCIPFactoryTest is Test, CCIPDeployer {
         updateOracleList3();
         factoryBalancer.firstReweightAction(address(indexToken), 1);
         mockRouter.executeAllMessages();
-        // mainChainBalancer.secondReweightAction(address(indexToken));
-        // mockRouter.executeAllMessages();
+        mainChainBalancer.secondReweightAction(address(indexToken));
+        mockRouter.executeAllMessages();
         console.log("token0 value", token0.balanceOf(address(vault)));
         console.log("token1 value", token1.balanceOf(address(vault)));
         console.log("token2 value", token2.balanceOf(address(vault)));
@@ -1661,6 +1662,7 @@ contract CCIPFactoryTest is Test, CCIPDeployer {
         // factoryBalancer.askValues(address(indexToken));
         // mockRouter.executeAllMessages();
         console.log("reweight called", mainChainBalancer.reweightCalled());
+        console.log("reweight called", balancerSender.reweightCalled());
         console.log("token0 value", token0.balanceOf(address(vault)));
         console.log("token1 value", token1.balanceOf(address(vault)));
         console.log("token2 value", token2.balanceOf(address(vault)));
@@ -1668,6 +1670,7 @@ contract CCIPFactoryTest is Test, CCIPDeployer {
         console.log("token4 value", token4.balanceOf(address(crossChainVault)));
         console.log("extra weth amount", mainChainStorage.extraWethByNonce(1));
         console.log("extra percentage", mainChainStorage.reweightExtraPercentage(1));
+        console.log("weth balance", weth.balanceOf(address(mainChainBalancer)));
         // console.log("updateAskValuesCount", factoryBalancer.updateAskValuesCount());
         // usdc.approve(address(factory), 1001e16);
         // factory.issuanceIndexTokens(address(indexToken), 1000e16);
@@ -1724,6 +1727,9 @@ contract CCIPFactoryTest is Test, CCIPDeployer {
 
         updateOracleList6();
         factoryBalancer.increaseReweightExtraPercentageByNonce(1, getProviderNegativePercentage());
+        factoryBalancer.setRebalanceStatus(1, IndexFactoryBalancer.RebalanceStatus.FirstRebalanceCompleted);
+        console.log("Rebalance Status:", uint(IndexFactoryBalancer.RebalanceStatus.FirstRebalanceCompleted));
+        console.log("Rebalance Status:", uint(factoryBalancer.rebalanceStatusByNonce(1)));
         factoryBalancer.secondReweightAction(address(indexToken), 1);
         mockRouter.executeAllMessages();
         mainChainBalancer.secondReweightAction(address(indexToken));

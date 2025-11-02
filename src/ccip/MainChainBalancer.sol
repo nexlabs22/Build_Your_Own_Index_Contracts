@@ -48,9 +48,9 @@ contract MainChainBalancer is Initializable, ProposableOwnableUpgradeable, Pausa
         uint256 swapWethAmount;
     }
 
-    event RequestedAskValues(uint256 time);
-    event RequestedFirstReweightAction(uint256 time);
-    event RequestedSecondReweightAction(uint256 time);
+    event RequestedAskValues(address indexToken, uint256 time);
+    event RequestedFirstReweightAction(address indexToken, uint256 time);
+    event RequestedSecondReweightAction(address indexToken, uint256 time);
 
     /**
      * @dev Pauses the contract.
@@ -235,16 +235,16 @@ contract MainChainBalancer is Initializable, ProposableOwnableUpgradeable, Pausa
         }
     }
 
-    function completeSecondReweightAction(uint256 nonce) public onlyOwnerOrOperator {
+    function completeSecondReweightAction(address _indexToken, uint256 nonce) public onlyOwnerOrOperator {
         if (
-            mainChainStorage.totalReweightLowerPendingChains(nonce) > 0
-                && mainChainStorage.totalReweightLowerPendingChains(nonce)
+            // mainChainStorage.totalReweightLowerPendingChains(nonce) > 0 && 
+            mainChainStorage.totalReweightLowerPendingChains(nonce)
                     == mainChainStorage.totalReweightLowerCompletedChains(nonce)
         ) {
-            balancerSender.emitSecondReweightActionCompleted();
+            balancerSender.emitSecondReweightActionCompleted(_indexToken, nonce);
             uint256 remainedExtraWeth =
                 mainChainStorage.extraWethByNonce(nonce) - mainChainStorage.consumedExtraWethByNonce(nonce);
-            reweightCalled = mainChainStorage.consumedExtraWethByNonce(nonce);
+            reweightCalled = remainedExtraWeth;
             uint256 outputAmount;
             if (remainedExtraWeth > 1000) {
                 (address[] memory toTokenPath, uint24[] memory toTokenFees) =
@@ -253,7 +253,7 @@ contract MainChainBalancer is Initializable, ProposableOwnableUpgradeable, Pausa
                 // approve to order manager
                 IERC20(usdcAddress).approve(address(indexFactoryBalancer), outputAmount);
             }
-            indexFactoryBalancer.completeFirstReweightAction(1, nonce, outputAmount);
+            indexFactoryBalancer.completeReweightAction(_indexToken, 1, nonce, outputAmount);
         }
     }
 
@@ -266,6 +266,8 @@ contract MainChainBalancer is Initializable, ProposableOwnableUpgradeable, Pausa
         onlyOwnerOrOperator
     {
         uint256 nonce = mainChainStorage.updatePortfolioNonce();
+        // check ask values completed
+        require(mainChainStorage.rebalanceStatusByNonce(nonce) == MainChainStorage.RebalanceStatus.AskValuesCompleted, "Values not asked");
         uint256 portfolioValue = mainChainStorage.portfolioTotalValueByNonce(nonce);
 
         uint256 latestCurrentCount = functionsOracle.currentFilledCount(_indexToken);
@@ -283,9 +285,9 @@ contract MainChainBalancer is Initializable, ProposableOwnableUpgradeable, Pausa
             }
         }
 
-        emit RequestedFirstReweightAction(block.timestamp);
+        emit RequestedFirstReweightAction(_indexToken, block.timestamp);
         if (!isCrossChain) {
-            balancerSender.emitFirstReweightActionCompleted();
+            balancerSender.emitFirstReweightActionCompleted(_indexToken, nonce);
         }
     }
 
@@ -453,6 +455,8 @@ contract MainChainBalancer is Initializable, ProposableOwnableUpgradeable, Pausa
      */
     function secondReweightAction(address _indexToken) public whenNotPaused onlyOwnerOrOperator {
         uint256 nonce = mainChainStorage.updatePortfolioNonce();
+        // check previous reweight completed
+        require(mainChainStorage.rebalanceStatusByNonce(nonce) == MainChainStorage.RebalanceStatus.FirstRebalanceCompleted, "First reweight not completed");
         uint256 _targetPortfolioValue = targetPortfolioValue;
         // uint256 portfolioValue = mainChainStorage.portfolioTotalValueByNonce(nonce);
 
@@ -499,9 +503,9 @@ contract MainChainBalancer is Initializable, ProposableOwnableUpgradeable, Pausa
             }
         }
         mainChainStorage.decreasePendingExtraWethByNonce(nonce);
-        emit RequestedSecondReweightAction(block.timestamp);
+        emit RequestedSecondReweightAction(_indexToken, block.timestamp);
         if (isOnlyOnCurrentChain) {
-            completeSecondReweightAction(nonce);
+            completeSecondReweightAction(_indexToken, nonce);
             // unpauseMainChainFactory();
         }
     }
