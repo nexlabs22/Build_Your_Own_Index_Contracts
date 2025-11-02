@@ -128,7 +128,7 @@ contract MainChainBalancer2 is Initializable, ProposableOwnableUpgradeable, Paus
         return mainChainStorage.updatePortfolioNonce();
     }
 
-    function _updateCheckValuesCurrentChainMappings(uint256 value, address tokenAddress) internal {
+    function _updateCheckValuesCurrentChainMappings(address _indexToken, uint256 value, address tokenAddress) internal {
         mainChainStorage.increasePortfolioTotalValueByNonce(
             mainChainStorage.updatePortfolioNonce(), mainChainStorage.convertEthToUsd(value)
         );
@@ -139,10 +139,20 @@ contract MainChainBalancer2 is Initializable, ProposableOwnableUpgradeable, Paus
         mainChainStorage.increaseChainValueByNonce(
             mainChainStorage.updatePortfolioNonce(), currentChainSelector, mainChainStorage.convertEthToUsd(value)
         );
+        (, address[] memory underlyingAssets,) =
+            functionsOracle.getCurrentProviderIndexData(_indexToken, functionsOracle.currentFilledCount(_indexToken), 1);
+        if(
+            mainChainStorage.updatedTokensValueCount(mainChainStorage.updatePortfolioNonce())
+                == underlyingAssets.length
+        ) {
+        mainChainStorage.setRebalanceStatusByNonce(
+            mainChainStorage.updatePortfolioNonce(), MainChainStorage.RebalanceStatus.AskValuesCompleted
+        );
         // inform factory about the value
         indexFactoryBalancer.completeAskValueCCIP(
-            mainChainStorage.updatePortfolioNonce(), mainChainStorage.convertEthToUsd(value)
+            _indexToken, mainChainStorage.updatePortfolioNonce(), mainChainStorage.convertEthToUsd(value)
         );
+        }
     }
 
     function _checkValueCurrentChainValues(address _indexToken, address tokenAddress)
@@ -169,7 +179,7 @@ contract MainChainBalancer2 is Initializable, ProposableOwnableUpgradeable, Paus
         for (uint256 j = 0; j < chainSelectorTokensCount; j++) {
             address tokenAddress = tokens[j];
             uint256 value = _checkValueCurrentChainValues(_indexToken, tokenAddress);
-            _updateCheckValuesCurrentChainMappings(value, tokenAddress);
+            _updateCheckValuesCurrentChainMappings(_indexToken, value, tokenAddress);
         }
     }
 
