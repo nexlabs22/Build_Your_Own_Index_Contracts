@@ -50,12 +50,16 @@ contract CallIndexFactoryOrders is Script {
         // uint256 amount = 100e6;
 
         // CCIP CrossChain
-        address indexToken = 0x7f878aD42333E07F122b9f6E1C778C5353e9f1B4;
-        uint256 amount = 30e6;
+        // address indexToken = 0x7f878aD42333E07F122b9f6E1C778C5353e9f1B4;
+        // uint256 amount = 30e6;
 
         // // CCIP + Stock
         // address indexToken = 0x32d89568718643C212bF8F2dCC0bad76723A64fd;
         // uint256 amount = 40e6;
+
+        // Stock + Meme coin
+        address indexToken = 0xAF89F0f13678aEf4BBb1F01d3d38247074529Ac4;
+        uint256 amount = 110e6;
 
         console.log("Calling issuanceIndexTokens on:", factory);
         console.log("Index token:", indexToken);
@@ -63,7 +67,7 @@ contract CallIndexFactoryOrders is Script {
 
         uint256 pk = vm.envUint("PRIVATE_KEY");
         vm.startBroadcast(pk);
-        IERC20(dinariUsdc).approve(address(factory), 50e6);
+        IERC20(dinariUsdc).approve(address(factory), 130e6);
         uint256 orderNonce = IndexFactory(factory).issuanceIndexTokens(indexToken, amount);
         vm.stopBroadcast();
 

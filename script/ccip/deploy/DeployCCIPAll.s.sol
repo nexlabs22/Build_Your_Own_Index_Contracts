@@ -54,8 +54,7 @@ contract DeployCCIPAll is Script {
         // if (cfg.vaultAddress != address(0)) {
         //     mainChainStorage.setVault(cfg.vaultAddress);
         // }
-        // address ccStorageProxy = _deployCrossChainIndexFactoryStorage(owner, cfg);
-        // address ccFactoryProxy = _deployCrossChainIndexFactory(owner, cfg, ccStorageProxy);
+
         address balancerSenderProxy = _deployBalancerSender(owner, cfg, mainChainStorageProxy);
         address coreSenderProxy = _deployCoreSender(owner, cfg, mainChainStorageProxy);
         address mainChainBalancerProxy =
@@ -69,12 +68,6 @@ contract DeployCCIPAll is Script {
 
         console.log("MainChainStorage proxy deployed at:", mainChainStorageProxy);
         console.log("MainChainStorage ProxyAdmin:", Upgrades.getAdminAddress(mainChainStorageProxy));
-
-        // console.log("CrossChainIndexFactoryStorage proxy deployed at:", ccStorageProxy);
-        // console.log("CrossChainIndexFactoryStorage ProxyAdmin:", Upgrades.getAdminAddress(ccStorageProxy));
-
-        // console.log("CrossChainIndexFactory proxy deployed at:", ccFactoryProxy);
-        // console.log("CrossChainIndexFactory ProxyAdmin:", Upgrades.getAdminAddress(ccFactoryProxy));
 
         console.log("BalancerSender proxy deployed at:", balancerSenderProxy);
         console.log("BalancerSender ProxyAdmin:", Upgrades.getAdminAddress(balancerSenderProxy));

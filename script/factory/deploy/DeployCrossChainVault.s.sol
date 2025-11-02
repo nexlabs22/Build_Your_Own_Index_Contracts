@@ -13,26 +13,21 @@ contract DeployVault is Script {
     function run() external {
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
 
-        string memory targetChain = "sepolia";
-        // string memory targetChain = "arbitrum_mainnet";
+        string memory targetChain = "arbitrum_sepolia";
+        // string memory targetChain = "base";
 
-        address mainchainFactory;
-        address mainchainBalancer;
-        address dinariFactory;
-        address dinariBalancer;
+        address crosschainIndexFactory;
+        address crosschainIndexFactoryBalancer;
 
         address owner = vm.addr(deployerPrivateKey);
 
-        if (keccak256(bytes(targetChain)) == keccak256("sepolia")) {
-            mainchainFactory = vm.envAddress("SEPOLIA_MAIN_CHAIN_FACTORY_PROXY_ADDRESS");
-            mainchainBalancer = vm.envAddress("SEPOLIA_MAIN_CHAIN_BALANCER_PROXY_ADDRESS");
-            dinariFactory = vm.envAddress("SEPOLIA_DINARI_FACTORY_PROXY_ADDRESS");
-            dinariBalancer = vm.envAddress("SEPOLIA_DINARI_BALANCER_PROXY_ADDRESS");
-        } else if (keccak256(bytes(targetChain)) == keccak256("arbitrum_mainnet")) {
-            mainchainFactory = vm.envAddress("ARBITRUM_MAIN_CHAIN_FACTORY_PROXY_ADDRESS");
-            mainchainBalancer = vm.envAddress("ARBITRUM_MAIN_CHAIN_BALANCER_PROXY_ADDRESS");
-            dinariFactory = vm.envAddress("ARBITRUM_DINARI_FACTORY_PROXY_ADDRESS");
-            dinariBalancer = vm.envAddress("ARBITRUM_DINARI_BALANCER_PROXY_ADDRESS");
+        if (keccak256(bytes(targetChain)) == keccak256("arbitrum_sepolia")) {
+            crosschainIndexFactory = vm.envAddress("ARBITRUM_SEPOLIA_CROSS_CHAIN_FACTORY_PROXY_ADDRESS");
+            crosschainIndexFactoryBalancer =
+                vm.envAddress("ARBITRUM_SEPOLIA_CROSS_CHAIN_FACTORY_BALANCER_PROXY_ADDRESS");
+        } else if (keccak256(bytes(targetChain)) == keccak256("base")) {
+            crosschainIndexFactory = vm.envAddress("");
+            crosschainIndexFactoryBalancer = vm.envAddress("");
         } else {
             revert("Unsupported target chain");
         }
@@ -50,10 +45,8 @@ contract DeployVault is Script {
         console.log("Vault proxy deployed at:", address(proxy));
         console.log("ProxyAdmin for Vault deployed at:", address(proxyAdmin));
 
-        Vault(proxy).setOperator(mainchainFactory, true);
-        Vault(proxy).setOperator(mainchainBalancer, true);
-        Vault(proxy).setOperator(dinariFactory, true);
-        Vault(proxy).setOperator(dinariBalancer, true);
+        Vault(proxy).setOperator(crosschainIndexFactory, true);
+        Vault(proxy).setOperator(crosschainIndexFactoryBalancer, true);
 
         console.log("Set operators successfuly!");
 

@@ -21,6 +21,7 @@ import {MainChainBalancer2} from "../../src/ccip/MainChainBalancer2.sol";
 import {MainChainFactory} from "../../src/ccip/MainChainFactory.sol";
 import {CrossChainIndexFactoryBalancer} from "../../src/ccip/CrossChainIndexFactoryBalancer.sol";
 import {OrderManager} from "../../src/orderManager/OrderManager.sol";
+import {IndexFactoryStorage} from "../../src/factory/IndexFactoryStorage.sol";
 
 contract ConfigureProviderSetters is Script {
     function run() external {
@@ -54,6 +55,11 @@ contract ConfigureProviderSetters is Script {
         _configureDinari(targetChain);
         _configureBackedFi(targetChain);
         _configureCcip(targetChain);
+        _configureIndexFactoryStorage(targetChain);
+        _configureOrderManager(targetChain);
+
+        // CrossChain
+        // _configureCrosschain(targetChain);
 
         vm.stopBroadcast();
     }
@@ -62,7 +68,6 @@ contract ConfigureProviderSetters is Script {
         string memory prefix = _chainPrefix(targetChain);
         address storageProxy = vm.envAddress(string.concat(prefix, "_DINARI_STORAGE_PROXY_ADDRESS"));
         address factoryProxy = vm.envAddress(string.concat(prefix, "_DINARI_FACTORY_PROXY_ADDRESS"));
-        // address indexFactoryBalancer = vm.envAddress(string.concat(prefix, "_INDEX_FACTORY_BALANCER_PROXY_ADDRESS"));
         address factoryProcessorProxy = vm.envAddress(string.concat(prefix, "_DINARI_FACTORY_PROCESSOR_PROXY_ADDRESS"));
         address orderManagerProxy = vm.envAddress(string.concat(prefix, "_DINARI_ORDER_MANAGER_PROXY_ADDRESS"));
         address functionsOracle = vm.envAddress(string.concat(prefix, "_FUNCTIONS_ORACLE_PROXY_ADDRESS"));
@@ -75,7 +80,6 @@ contract ConfigureProviderSetters is Script {
 
         DinariStorage storageContract = DinariStorage(storageProxy);
         storageContract.setFactory(factoryProxy);
-        // storageContract.setFactoryBalancer(indexFactoryBalancer);
         storageContract.setFactoryProcessor(factoryProcessorProxy);
         storageContract.setOrderManager(orderManagerProxy);
         storageContract.setFunctionsOracle(functionsOracle);
@@ -124,15 +128,19 @@ contract ConfigureProviderSetters is Script {
     function _configureCcip(string memory targetChain) internal {
         string memory prefix = _chainPrefix(targetChain);
         _configureMainChainStorage(prefix);
-        // _configureCrossChainIndexFactory(prefix);
         _configureBalancerSender(prefix);
         _configureCoreSender(prefix);
         _configureMainChainBalancer(prefix);
         _configureMainChainBalancer2(prefix);
-        // _configureCrossChainIndexFactoryBalancer(prefix);
         _configureMainChainFactory(prefix);
 
         console.log("Configured CCIP setters");
+    }
+
+    function _configureCrosschain(string memory targetChain) internal {
+        string memory prefix = _chainPrefix(targetChain);
+        _configureCrossChainIndexFactory(prefix);
+        _configureCrossChainIndexFactoryBalancer(prefix);
     }
 
     function _configureMainChainBalancer2(string memory prefix) internal {
@@ -186,6 +194,7 @@ contract ConfigureProviderSetters is Script {
         mcs.setCrossChainFactoryBalancer(crossChainFactoryBalancerProxy, chainSelector);
         mcs.setFunctionsOracle(functionsOracle);
         mcs.setMainChainFactory(mainChainFactoryProxy);
+        mcs.setCoreSenderAndBalancerSenderGasLimits(2000000, 2000000);
     }
 
     function _configureCrossChainIndexFactory(string memory prefix) internal {
@@ -277,10 +286,33 @@ contract ConfigureProviderSetters is Script {
         om.setOperator(coreSenderProxy, true);
     }
 
+    function _configureIndexFactoryStorage(string memory prefix) internal {
+        address fStorage = vm.envAddress(string.concat(prefix, "_INDEX_FACTORY_STORAGE_PROXY_ADDRESS"));
+        address usdc = vm.envAddress(string.concat(prefix, "_USDC_ADDRESS"));
+        address indexFactory = vm.envAddress(string.concat(prefix, "_INDEX_FACTORY_PROXY_ADDRESS"));
+        address toUsdcPriceFeed = vm.envAddress(string.concat(prefix, "_TO_USD_PRICE_FEED_ADDRESS"));
+        address orderManager = vm.envAddress(string.concat(prefix, "_ORDER_MANAGER_PROXY_ADDRESS"));
+        address mainChainBalancer = vm.envAddress(string.concat(prefix, "_MAIN_CHAIN_BALANCER_PROXY_ADDRESS"));
+
+        IndexFactoryStorage factoryStorage = IndexFactoryStorage(fStorage);
+        factoryStorage.setUsdcAddress(usdc);
+        factoryStorage.setIndexFactory(indexFactory);
+        factoryStorage.setToUsdPriceFeed(toUsdcPriceFeed);
+        factoryStorage.setOrderManager(orderManager);
+        factoryStorage.setMainChainBalancer(mainChainBalancer);
+    }
+
     function _chainPrefix(string memory targetChain) internal pure returns (string memory) {
         if (keccak256(bytes(targetChain)) == keccak256("arbitrum_mainnet")) {
             return "ARBITRUM";
+        } else if (keccak256(bytes(targetChain)) == keccak256("sepolia")) {
+            return "SEPOLIA";
+        } else if (keccak256(bytes(targetChain)) == keccak256("arbitrum_sepolia")) {
+            return "ARBITRUM_SEPOLIA";
+        } else if (keccak256(bytes(targetChain)) == keccak256("base_mainnet")) {
+            return "BASE";
         }
+
         return "SEPOLIA";
     }
 }

@@ -20,6 +20,8 @@ contract DeployIndexToken is Script {
         uint256 feeRatePerDayScaled;
         address feeReceiver;
         uint256 supplyCeiling;
+        address coreSender;
+        address globalFactory;
 
         address owner = vm.addr(deployerPrivateKey);
 
@@ -27,10 +29,14 @@ contract DeployIndexToken is Script {
             feeRatePerDayScaled = vm.envUint("SEPOLIA_FEE_RATE_PER_DAY_SCALED");
             feeReceiver = vm.envAddress("SEPOLIA_FEE_RECEIVER");
             supplyCeiling = vm.envUint("SEPOLIA_SUPPLY_CEILING");
+            coreSender = vm.envAddress("SEPOLIA_CORE_SENDER_PROXY_ADDRESS");
+            globalFactory = vm.envAddress("SEPOLIA_INDEX_FACTORY_PROXY_ADDRESS");
         } else if (keccak256(bytes(targetChain)) == keccak256("arbitrum_mainnet")) {
             feeRatePerDayScaled = vm.envUint("ARBITRUM_FEE_RATE_PER_DAY_SCALED");
             feeReceiver = vm.envAddress("ARBITRUM_FEE_RECEIVER");
             supplyCeiling = vm.envUint("ARBITRUM_SUPPLY_CEILING");
+            coreSender = vm.envAddress("ARBITRUM_CORE_SENDER_PROXY_ADDRESS");
+            globalFactory = vm.envAddress("ARBITRUM_INDEX_FACTORY_PROXY_ADDRESS");
         } else {
             revert("Unsupported target chain");
         }
@@ -52,6 +58,11 @@ contract DeployIndexToken is Script {
         console.log("IndexToken implementation deployed at:", address(indexTokenImplementation));
         console.log("IndexToken proxy deployed at:", address(proxy));
         console.log("ProxyAdmin for IndexToken deployed at:", address(proxyAdmin));
+
+        IndexToken(proxy).setMinter(coreSender, true);
+        IndexToken(proxy).setMinter(globalFactory, true);
+
+        console.log("Set minter successfuly!");
 
         vm.stopBroadcast();
     }
