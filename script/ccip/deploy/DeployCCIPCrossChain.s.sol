@@ -34,7 +34,8 @@ contract DeployCCIPAll is Script {
     function run() external {
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
         address owner = vm.addr(deployerPrivateKey);
-        string memory targetChain = "sepolia";
+        // string memory targetChain = "sepolia";
+        string memory targetChain = "base_mainnet";
 
         ChainConfig memory cfg = _loadConfig(targetChain);
 
@@ -52,6 +53,9 @@ contract DeployCCIPAll is Script {
 
         console.log("CrossChainIndexFactory proxy deployed at:", ccFactoryProxy);
         console.log("CrossChainIndexFactory ProxyAdmin:", Upgrades.getAdminAddress(ccFactoryProxy));
+
+        console.log("CrossChainIndexFactoryBalancer proxy deployed at:", ccBalancerProxy);
+        console.log("CrossChainIndexFactoryBalancer ProxyAdmin:", Upgrades.getAdminAddress(ccBalancerProxy));
 
         vm.stopBroadcast();
     }

@@ -41,7 +41,8 @@ contract DeployDinariAll is Script {
     function run() external {
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
         address owner = vm.addr(deployerPrivateKey);
-        string memory targetChain = "sepolia";
+        // string memory targetChain = "sepolia";
+        string memory targetChain = "arbitrum_mainnet";
 
         DinariConfig memory cfg = _loadConfig(targetChain);
 

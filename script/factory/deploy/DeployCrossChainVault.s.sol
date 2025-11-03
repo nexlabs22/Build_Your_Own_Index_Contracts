@@ -13,8 +13,8 @@ contract DeployVault is Script {
     function run() external {
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
 
-        string memory targetChain = "arbitrum_sepolia";
-        // string memory targetChain = "base";
+        // string memory targetChain = "arbitrum_sepolia";
+        string memory targetChain = "base";
 
         address crosschainIndexFactory;
         address crosschainIndexFactoryBalancer;
@@ -26,8 +26,8 @@ contract DeployVault is Script {
             crosschainIndexFactoryBalancer =
                 vm.envAddress("ARBITRUM_SEPOLIA_CROSS_CHAIN_FACTORY_BALANCER_PROXY_ADDRESS");
         } else if (keccak256(bytes(targetChain)) == keccak256("base")) {
-            crosschainIndexFactory = vm.envAddress("");
-            crosschainIndexFactoryBalancer = vm.envAddress("");
+            crosschainIndexFactory = vm.envAddress("BASE_CROSS_CHAIN_FACTORY_PROXY_ADDRESS");
+            crosschainIndexFactoryBalancer = vm.envAddress("BASE_CROSS_CHAIN_FACTORY_BALANCER_PROXY_ADDRESS");
         } else {
             revert("Unsupported target chain");
         }

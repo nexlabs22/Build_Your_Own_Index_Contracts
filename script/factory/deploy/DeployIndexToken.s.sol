@@ -12,11 +12,13 @@ import {IndexToken} from "../../../src/token/IndexToken.sol";
 contract DeployIndexToken is Script {
     function run() external {
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
-        string memory tokenName = "Meme Coin Portfolio";
-        string memory tokenSymbol = "MEME PORTFOLIO";
+        // string memory tokenName = "Meme Coin Portfolio";
+        // string memory tokenSymbol = "MEME PORTFOLIO";
+        string memory tokenName = "Stock Portfolio";
+        string memory tokenSymbol = "Stock Portfolio";
 
-        string memory targetChain = "sepolia";
-        // string memory targetChain = "arbitrum_mainnet";
+        // string memory targetChain = "sepolia";
+        string memory targetChain = "arbitrum_mainnet";
         uint256 feeRatePerDayScaled;
         address feeReceiver;
         uint256 supplyCeiling;

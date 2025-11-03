@@ -26,7 +26,8 @@ import {IndexFactoryStorage} from "../../src/factory/IndexFactoryStorage.sol";
 contract ConfigureProviderSetters is Script {
     function run() external {
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
-        string memory targetChain = vm.envOr("TARGET_CHAIN", string("sepolia"));
+        // string memory targetChain = vm.envOr("TARGET_CHAIN", string("sepolia"));
+        string memory targetChain = vm.envOr("TARGET_CHAIN", string("arbitrum_mainnet"));
 
         vm.startBroadcast(deployerPrivateKey);
 
@@ -52,14 +53,14 @@ contract ConfigureProviderSetters is Script {
         // set price oracle in crosschain storage
         // set verified factory in crosschain storage => core sender and balancer sender
 
-        _configureDinari(targetChain);
-        _configureBackedFi(targetChain);
-        _configureCcip(targetChain);
-        _configureIndexFactoryStorage(targetChain);
-        _configureOrderManager(targetChain);
+        // _configureDinari(targetChain);
+        // _configureBackedFi(targetChain);
+        // _configureCcip(targetChain);
+        // _configureIndexFactoryStorage(targetChain);
+        // _configureOrderManager(targetChain);
 
         // CrossChain
-        // _configureCrosschain(targetChain);
+        _configureCrosschain(targetChain);
 
         vm.stopBroadcast();
     }
@@ -276,7 +277,9 @@ contract ConfigureProviderSetters is Script {
         mcf.setIndexFactoryStorage(indexFactoryStorage);
     }
 
-    function _configureOrderManager(string memory prefix) internal {
+    function _configureOrderManager(string memory targetChain) internal {
+        string memory prefix = _chainPrefix(targetChain);
+
         address orderManager = vm.envAddress(string.concat(prefix, "_ORDER_MANAGER_PROXY_ADDRESS"));
         address mainChainFactoryProxy = vm.envAddress(string.concat(prefix, "_MAIN_CHAIN_FACTORY_PROXY_ADDRESS"));
         address coreSenderProxy = vm.envAddress(string.concat(prefix, "_CORE_SENDER_PROXY_ADDRESS"));
@@ -286,7 +289,9 @@ contract ConfigureProviderSetters is Script {
         om.setOperator(coreSenderProxy, true);
     }
 
-    function _configureIndexFactoryStorage(string memory prefix) internal {
+    function _configureIndexFactoryStorage(string memory targetChain) internal {
+        string memory prefix = _chainPrefix(targetChain);
+
         address fStorage = vm.envAddress(string.concat(prefix, "_INDEX_FACTORY_STORAGE_PROXY_ADDRESS"));
         address usdc = vm.envAddress(string.concat(prefix, "_USDC_ADDRESS"));
         address indexFactory = vm.envAddress(string.concat(prefix, "_INDEX_FACTORY_PROXY_ADDRESS"));

@@ -19,7 +19,6 @@ import "../../src/test/MockV3Aggregator.sol";
 import "./CCIPDeployer.sol";
 import "../../src/factory/IndexFactoryBalancer.sol";
 
-
 contract CCIPFactoryTest is Test, CCIPDeployer {
     using stdStorage for StdStorage;
 
@@ -156,7 +155,6 @@ contract CCIPFactoryTest is Test, CCIPDeployer {
         // update path data
         // oracle.fulfillOracleFundingRateRequest(requestId, assetList, tokenShares, swapFees, chains);
     }
-
 
     function updateOracleListSameChain() public {
         address[] memory indexTokens = new address[](5);
@@ -328,7 +326,6 @@ contract CCIPFactoryTest is Test, CCIPDeployer {
         // oracle.fulfillOracleFundingRateRequest(requestId, assetList, tokenShares, swapFees, chains);
     }
 
-
     function updateOracleListOtherChain2() public {
         address[] memory indexTokens = new address[](5);
         indexTokens[0] = address(indexToken);
@@ -413,7 +410,6 @@ contract CCIPFactoryTest is Test, CCIPDeployer {
         // update path data
         // oracle.fulfillOracleFundingRateRequest(requestId, assetList, tokenShares, swapFees, chains);
     }
-
 
     function updateOracleListSameChain2() public {
         address[] memory indexTokens = new address[](5);
@@ -1007,8 +1003,6 @@ contract CCIPFactoryTest is Test, CCIPDeployer {
         assertEq(fees9[0], 3000);
     }
 
-
-
     function test_providerIndex_lists() public {
         updateOracleList();
         // chain selector lists
@@ -1476,11 +1470,9 @@ contract CCIPFactoryTest is Test, CCIPDeployer {
         console.log("token2 value", token2.balanceOf(address(vault)));
         console.log("token3 value", token3.balanceOf(address(vault)));
         console.log("token4 value", token4.balanceOf(address(crossChainVault)));
-        console.log("reweightCalled", factoryBalancer.reweightCalled());
-        console.log("reweightCalled", mainChainBalancer.reweightCalled());
-    
+        // console.log("reweightCalled", factoryBalancer.reweightCalled());
+        // console.log("reweightCalled", mainChainBalancer.reweightCalled());
     }
-
 
     function test_reweight_same_chain() public {
         updateOracleListSameChain();
@@ -1526,7 +1518,6 @@ contract CCIPFactoryTest is Test, CCIPDeployer {
         console.log("token4 value", token4.balanceOf(address(vault)));
         console.log("reweightCalled", factoryBalancer.reweightCalled());
         console.log("reweightCalled", mainChainBalancer.reweightCalled());
-    
     }
 
     function test_reweight_other_chain() public {
@@ -1573,7 +1564,6 @@ contract CCIPFactoryTest is Test, CCIPDeployer {
         console.log("token4 value", token4.balanceOf(address(vault)));
         console.log("reweightCalled", factoryBalancer.reweightCalled());
         console.log("reweightCalled", mainChainBalancer.reweightCalled());
-    
     }
 
     function test_reweight2() public {
@@ -1728,8 +1718,8 @@ contract CCIPFactoryTest is Test, CCIPDeployer {
         updateOracleList6();
         factoryBalancer.increaseReweightExtraPercentageByNonce(1, getProviderNegativePercentage());
         factoryBalancer.setRebalanceStatus(1, IndexFactoryBalancer.RebalanceStatus.FirstRebalanceCompleted);
-        console.log("Rebalance Status:", uint(IndexFactoryBalancer.RebalanceStatus.FirstRebalanceCompleted));
-        console.log("Rebalance Status:", uint(factoryBalancer.rebalanceStatusByNonce(1)));
+        console.log("Rebalance Status:", uint256(IndexFactoryBalancer.RebalanceStatus.FirstRebalanceCompleted));
+        console.log("Rebalance Status:", uint256(factoryBalancer.rebalanceStatusByNonce(1)));
         factoryBalancer.secondReweightAction(address(indexToken), 1);
         mockRouter.executeAllMessages();
         mainChainBalancer.secondReweightAction(address(indexToken));

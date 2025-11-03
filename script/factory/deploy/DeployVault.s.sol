@@ -13,8 +13,8 @@ contract DeployVault is Script {
     function run() external {
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
 
-        string memory targetChain = "sepolia";
-        // string memory targetChain = "arbitrum_mainnet";
+        // string memory targetChain = "sepolia";
+        string memory targetChain = "arbitrum_mainnet";
 
         address mainchainFactory;
         address mainchainBalancer;

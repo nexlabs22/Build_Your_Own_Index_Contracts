@@ -50,7 +50,6 @@ contract IndexFactoryBalancer is Initializable, OwnableUpgradeable, PausableUpgr
 
     address public balancerSenderAddress;
 
-
     event UsdcProvided(
         address indexed indexToken,
         uint8 indexed providerIndex,
@@ -77,7 +76,9 @@ contract IndexFactoryBalancer is Initializable, OwnableUpgradeable, PausableUpgr
     }
 
     event AskValuesRequested(address _indexToken, uint256 indexed portfolioNonce);
-    event AskValuesFulfilled(address _indexToken, uint256 indexed portfolioNonce, uint256 indexed providerNonce, uint256 value);
+    event AskValuesFulfilled(
+        address _indexToken, uint256 indexed portfolioNonce, uint256 indexed providerNonce, uint256 value
+    );
     event AskValuesCompleted(address _indexToken, uint256 indexed portfolioNonce);
     event FirstRebalanceRequested(address _indexToken, uint256 indexed portfolioNonce);
     event FirstRebalanceFulfilled(address _indexToken, uint256 indexed portfolioNonce, uint256 indexed providerNonce);
@@ -93,7 +94,8 @@ contract IndexFactoryBalancer is Initializable, OwnableUpgradeable, PausableUpgr
 
     modifier onlyProviderBalancers() {
         require(
-            msg.sender == address(mainChainBalancer) || msg.sender == address(balancerSenderAddress) || msg.sender == address(mainChainBalancer2) || msg.sender == address(dinariBalancer),
+            msg.sender == address(mainChainBalancer) || msg.sender == address(balancerSenderAddress)
+                || msg.sender == address(mainChainBalancer2) || msg.sender == address(dinariBalancer),
             "Not provider balancer"
         );
         _;
@@ -110,7 +112,7 @@ contract IndexFactoryBalancer is Initializable, OwnableUpgradeable, PausableUpgr
         require(_factoryStorage != address(0), "Invalid address for _factoryStorage");
         require(_mainChainBalancer != address(0), "Invalid address for _mainChainBalancer");
         require(_mainChainBalancer2 != address(0), "Invalid address for _mainChainBalancer2");
-        // require(_dinariBalancer != address(0), "Invalid address for _dinariBalancer");
+        require(_dinariBalancer != address(0), "Invalid address for _dinariBalancer");
         functionsOracle = FunctionsOracle(_functionsOracle);
         factoryStorage = IndexFactoryStorage(_factoryStorage);
         mainChainBalancer = MainChainBalancer(_mainChainBalancer);
@@ -135,15 +137,36 @@ contract IndexFactoryBalancer is Initializable, OwnableUpgradeable, PausableUpgr
         balancerSenderAddress = _balancerSenderAddress;
     }
 
-    function increasePortfolioTotalValueByNonce(uint256 _updatePortfolioNonce, uint256 _totalValue) public onlyOwnerOrOperator {
+    function setMainChainBalancerAddress(address _mainChainBalancerAddress) external onlyOwner {
+        mainChainBalancer = MainChainBalancer(_mainChainBalancerAddress);
+    }
+
+    function setMainChainBalancer2Address(address _mainChainBalancer2Address) external onlyOwner {
+        mainChainBalancer2 = MainChainBalancer2(_mainChainBalancer2Address);
+    }
+
+    function setDinariBalancerAddress(address _dinariBalancerAddress) external onlyOwner {
+        dinariBalancer = DinariBalancer(_dinariBalancerAddress);
+    }
+
+    function increasePortfolioTotalValueByNonce(uint256 _updatePortfolioNonce, uint256 _totalValue)
+        public
+        onlyOwnerOrOperator
+    {
         portfolioTotalValueByNonce[_updatePortfolioNonce] += _totalValue;
     }
 
-    function increaseExtraUsdcAmountByNonce(uint256 _updatePortfolioNonce, uint256 _extraUsdcAmount) public onlyOwnerOrOperator {
+    function increaseExtraUsdcAmountByNonce(uint256 _updatePortfolioNonce, uint256 _extraUsdcAmount)
+        public
+        onlyOwnerOrOperator
+    {
         extraUsdcAmountByNonce[_updatePortfolioNonce] += _extraUsdcAmount;
     }
 
-    function increaseReweightExtraPercentageByNonce(uint256 _updatePortfolioNonce, uint256 _extraPercentage) public onlyOwnerOrOperator {
+    function increaseReweightExtraPercentageByNonce(uint256 _updatePortfolioNonce, uint256 _extraPercentage)
+        public
+        onlyOwnerOrOperator
+    {
         reweightExtraPercentageByNonce[_updatePortfolioNonce] += _extraPercentage;
     }
 
@@ -227,35 +250,38 @@ contract IndexFactoryBalancer is Initializable, OwnableUpgradeable, PausableUpgr
         emit FirstRebalanceRequested(_indexToken, _updatePortfolioNonce);
     }
 
-    function completeReweightAction(address _indexToken, uint64 _providerIndex, uint256 _updateProviderNonce, uint256 _extraUsdcAmount)
-        external
-        onlyProviderBalancers
-        whenNotPaused
-    {
+    function completeReweightAction(
+        address _indexToken,
+        uint64 _providerIndex,
+        uint256 _updateProviderNonce,
+        uint256 _extraUsdcAmount
+    ) external onlyProviderBalancers whenNotPaused {
         uint256 updatePortfolioNonce_ = providerNonceToGlobalNonce[_providerIndex][_updateProviderNonce];
-        if(providerRebalanceStatus[_providerIndex][updatePortfolioNonce_] == ProviderRebalanceStatus.FirstRebalance) {
-        if (_extraUsdcAmount > 0) {
-            IERC20(factoryStorage.usdcAddress()).transferFrom(msg.sender, address(this), _extraUsdcAmount);
-        }
-        extraUsdcAmountByNonce[updatePortfolioNonce_] += _extraUsdcAmount;
-        emit FirstRebalanceFulfilled(
-            _indexToken,
-            providerNonceToGlobalNonce[_providerIndex][_updateProviderNonce],
-            _updateProviderNonce
-        );
-        totalCompletedFirstRebalanceByNonce[updatePortfolioNonce_]++;
-        if(totalCompletedFirstRebalanceByNonce[updatePortfolioNonce_] == totalPendingFirstRebalanceByNonce[updatePortfolioNonce_]) {
-            rebalanceStatusByNonce[updatePortfolioNonce_] = RebalanceStatus.FirstRebalanceCompleted;
-            emit FirstRebalanceCompleted(_indexToken, updatePortfolioNonce_);
-        }
-        } else if(providerRebalanceStatus[_providerIndex][updatePortfolioNonce_] == ProviderRebalanceStatus.SecondRebalance) {
-            emit SecondRebalanceFulfilled(
-                _indexToken,
-                updatePortfolioNonce_,
-                _updateProviderNonce
+        if (providerRebalanceStatus[_providerIndex][updatePortfolioNonce_] == ProviderRebalanceStatus.FirstRebalance) {
+            if (_extraUsdcAmount > 0) {
+                IERC20(factoryStorage.usdcAddress()).transferFrom(msg.sender, address(this), _extraUsdcAmount);
+            }
+            extraUsdcAmountByNonce[updatePortfolioNonce_] += _extraUsdcAmount;
+            emit FirstRebalanceFulfilled(
+                _indexToken, providerNonceToGlobalNonce[_providerIndex][_updateProviderNonce], _updateProviderNonce
             );
+            totalCompletedFirstRebalanceByNonce[updatePortfolioNonce_]++;
+            if (
+                totalCompletedFirstRebalanceByNonce[updatePortfolioNonce_]
+                    == totalPendingFirstRebalanceByNonce[updatePortfolioNonce_]
+            ) {
+                rebalanceStatusByNonce[updatePortfolioNonce_] = RebalanceStatus.FirstRebalanceCompleted;
+                emit FirstRebalanceCompleted(_indexToken, updatePortfolioNonce_);
+            }
+        } else if (
+            providerRebalanceStatus[_providerIndex][updatePortfolioNonce_] == ProviderRebalanceStatus.SecondRebalance
+        ) {
+            emit SecondRebalanceFulfilled(_indexToken, updatePortfolioNonce_, _updateProviderNonce);
             totalCompletedSecondRebalanceByNonce[updatePortfolioNonce_]++;
-            if(totalCompletedSecondRebalanceByNonce[updatePortfolioNonce_] == totalPendingSecondRebalanceByNonce[updatePortfolioNonce_]) {
+            if (
+                totalCompletedSecondRebalanceByNonce[updatePortfolioNonce_]
+                    == totalPendingSecondRebalanceByNonce[updatePortfolioNonce_]
+            ) {
                 rebalanceStatusByNonce[updatePortfolioNonce_] = RebalanceStatus.SecondRebalanceCompleted;
                 emit SecondRebalanceCompleted(_indexToken, updatePortfolioNonce_);
             }
@@ -320,16 +346,27 @@ contract IndexFactoryBalancer is Initializable, OwnableUpgradeable, PausableUpgr
         portfolioTotalValueByNonce[_updatePortfolioNonce] += _value;
     }
 
-    function _completeAskValues(address _indexToken, uint256 _updatePortfolioNonce, uint256 _providerNonce, uint256 _value) internal whenNotPaused {
+    function _completeAskValues(
+        address _indexToken,
+        uint256 _updatePortfolioNonce,
+        uint256 _providerNonce,
+        uint256 _value
+    ) internal whenNotPaused {
         totalCompletedAskValuesByNonce[_updatePortfolioNonce]++;
         emit AskValuesFulfilled(_indexToken, _updatePortfolioNonce, _providerNonce, _value);
-        if(totalCompletedAskValuesByNonce[_updatePortfolioNonce] == totalPendingAskValuesByNonce[_updatePortfolioNonce]) {
-        rebalanceStatusByNonce[_updatePortfolioNonce] = RebalanceStatus.AskValuesCompleted;
-        emit AskValuesCompleted(_indexToken, _updatePortfolioNonce);
+        if (
+            totalCompletedAskValuesByNonce[_updatePortfolioNonce] == totalPendingAskValuesByNonce[_updatePortfolioNonce]
+        ) {
+            rebalanceStatusByNonce[_updatePortfolioNonce] = RebalanceStatus.AskValuesCompleted;
+            emit AskValuesCompleted(_indexToken, _updatePortfolioNonce);
         }
     }
 
-    function completeAskValueCCIP(address _indexToken, uint256 _updateProviderNonce, uint256 _value) external onlyProviderBalancers whenNotPaused {
+    function completeAskValueCCIP(address _indexToken, uint256 _updateProviderNonce, uint256 _value)
+        external
+        onlyProviderBalancers
+        whenNotPaused
+    {
         require(_value > 0, "Zero total value");
         require(_updateProviderNonce > 0, "Zero provider nonce");
 
@@ -350,7 +387,11 @@ contract IndexFactoryBalancer is Initializable, OwnableUpgradeable, PausableUpgr
         return providerUpdateNonce + 1;
     }
 
-    function completeDinariAskValues(address _indexToken, uint256 _updateProviderNonce, uint256 _value) external onlyProviderBalancers whenNotPaused {
+    function completeDinariAskValues(address _indexToken, uint256 _updateProviderNonce, uint256 _value)
+        external
+        onlyProviderBalancers
+        whenNotPaused
+    {
         require(_value > 0, "Zero total value");
         // uint8 providerIndex = dinariBalancer.dinariStorage().providerIndex();
 

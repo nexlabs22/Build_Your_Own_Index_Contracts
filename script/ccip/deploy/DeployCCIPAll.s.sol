@@ -44,7 +44,8 @@ contract DeployCCIPAll is Script {
     function run() external {
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
         address owner = vm.addr(deployerPrivateKey);
-        string memory targetChain = "sepolia";
+        // string memory targetChain = "sepolia";
+        string memory targetChain = "arbitrum_mainnet";
 
         ChainConfig memory cfg = _loadConfig(targetChain);
 
@@ -115,6 +116,7 @@ contract DeployCCIPAll is Script {
             cfg.ccipRouter = vm.envAddress("ARBITRUM_CCIP_ROUTER_ADDRESS");
             cfg.orderManager = vm.envAddress("ARBITRUM_ORDER_MANAGER_PROXY_ADDRESS");
             cfg.usdc = vm.envAddress("ARBITRUM_USDC_ADDRESS");
+            cfg.indexToken = vm.envAddress("ARBITRUM_INDEX_TOKEN_PROXY_ADDRESS");
         } else {
             revert("Unsupported target chain");
         }
