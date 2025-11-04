@@ -19,7 +19,7 @@ contract DeployBackedFiAll is Script {
     function run() external {
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
         address owner = vm.addr(deployerPrivateKey);
-        string memory targetChain = "sepolia";
+        string memory targetChain = "arbitrum_mainnet";
 
         vm.startBroadcast(deployerPrivateKey);
 

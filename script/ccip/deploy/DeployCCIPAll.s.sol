@@ -44,7 +44,8 @@ contract DeployCCIPAll is Script {
     function run() external {
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
         address owner = vm.addr(deployerPrivateKey);
-        string memory targetChain = "sepolia";
+        // string memory targetChain = "sepolia";
+        string memory targetChain = "arbitrum_mainnet";
 
         ChainConfig memory cfg = _loadConfig(targetChain);
 
@@ -54,8 +55,7 @@ contract DeployCCIPAll is Script {
         // if (cfg.vaultAddress != address(0)) {
         //     mainChainStorage.setVault(cfg.vaultAddress);
         // }
-        // address ccStorageProxy = _deployCrossChainIndexFactoryStorage(owner, cfg);
-        // address ccFactoryProxy = _deployCrossChainIndexFactory(owner, cfg, ccStorageProxy);
+
         address balancerSenderProxy = _deployBalancerSender(owner, cfg, mainChainStorageProxy);
         address coreSenderProxy = _deployCoreSender(owner, cfg, mainChainStorageProxy);
         address mainChainBalancerProxy =
@@ -69,12 +69,6 @@ contract DeployCCIPAll is Script {
 
         console.log("MainChainStorage proxy deployed at:", mainChainStorageProxy);
         console.log("MainChainStorage ProxyAdmin:", Upgrades.getAdminAddress(mainChainStorageProxy));
-
-        // console.log("CrossChainIndexFactoryStorage proxy deployed at:", ccStorageProxy);
-        // console.log("CrossChainIndexFactoryStorage ProxyAdmin:", Upgrades.getAdminAddress(ccStorageProxy));
-
-        // console.log("CrossChainIndexFactory proxy deployed at:", ccFactoryProxy);
-        // console.log("CrossChainIndexFactory ProxyAdmin:", Upgrades.getAdminAddress(ccFactoryProxy));
 
         console.log("BalancerSender proxy deployed at:", balancerSenderProxy);
         console.log("BalancerSender ProxyAdmin:", Upgrades.getAdminAddress(balancerSenderProxy));
@@ -122,6 +116,7 @@ contract DeployCCIPAll is Script {
             cfg.ccipRouter = vm.envAddress("ARBITRUM_CCIP_ROUTER_ADDRESS");
             cfg.orderManager = vm.envAddress("ARBITRUM_ORDER_MANAGER_PROXY_ADDRESS");
             cfg.usdc = vm.envAddress("ARBITRUM_USDC_ADDRESS");
+            cfg.indexToken = vm.envAddress("ARBITRUM_INDEX_TOKEN_PROXY_ADDRESS");
         } else {
             revert("Unsupported target chain");
         }

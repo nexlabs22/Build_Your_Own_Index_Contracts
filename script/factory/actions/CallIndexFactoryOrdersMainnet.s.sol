@@ -12,9 +12,8 @@ import "../../../src/dinari/DinariFactoryProcessor.sol";
 contract CallIndexFactoryOrders is Script {
     using stdJson for string;
 
-    address usdc = 0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238;
-    address dinariUsdc = 0x665b099132d79739462DfDe6874126AFe840F7a3;
-    address orderProcessor = 0xab30AeD5cFb5E874cCdc212571ff6843e2D603AD;
+    address usdc = 0xaf88d065e77c8cC2239327C5EDb3A432268e5831;
+    address orderProcessor = 0x55AaA2fE5dDd1eFaD23994D0Fa06a6B53ff3c783;
 
     function run() external {
         _callIssuance();
@@ -23,15 +22,8 @@ contract CallIndexFactoryOrders is Script {
     }
 
     function _multical() internal {
-        // address indexToken = 0x4e835FDB96830626e5Ba490f43CFb7274C146691;
-        address indexToken = 0x32d89568718643C212bF8F2dCC0bad76723A64fd;
-        // uint256 id = 56363541050082005171475772922014067549853542647048762960790269805762203907207;
-        // uint256 id = 69440554077137204197358502522389177234787938694285949050586132758478051844846;
-        uint256 id = 43478041760585360910061147228417767134697245366538639450236704202744456820233;
-
         uint256 pk = vm.envUint("PRIVATE_KEY");
         vm.startBroadcast(pk);
-        DinariFactoryProcessor(orderProcessor).multical(indexToken, id);
         vm.stopBroadcast();
 
         console.log("multical sent");
@@ -41,25 +33,8 @@ contract CallIndexFactoryOrders is Script {
         address factory = _indexFactory();
 
         // Dinari
-        // address indexToken = 0x4e835FDB96830626e5Ba490f43CFb7274C146691;
-        // uint256 amount = 30e6;
-
-        // // CCIP
-        // address indexToken = 0x3A1696F9A7b3140dB3e328654f914c07e55Ee793;
-        // uint256 amount = 30e6;
-        // uint256 amount = 100e6;
-
-        // CCIP CrossChain
-        // address indexToken = 0x7f878aD42333E07F122b9f6E1C778C5353e9f1B4;
-        // uint256 amount = 30e6;
-
-        // // CCIP + Stock
-        // address indexToken = 0x32d89568718643C212bF8F2dCC0bad76723A64fd;
-        // uint256 amount = 40e6;
-
-        // Stock + Meme coin
-        address indexToken = 0xAF89F0f13678aEf4BBb1F01d3d38247074529Ac4;
-        uint256 amount = 110e6;
+        address indexToken = 0x2E4150CFBdF6A37b55d07e81F6d3f4D47648D52A;
+        uint256 amount = 4e6;
 
         console.log("Calling issuanceIndexTokens on:", factory);
         console.log("Index token:", indexToken);
@@ -67,7 +42,7 @@ contract CallIndexFactoryOrders is Script {
 
         uint256 pk = vm.envUint("PRIVATE_KEY");
         vm.startBroadcast(pk);
-        IERC20(dinariUsdc).approve(address(factory), 130e6);
+        IERC20(usdc).approve(address(factory), 5e6);
         uint256 orderNonce = IndexFactory(factory).issuanceIndexTokens(indexToken, amount);
         vm.stopBroadcast();
 
@@ -76,19 +51,11 @@ contract CallIndexFactoryOrders is Script {
 
     function _callRedemption() internal {
         address factory = _indexFactory();
-        // // Dinari
-        // address indexToken = 0x4e835FDB96830626e5Ba490f43CFb7274C146691;
-        // // uint256 amount = 30e6;
-        // uint256 amount = IERC20(indexToken).balanceOf(0x11a8E23DAfbE058e9758c899dAEe0e43f287A96D);
 
         // CCIP
         address indexToken = 0x3A1696F9A7b3140dB3e328654f914c07e55Ee793;
         // uint256 amount = IERC20(indexToken).balanceOf(0x11a8E23DAfbE058e9758c899dAEe0e43f287A96D);
         uint256 amount = 100e18;
-
-        // CCIP CrossChain
-        // address indexToken = 0x7f878aD42333E07F122b9f6E1C778C5353e9f1B4;
-        // uint256 amount = IERC20(indexToken).balanceOf(0x11a8E23DAfbE058e9758c899dAEe0e43f287A96D);
 
         console.log("Calling redemption on:", factory);
         console.log("Index token:", indexToken);
