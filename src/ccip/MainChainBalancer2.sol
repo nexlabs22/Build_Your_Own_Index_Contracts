@@ -150,7 +150,7 @@ contract MainChainBalancer2 is Initializable, ProposableOwnableUpgradeable, Paus
         );
         // inform factory about the value
         indexFactoryBalancer.completeAskValueCCIP(
-            _indexToken, mainChainStorage.updatePortfolioNonce(), mainChainStorage.convertEthToUsd(value)
+            _indexToken, mainChainStorage.updatePortfolioNonce(), mainChainStorage.portfolioTotalValueByNonce(mainChainStorage.updatePortfolioNonce())
         );
         }
     }
