@@ -11,7 +11,8 @@ import {IndexToken} from "../../../src/token/IndexToken.sol";
 import {FunctionsOracle} from "../../../src/oracle/FunctionsOracle.sol";
 
 contract CallUpdateCrosschainPath is Script, Test {
-    address functionsOracleProxy = 0xBeB1e7d48718B2f55c2B13c31fB51CF7b1123592;
+    // address functionsOracleProxy = 0xBeB1e7d48718B2f55c2B13c31fB51CF7b1123592; // testnet
+    address functionsOracleProxy = 0xB48e2500998874cB7300b587190250C20daF8Ce8; // mainnet
 
     function run() external {
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
@@ -24,7 +25,9 @@ contract CallUpdateCrosschainPath is Script, Test {
         // _fillMockAssetsListUSDCWETH();
         // _fillMockAssetsListTestnetCrossChain();
         // _fillMemeCoinPortfolio();
-        arbeiPathData();
+        // arbeiPathData();
+        // _setArbitrumCCIP();
+        _setArbitrumCrossChain();
 
         vm.stopBroadcast();
 
@@ -60,6 +63,97 @@ contract CallUpdateCrosschainPath is Script, Test {
         pathData[0] = abi.encode(path, feesData);
 
         console.logBytes(pathData[0]);
+    }
+
+    function _setArbitrumCrossChain() internal {
+        uint64 otherChainSelector = 15971525489660198786;
+
+        address wethAddress = 0x4200000000000000000000000000000000000006;
+        address zora = 0x1111111111166b7FE7bd91427724B487980aFc69;
+        address toshi = 0xAC1Bd2486aAf3B5C0fc3Fd868558b082a531B2B4;
+
+        uint64[] memory chainSelectors = new uint64[](2);
+        chainSelectors[0] = otherChainSelector;
+        chainSelectors[1] = otherChainSelector;
+
+        uint64[] memory providerIndex = new uint64[](2);
+        providerIndex[0] = 1;
+        providerIndex[1] = 1;
+
+        uint24[] memory feesData = new uint24[](1);
+        feesData[0] = 3000;
+
+        bytes[] memory pathData = new bytes[](2);
+        address[] memory path = new address[](2);
+        path[0] = wethAddress;
+        path[1] = zora;
+        pathData[0] = abi.encode(path, feesData);
+
+        // uint24[] memory feesData1 = new uint24[](1);
+        // feesData1[0] = 500;
+
+        address[] memory path1 = new address[](2);
+        path1[0] = wethAddress;
+        path1[1] = toshi;
+        pathData[1] = abi.encode(path1, feesData);
+
+        FunctionsOracle(functionsOracleProxy).updatePathData(providerIndex, chainSelectors, pathData);
+        console.log("Called mockFillAssetsList() [testnet style].");
+
+        // address[20] memory baseTokens = [
+        //     address(0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913), // USDC - WETH => 500
+        //     address(0x1111111111166b7FE7bd91427724B487980aFc69), // ZORA - WETH => 3000
+        //     address(0xAC1Bd2486aAf3B5C0fc3Fd868558b082a531B2B4), // TOSHI - WETH => 3000
+        //     address(0x27D2DECb4bFC9C76F0309b8E88dec3a601Fe25a8) // BARD - WETH => 100
+        // ];
+    }
+
+    function _setArbitrumCCIP() internal {
+        uint64 mainChainSelector = 4949039107694359620;
+        // uint64 otherChainSelector = 15971525489660198786;
+
+        address wethAddress = 0x82aF49447D8a07e3bd95BD0d56f35241523fBab1;
+        address uni = 0xFa7F8980b0f1E64A2062791cc3b0871572f1F7f0;
+        address aave = 0xba5DdD1f9d7F570dc94a51479a000E3BCE967196;
+
+        uint64[] memory chainSelectors = new uint64[](2);
+        chainSelectors[0] = mainChainSelector;
+        chainSelectors[1] = mainChainSelector;
+
+        uint64[] memory providerIndex = new uint64[](2);
+        providerIndex[0] = 1;
+        providerIndex[1] = 1;
+
+        uint24[] memory feesData = new uint24[](1);
+        feesData[0] = 3000;
+
+        bytes[] memory pathData = new bytes[](2);
+        address[] memory path = new address[](2);
+        path[0] = wethAddress;
+        path[1] = uni;
+        pathData[0] = abi.encode(path, feesData);
+
+        uint24[] memory feesData1 = new uint24[](1);
+        feesData1[0] = 500;
+
+        address[] memory path1 = new address[](2);
+        path1[0] = wethAddress;
+        path1[1] = aave;
+        pathData[1] = abi.encode(path1, feesData1);
+
+        FunctionsOracle(functionsOracleProxy).updatePathData(providerIndex, chainSelectors, pathData);
+        console.log("Called mockFillAssetsList() [testnet style].");
+
+        // address[20] memory baseTokens = [
+        //     address(0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913), // USDC - WETH => 500
+        //     address(0x1111111111166b7FE7bd91427724B487980aFc69), // ZORA - WETH => 3000
+        //     address(0xAC1Bd2486aAf3B5C0fc3Fd868558b082a531B2B4), // TOSHI - WETH => 3000
+        //     address(0x27D2DECb4bFC9C76F0309b8E88dec3a601Fe25a8) // BARD - WETH => 100
+        // ];
+
+        //   address(0xba5DdD1f9d7F570dc94a51479a000E3BCE967196), // AAVE - WETH => 500
+        // address(0x0c880f6761F1af8d9Aa9C466984b80DAb9a8c9e8), // PENDLE - WETH => 500
+        // address(0xFa7F8980b0f1E64A2062791cc3b0871572f1F7f0), // UNI - WETH => 3000
     }
 
     function _fillMemeCoinPortfolio() internal {

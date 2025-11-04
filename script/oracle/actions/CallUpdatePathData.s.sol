@@ -12,10 +12,15 @@ contract CallUpdatePathData is Script {
 
     function run() external {
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
-        string memory targetChain = vm.envOr("TARGET_CHAIN", string("sepolia"));
+        string memory targetChain = vm.envOr("TARGET_CHAIN", string("arbitrum_mainnet"));
         address oracle = _functionsOracle(targetChain);
 
+        //  tokens[0] = 0xCe38e140fC3982a6bCEbc37b040913EF2Cd6C5a7;
+        //  tokens[1] = 0x77308F8B63A99b24b262D930E0218ED2f49F8475;
+
         address[] memory assets = new address[](2);
+        assets[0] = 0xCe38e140fC3982a6bCEbc37b040913EF2Cd6C5a7; // APPLE
+        assets[1] = 0x77308F8B63A99b24b262D930E0218ED2f49F8475; // MSFT
 
         uint64[] memory providers = new uint64[](assets.length);
         uint64[] memory chains = new uint64[](assets.length);
@@ -23,11 +28,13 @@ contract CallUpdatePathData is Script {
         uint24[] memory fees = new uint24[](1);
         fees[0] = 3000;
 
-        address weth = 0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14;
+        // address weth = 0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14;
+        address weth = 0x82aF49447D8a07e3bd95BD0d56f35241523fBab1;
 
         for (uint256 i = 0; i < assets.length; i++) {
             providers[i] = uint64(2);
-            chains[i] = 16015286601757825753;
+            // chains[i] = 16015286601757825753;
+            chains[i] = 4949039107694359620;
             address[] memory path = new address[](2);
             path[0] = address(weth);
             path[1] = assets[i];
@@ -53,7 +60,7 @@ contract CallUpdatePathData is Script {
         if (chainHash == keccak256("sepolia")) {
             return "SEPOLIA";
         }
-        return "SEPOLIA";
+        return "";
     }
 
     function _toUint64Array(uint256[] memory values) internal pure returns (uint64[] memory out) {

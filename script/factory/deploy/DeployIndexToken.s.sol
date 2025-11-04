@@ -14,8 +14,14 @@ contract DeployIndexToken is Script {
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
         // string memory tokenName = "Meme Coin Portfolio";
         // string memory tokenSymbol = "MEME PORTFOLIO";
-        string memory tokenName = "Stock Portfolio";
-        string memory tokenSymbol = "Stock Portfolio";
+        // string memory tokenName = "Stock Portfolio";
+        // string memory tokenSymbol = "Stock Portfolio";
+
+        // string memory tokenName = "CCIP Portfolio";
+        // string memory tokenSymbol = "CCIP Portfolio";
+
+        string memory tokenName = "CCIP Portfolio";
+        string memory tokenSymbol = "CCIP Portfolio";
 
         // string memory targetChain = "sepolia";
         string memory targetChain = "arbitrum_mainnet";

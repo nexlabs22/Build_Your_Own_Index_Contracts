@@ -12,6 +12,15 @@ import "../../../src/dinari/DinariFactoryProcessor.sol";
 contract CallIndexFactoryOrders is Script {
     using stdJson for string;
 
+    // Dinari
+    // address indexToken = 0x2E4150CFBdF6A37b55d07e81F6d3f4D47648D52A;
+
+    // CCIP
+    // address indexToken = 0x112cdC1651C455032a1bB85C5CdD8Cd0C12A8aE1;
+
+    // CrossChain
+    address indexToken = 0x2EC6821b03e2DB6326E585baCbB9df14058eDbd2;
+
     address usdc = 0xaf88d065e77c8cC2239327C5EDb3A432268e5831;
     address orderProcessor = 0x55AaA2fE5dDd1eFaD23994D0Fa06a6B53ff3c783;
 
@@ -22,8 +31,13 @@ contract CallIndexFactoryOrders is Script {
     }
 
     function _multical() internal {
+        // address indexToken = 0x2E4150CFBdF6A37b55d07e81F6d3f4D47648D52A;
+
+        uint256 id = 99305343573533343324030039415639664270793484036763770274076914461729067259749;
+
         uint256 pk = vm.envUint("PRIVATE_KEY");
         vm.startBroadcast(pk);
+        DinariFactoryProcessor(orderProcessor).multical(indexToken, id);
         vm.stopBroadcast();
 
         console.log("multical sent");
@@ -32,9 +46,8 @@ contract CallIndexFactoryOrders is Script {
     function _callIssuance() internal {
         address factory = _indexFactory();
 
-        // Dinari
-        address indexToken = 0x2E4150CFBdF6A37b55d07e81F6d3f4D47648D52A;
-        uint256 amount = 4e6;
+        // uint256 amount = 4e6;
+        uint256 amount = 2e6;
 
         console.log("Calling issuanceIndexTokens on:", factory);
         console.log("Index token:", indexToken);
@@ -42,7 +55,7 @@ contract CallIndexFactoryOrders is Script {
 
         uint256 pk = vm.envUint("PRIVATE_KEY");
         vm.startBroadcast(pk);
-        IERC20(usdc).approve(address(factory), 5e6);
+        // IERC20(usdc).approve(address(factory), 6e6);
         uint256 orderNonce = IndexFactory(factory).issuanceIndexTokens(indexToken, amount);
         vm.stopBroadcast();
 
@@ -53,9 +66,8 @@ contract CallIndexFactoryOrders is Script {
         address factory = _indexFactory();
 
         // CCIP
-        address indexToken = 0x3A1696F9A7b3140dB3e328654f914c07e55Ee793;
-        // uint256 amount = IERC20(indexToken).balanceOf(0x11a8E23DAfbE058e9758c899dAEe0e43f287A96D);
-        uint256 amount = 100e18;
+        uint256 amount = IERC20(indexToken).balanceOf(0x11a8E23DAfbE058e9758c899dAEe0e43f287A96D);
+        // uint256 amount = 100e18;
 
         console.log("Calling redemption on:", factory);
         console.log("Index token:", indexToken);
@@ -64,14 +76,15 @@ contract CallIndexFactoryOrders is Script {
         uint256 pk = vm.envUint("PRIVATE_KEY");
         vm.startBroadcast(pk);
         IERC20(indexToken).approve(address(factory), amount);
-        // uint256 orderNonce = IndexFactory(factory).redemption(indexToken, amount);
+        uint256 orderNonce = IndexFactory(factory).redemption(indexToken, amount);
         vm.stopBroadcast();
 
-        // console.log("redemption order nonce:", orderNonce);
+        console.log("redemption order nonce:", orderNonce);
     }
 
     function _indexFactory() internal view returns (address) {
-        string memory targetChain = vm.envOr("TARGET_CHAIN", string("sepolia"));
+        // string memory targetChain = vm.envOr("TARGET_CHAIN", string("sepolia"));
+        string memory targetChain = vm.envOr("TARGET_CHAIN", string("arbitrum_mainnet"));
         string memory prefix = _envPrefix(targetChain);
         return vm.envAddress(string.concat(prefix, "_INDEX_FACTORY_PROXY_ADDRESS"));
     }
@@ -84,7 +97,7 @@ contract CallIndexFactoryOrders is Script {
         if (chainHash == keccak256("sepolia")) {
             return "SEPOLIA";
         }
-        return "SEPOLIA";
+        return "";
     }
 }
 

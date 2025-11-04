@@ -30,7 +30,9 @@ import "../libraries/MessageSender.sol";
 /// @author NEX Labs Protocol
 /// @notice The main token contract for Index Token (NEX Labs Protocol)
 /// @dev This contract uses an upgradeable pattern
-contract CrossChainIndexFactoryStorage is
+
+/// @custom:oz-upgrades-from CrossChainIndexFactoryStorage
+contract CrossChainIndexFactoryStorageV2 is
     Initializable,
     ContextUpgradeable,
     ProposableOwnableUpgradeable,
