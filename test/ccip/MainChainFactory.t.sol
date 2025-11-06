@@ -1463,7 +1463,7 @@ contract CCIPFactoryTest is Test, CCIPDeployer {
         updateOracleList2();
         factoryBalancer.firstReweightAction(address(indexToken), 1);
         mockRouter.executeAllMessages();
-        mainChainBalancer.secondReweightAction(address(indexToken));
+        mainChainBalancer.secondReweightAction(address(indexToken), 1);
         mockRouter.executeAllMessages();
         console.log("token0 value", token0.balanceOf(address(vault)));
         console.log("token1 value", token1.balanceOf(address(vault)));
@@ -1509,7 +1509,7 @@ contract CCIPFactoryTest is Test, CCIPDeployer {
         updateOracleListSameChain2();
         factoryBalancer.firstReweightAction(address(indexToken), 1);
         mockRouter.executeAllMessages();
-        mainChainBalancer.secondReweightAction(address(indexToken));
+        mainChainBalancer.secondReweightAction(address(indexToken), 1);
         mockRouter.executeAllMessages();
         console.log("token0 value", token0.balanceOf(address(vault)));
         console.log("token1 value", token1.balanceOf(address(vault)));
@@ -1555,7 +1555,7 @@ contract CCIPFactoryTest is Test, CCIPDeployer {
         updateOracleListOtherChain2();
         factoryBalancer.firstReweightAction(address(indexToken), 1);
         mockRouter.executeAllMessages();
-        mainChainBalancer.secondReweightAction(address(indexToken));
+        mainChainBalancer.secondReweightAction(address(indexToken), 1);
         mockRouter.executeAllMessages();
         console.log("token0 value", token0.balanceOf(address(vault)));
         console.log("token1 value", token1.balanceOf(address(vault)));
@@ -1600,7 +1600,7 @@ contract CCIPFactoryTest is Test, CCIPDeployer {
         updateOracleList3();
         factoryBalancer.firstReweightAction(address(indexToken), 1);
         mockRouter.executeAllMessages();
-        mainChainBalancer.secondReweightAction(address(indexToken));
+        mainChainBalancer.secondReweightAction(address(indexToken), 1);
         mockRouter.executeAllMessages();
         console.log("token0 value", token0.balanceOf(address(vault)));
         console.log("token1 value", token1.balanceOf(address(vault)));
@@ -1647,7 +1647,7 @@ contract CCIPFactoryTest is Test, CCIPDeployer {
         updateOracleList4();
         factoryBalancer.firstReweightAction(address(indexToken), 1);
         mockRouter.executeAllMessages();
-        mainChainBalancer.secondReweightAction(address(indexToken));
+        mainChainBalancer.secondReweightAction(address(indexToken), 1);
         mockRouter.executeAllMessages();
         // factoryBalancer.askValues(address(indexToken));
         // mockRouter.executeAllMessages();
@@ -1722,7 +1722,7 @@ contract CCIPFactoryTest is Test, CCIPDeployer {
         console.log("Rebalance Status:", uint256(factoryBalancer.rebalanceStatusByNonce(1)));
         factoryBalancer.secondReweightAction(address(indexToken), 1);
         mockRouter.executeAllMessages();
-        mainChainBalancer.secondReweightAction(address(indexToken));
+        mainChainBalancer.secondReweightAction(address(indexToken), 1);
         mockRouter.executeAllMessages();
         // factoryBalancer.askValues(address(indexToken));
         // mockRouter.executeAllMessages();

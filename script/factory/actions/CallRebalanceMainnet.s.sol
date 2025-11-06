@@ -59,7 +59,7 @@ contract CallRebalance is Script {
     }
 
     function secondRebalanceCcip() public {
-        MainChainBalancer(ccipBalancer).secondReweightAction(indexToken);
+        MainChainBalancer(ccipBalancer).secondReweightAction(indexToken, 0);
     }
 
     function secondRebalanceDinari() public {
