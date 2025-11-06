@@ -7,7 +7,7 @@ import {ProxyAdmin} from "@openzeppelin/contracts/proxy/transparent/ProxyAdmin.s
 import {ITransparentUpgradeableProxy} from "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
 import "openzeppelin-foundry-upgrades/Upgrades.sol";
 
-contract UpgradeDinariBalancer is Script {
+contract UpgradeMainChainBalancer2 is Script {
     function run() external {
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
         vm.startBroadcast(deployerPrivateKey);
@@ -18,18 +18,19 @@ contract UpgradeDinariBalancer is Script {
         address owner = vm.addr(deployerPrivateKey);
 
         if (keccak256(bytes(targetChain)) == keccak256("sepolia")) {
-            proxyAddress = vm.envAddress("SEPOLIA_DINARI_BALANCER_PROXY_ADDRESS");
+            proxyAddress = vm.envAddress("SEPOLIA_MAIN_CHAIN_BALANCER2_PROXY_ADDRESS");
         } else if (keccak256(bytes(targetChain)) == keccak256("arbitrum_mainnet")) {
-            proxyAddress = vm.envAddress("ARBITRUM_DINARI_BALANCER_PROXY_ADDRESS");
+            proxyAddress = vm.envAddress("ARBITRUM_MAIN_CHAIN_BALANCER2_PROXY_ADDRESS");
         } else {
             revert("Unsupported target chain");
         }
 
-        Upgrades.upgradeProxy(proxyAddress, "DinariBalancerV3.sol", "", owner);
+        Upgrades.upgradeProxy(proxyAddress, "MainChainBalancer2V2.sol", "", owner);
 
         address newImpl = Upgrades.getImplementationAddress(proxyAddress);
-        console.log("DinariBalancer proxy upgraded to new implementation at:", newImpl);
+        console.log("MainChainBalancer2 proxy upgraded to new implementation at:", newImpl);
 
         vm.stopBroadcast();
     }
 }
+

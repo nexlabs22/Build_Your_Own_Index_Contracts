@@ -21,6 +21,12 @@ contract CallIndexFactoryOrders is Script {
     // CrossChain
     address indexToken = 0x2EC6821b03e2DB6326E585baCbB9df14058eDbd2;
 
+    // Meme Coin
+    // address indexToken = 0x01b536d445e2B2B14e58B5D2469f6b4908E6266A;
+
+    // OP CCIP
+    // address indexToken = 0x9D00bEc78dD6987c78510d0C410484C5f3c7Ca05;
+
     address usdc = 0xaf88d065e77c8cC2239327C5EDb3A432268e5831;
     address orderProcessor = 0x55AaA2fE5dDd1eFaD23994D0Fa06a6B53ff3c783;
 
@@ -37,7 +43,7 @@ contract CallIndexFactoryOrders is Script {
 
         uint256 pk = vm.envUint("PRIVATE_KEY");
         vm.startBroadcast(pk);
-        DinariFactoryProcessor(orderProcessor).multical(indexToken, id);
+        DinariFactoryProcessor(orderProcessor).multical(id);
         vm.stopBroadcast();
 
         console.log("multical sent");
@@ -46,8 +52,8 @@ contract CallIndexFactoryOrders is Script {
     function _callIssuance() internal {
         address factory = _indexFactory();
 
-        // uint256 amount = 4e6;
-        uint256 amount = 2e6;
+        uint256 amount = 8e5;
+        // uint256 amount = 10e6;
 
         console.log("Calling issuanceIndexTokens on:", factory);
         console.log("Index token:", indexToken);
@@ -55,7 +61,7 @@ contract CallIndexFactoryOrders is Script {
 
         uint256 pk = vm.envUint("PRIVATE_KEY");
         vm.startBroadcast(pk);
-        // IERC20(usdc).approve(address(factory), 6e6);
+        // IERC20(usdc).approve(address(factory), 12e6);
         uint256 orderNonce = IndexFactory(factory).issuanceIndexTokens(indexToken, amount);
         vm.stopBroadcast();
 

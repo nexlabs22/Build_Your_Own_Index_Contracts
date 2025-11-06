@@ -15,7 +15,8 @@ contract DeployCrossChainIndexFactory is Script {
 
     function run() external {
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
-        string memory targetChain = vm.envOr("TARGET_CHAIN", string("arbitrum_sepolia"));
+        // string memory targetChain = vm.envOr("TARGET_CHAIN", string("arbitrum_sepolia"));
+        string memory targetChain = vm.envOr("TARGET_CHAIN", string("optimism_mainnet"));
         address owner = vm.addr(deployerPrivateKey);
 
         address storageProxy;
@@ -34,6 +35,10 @@ contract DeployCrossChainIndexFactory is Script {
             storageProxy = vm.envAddress("ARBITRUM_CROSS_CHAIN_INDEX_FACTORY_STORAGE_PROXY_ADDRESS");
             ccipRouter = vm.envAddress("ARBITRUM_CCIP_ROUTER_ADDRESS");
             linkToken = vm.envAddress("ARBITRUM_LINK_TOKEN_ADDRESS");
+        } else if (keccak256(bytes(targetChain)) == keccak256("optimism_mainnet")) {
+            storageProxy = vm.envAddress("OPTIMISM_CROSS_CHAIN_INDEX_FACTORY_STORAGE_PROXY_ADDRESS");
+            ccipRouter = vm.envAddress("OPTIMISM_CCIP_ROUTER_ADDRESS");
+            linkToken = vm.envAddress("OPTIMISM_LINK_TOKEN_ADDRESS");
         } else {
             revert("Unsupported target chain");
         }

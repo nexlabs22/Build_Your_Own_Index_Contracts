@@ -16,7 +16,8 @@ import {Vault} from "../vault/Vault.sol";
 import {FeeCalculation} from "../libraries/FeeCalculation.sol";
 import {DinariBalancer} from "../dinari/DinariBalancer.sol";
 
-contract IndexFactoryBalancer is Initializable, OwnableUpgradeable, PausableUpgradeable, ReentrancyGuardUpgradeable {
+/// @custom:oz-upgrades-from IndexFactoryBalancer
+contract IndexFactoryBalancerV2 is Initializable, OwnableUpgradeable, PausableUpgradeable, ReentrancyGuardUpgradeable {
     using SafeERC20 for IERC20;
 
     FunctionsOracle public functionsOracle;
@@ -283,7 +284,6 @@ contract IndexFactoryBalancer is Initializable, OwnableUpgradeable, PausableUpgr
                     == totalPendingSecondRebalanceByNonce[updatePortfolioNonce_]
             ) {
                 rebalanceStatusByNonce[updatePortfolioNonce_] = RebalanceStatus.SecondRebalanceCompleted;
-                functionsOracle.updateCurrentList(_indexToken);
                 emit SecondRebalanceCompleted(_indexToken, updatePortfolioNonce_);
             }
         }
@@ -335,7 +335,6 @@ contract IndexFactoryBalancer is Initializable, OwnableUpgradeable, PausableUpgr
         emit SecondRebalanceRequested(_indexToken, _updatePortfolioNonce);
         if (isSecondEmpty) {
             rebalanceStatusByNonce[_updatePortfolioNonce] = RebalanceStatus.SecondRebalanceCompleted;
-            functionsOracle.updateCurrentList(_indexToken);
             emit SecondRebalanceCompleted(_indexToken, _updatePortfolioNonce);
         }
     }

@@ -20,7 +20,8 @@ import {DinariBalancer} from "./DinariBalancer.sol";
 
 /// @title Dinari Storage
 /// @notice Stores data and provides functions for managing index token issuance and redemption
-contract DinariStorage is Initializable, OwnableUpgradeable {
+/// @custom:oz-upgrades-from DinariStorage
+contract DinariStorageV2 is Initializable, OwnableUpgradeable {
     using FunctionsRequest for FunctionsRequest.Request;
 
     struct ActionInfo {

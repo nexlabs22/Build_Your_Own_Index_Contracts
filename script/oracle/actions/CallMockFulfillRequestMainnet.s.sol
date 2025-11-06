@@ -22,24 +22,25 @@ contract CallMockFulfillRequestMainnet is Script {
 
         // address[] memory tokens = new address[](2);
         // tokens[0] = 0xCe38e140fC3982a6bCEbc37b040913EF2Cd6C5a7; // APPLE
-        // tokens[1] = 0x77308F8B63A99b24b262D930E0218ED2f49F8475; // MSFT
+        // // tokens[1] = 0x77308F8B63A99b24b262D930E0218ED2f49F8475; // MSFT
+        // tokens[1] = 0x4DaFFfDDEa93DdF1e0e7B61E844331455053Ce5c; // NVIDIA
 
         // uint256[] memory marketShares = new uint256[](2);
         // marketShares[0] = 50e18;
         // marketShares[1] = 50e18;
 
         // CCIP
-        address[] memory indexTokens = new address[](2);
-        indexTokens[0] = 0x112cdC1651C455032a1bB85C5CdD8Cd0C12A8aE1;
-        indexTokens[1] = 0x112cdC1651C455032a1bB85C5CdD8Cd0C12A8aE1;
+        // address[] memory indexTokens = new address[](2);
+        // indexTokens[0] = 0x112cdC1651C455032a1bB85C5CdD8Cd0C12A8aE1;
+        // indexTokens[1] = 0x112cdC1651C455032a1bB85C5CdD8Cd0C12A8aE1;
 
-        address[] memory tokens = new address[](2);
-        tokens[0] = 0xFa7F8980b0f1E64A2062791cc3b0871572f1F7f0; // UNI
-        tokens[1] = 0xba5DdD1f9d7F570dc94a51479a000E3BCE967196; // AAVE
+        // address[] memory tokens = new address[](2);
+        // tokens[0] = 0xFa7F8980b0f1E64A2062791cc3b0871572f1F7f0; // UNI
+        // tokens[1] = 0xba5DdD1f9d7F570dc94a51479a000E3BCE967196; // AAVE
 
-        uint256[] memory marketShares = new uint256[](2);
-        marketShares[0] = 60e18;
-        marketShares[1] = 40e18;
+        // uint256[] memory marketShares = new uint256[](2);
+        // marketShares[0] = 50e18;
+        // marketShares[1] = 50e18;
 
         // CrossChain CCIP
         // address[] memory indexTokens = new address[](2);
@@ -51,16 +52,70 @@ contract CallMockFulfillRequestMainnet is Script {
         // tokens[1] = 0xAC1Bd2486aAf3B5C0fc3Fd868558b082a531B2B4; // TOSHI
 
         // uint256[] memory marketShares = new uint256[](2);
-        // marketShares[0] = 50e18;
-        // marketShares[1] = 50e18;
+        // marketShares[0] = 60e18;
+        // marketShares[1] = 40e18;
+
+        // Meme coin portfolio
+        // address[] memory indexTokens = new address[](6);
+        // indexTokens[0] = 0x01b536d445e2B2B14e58B5D2469f6b4908E6266A;
+        // indexTokens[1] = 0x01b536d445e2B2B14e58B5D2469f6b4908E6266A;
+        // indexTokens[2] = 0x01b536d445e2B2B14e58B5D2469f6b4908E6266A;
+        // indexTokens[3] = 0x01b536d445e2B2B14e58B5D2469f6b4908E6266A;
+        // indexTokens[4] = 0x01b536d445e2B2B14e58B5D2469f6b4908E6266A;
+        // indexTokens[5] = 0x01b536d445e2B2B14e58B5D2469f6b4908E6266A;
+
+        // address[] memory tokens = new address[](6);
+        // tokens[0] = 0x1111111111166b7FE7bd91427724B487980aFc69; // ZORA
+        // tokens[1] = 0xAC1Bd2486aAf3B5C0fc3Fd868558b082a531B2B4; // TOSHI
+        // tokens[2] = 0xFa7F8980b0f1E64A2062791cc3b0871572f1F7f0; // UNI
+        // tokens[3] = 0xba5DdD1f9d7F570dc94a51479a000E3BCE967196; // AAVE
+        // tokens[4] = 0xCe38e140fC3982a6bCEbc37b040913EF2Cd6C5a7; // APPLE
+        // tokens[5] = 0x77308F8B63A99b24b262D930E0218ED2f49F8475; // MSFT
+
+        // uint256[] memory marketShares = new uint256[](6);
+        // marketShares[0] = 5e18;
+        // marketShares[1] = 5e18;
+        // marketShares[2] = 5e18;
+        // marketShares[3] = 5e18;
+        // marketShares[4] = 40e18;
+        // marketShares[5] = 40e18;
+
+        // require(indexTokens.length == tokens.length, "length mismatch");
+        // require(tokens.length == marketShares.length, "length mismatch");
+
+        // console.log("Mainnet Calling mockFulfillRequest on:", oracle);
+        vm.startBroadcast(deployerPrivateKey);
+        setMockForOPCCIPPortfolio(oracle);
+        // FunctionsOracle(oracle).mockFulfillRequest(indexTokens, tokens, marketShares);
+        vm.stopBroadcast();
+    }
+
+    function setMockForOPCCIPPortfolio(address oracle) internal {
+        address[] memory indexTokens = new address[](2);
+        indexTokens[0] = 0x9D00bEc78dD6987c78510d0C410484C5f3c7Ca05;
+        // indexTokens[1] = 0x9D00bEc78dD6987c78510d0C410484C5f3c7Ca05;
+        indexTokens[1] = 0x9D00bEc78dD6987c78510d0C410484C5f3c7Ca05;
+
+        address[] memory tokens = new address[](2);
+        tokens[0] = 0x38F9bf9dCe51833Ec7f03C9dC218197999999999; // NYA
+        // tokens[1] = 0x17Aabf6838a6303fc6E9C5A227DC1EB6d95c829A; // TUX
+        tokens[1] = 0x4200000000000000000000000000000000000042; // OP
+
+        uint256[] memory marketShares = new uint256[](2);
+        marketShares[0] = 40e18;
+        // marketShares[1] = 0;
+        marketShares[1] = 60e18;
 
         require(indexTokens.length == tokens.length, "length mismatch");
         require(tokens.length == marketShares.length, "length mismatch");
 
         console.log("Mainnet Calling mockFulfillRequest on:", oracle);
-        vm.startBroadcast(deployerPrivateKey);
+
         FunctionsOracle(oracle).mockFulfillRequest(indexTokens, tokens, marketShares);
-        vm.stopBroadcast();
+
+        //     address nya = 0x38F9bf9dCe51833Ec7f03C9dC218197999999999;
+        // address tux = 0x17Aabf6838a6303fc6E9C5A227DC1EB6d95c829A;
+        // address op = 0x4200000000000000000000000000000000000042;
     }
 
     function _functionsOracle(string memory targetChain) internal view returns (address) {

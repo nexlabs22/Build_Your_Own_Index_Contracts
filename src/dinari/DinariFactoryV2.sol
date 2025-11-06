@@ -28,7 +28,8 @@ error ZeroFactoryStorageAddress();
 /// @title Dinari Factory
 /// @author NEX Labs Protocol
 /// @notice Allows User to initiate burn/mint requests and allows issuers to approve or deny them
-contract DinariFactory is Initializable, OwnableUpgradeable, PausableUpgradeable, ReentrancyGuardUpgradeable {
+/// @custom:oz-upgrades-from DinariFactory
+contract DinariFactoryV2 is Initializable, OwnableUpgradeable, PausableUpgradeable, ReentrancyGuardUpgradeable {
     using SafeERC20 for IERC20;
 
     struct ActionInfo {

@@ -336,13 +336,40 @@ contract FunctionsOracleV2 is Initializable, FunctionsClient, ConfirmedOwner {
 
     function updateCurrentList(address _indexToken) external {
         require(msg.sender == factoryBalancerAddress, "caller must be factory balancer");
-        totalCurrentList[_indexToken] = totalOracleList[_indexToken];
-        for (uint256 i = 0; i < totalOracleList[_indexToken]; i++) {
-            address tokenAddress = oracleList[_indexToken][i];
-            currentList[_indexToken][i] = tokenAddress;
-            tokenCurrentMarketShare[_indexToken][tokenAddress] = tokenOracleMarketShare[_indexToken][tokenAddress];
-            tokenCurrentListIndex[_indexToken][tokenAddress] = i;
+
+        uint256 totalOracleList = totalOracleList[_indexToken];
+        require(totalOracleList > 0, "oracle list is empty");
+
+        currentFilledCount[_indexToken] += 1;
+
+        // //save mappings
+        for (uint256 i = 0; i < totalOracleList; i++) {
+            address indexToken = _indexToken;
+            address token = oracleList[_indexToken][i];
+            uint256 share = tokenOracleMarketShare[_indexToken][token];
+
+            if (indexToken == address(0)) revert InvalidAddress();
+            if (token == address(0)) revert InvalidAddress();
+
+            uint64 chainSelector = tokenChainSelector[token];
+            uint64 providerIndex = tokenProviderIndex[token];
+            if (chainSelector == 0) revert ChainSelectorIsZero();
+            if (providerIndex == 0) revert ProviderIndexIsZero();
+
+            currentList[_indexToken][i] = token;
+            tokenCurrentMarketShare[_indexToken][token] = share;
+            tokenCurrentListIndex[_indexToken][token] = i;
+            // current main actions
+            _initMainCurrentData(_indexToken, token, share);
+            // current asset type actions
+            _initProviderIndexCurrentData(_indexToken, token, providerIndex, share);
+            // current chain selector actions
+            if (providerIndex == 1) {
+                _initChainSelectorsCurrentData(_indexToken, chainSelector, token, share);
+            }
         }
+
+        totalCurrentList[_indexToken] = totalOracleList;
     }
 
     function _updateCurrentList(address _indexToken) internal {
@@ -572,6 +599,18 @@ contract FunctionsOracleV2 is Initializable, FunctionsClient, ConfirmedOwner {
             currentData[indexToken][currentFilledCount_].currentProviderIndexTotalShares[providerIndex],
             currentData[indexToken][currentFilledCount_].currentProviderIndexTokens[providerIndex],
             currentData[indexToken][currentFilledCount_].currentProviderIndexTokenShares[providerIndex]
+        );
+    }
+
+    function getOracleProviderIndexData(address indexToken, uint256 oracleFilledCount_, uint64 providerIndex)
+        public
+        view
+        returns (uint256, address[] memory, uint256[] memory)
+    {
+        return (
+            oracleData[indexToken][oracleFilledCount_].oracleProviderIndexTotalShares[providerIndex],
+            oracleData[indexToken][oracleFilledCount_].oracleProviderIndexTokens[providerIndex],
+            oracleData[indexToken][oracleFilledCount_].oracleProviderIndexTokenShares[providerIndex]
         );
     }
 }

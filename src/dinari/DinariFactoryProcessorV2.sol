@@ -32,7 +32,13 @@ error RedemptionAlreadyCompleted();
 /// @title Index Token Factory
 /// @author NEX Labs Protocol
 /// @notice Allows User to initiate burn/mint requests and allows issuers to approve or deny them
-contract DinariFactoryProcessor is Initializable, OwnableUpgradeable, PausableUpgradeable, ReentrancyGuardUpgradeable {
+/// @custom:oz-upgrades-from DinariFactoryProcessor
+contract DinariFactoryProcessorV2 is
+    Initializable,
+    OwnableUpgradeable,
+    PausableUpgradeable,
+    ReentrancyGuardUpgradeable
+{
     DinariStorage public dinariStorage;
     IndexFactoryStorage public factoryStorage;
     FunctionsOracle public functionsOracle;

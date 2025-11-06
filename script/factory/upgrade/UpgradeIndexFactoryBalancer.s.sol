@@ -10,7 +10,8 @@ contract UpgradeIndexFactoryBalancer is Script {
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
         vm.startBroadcast(deployerPrivateKey);
 
-        string memory targetChain = vm.envOr("TARGET_CHAIN", string("sepolia"));
+        // string memory targetChain = vm.envOr("TARGET_CHAIN", string("sepolia"));
+        string memory targetChain = vm.envOr("TARGET_CHAIN", string("arbitrum_mainnet"));
 
         address proxyAddress;
         address owner = vm.addr(deployerPrivateKey);
@@ -23,7 +24,7 @@ contract UpgradeIndexFactoryBalancer is Script {
             revert("Unsupported target chain");
         }
 
-        Upgrades.upgradeProxy(proxyAddress, "IndexFactoryBalancerV12.sol", "", owner);
+        Upgrades.upgradeProxy(proxyAddress, "IndexFactoryBalancerV3.sol", "", owner);
 
         address implAddr = Upgrades.getImplementationAddress(proxyAddress);
         console.log("IndexFactoryBalancer proxy upgraded to new implementation at:", implAddr);

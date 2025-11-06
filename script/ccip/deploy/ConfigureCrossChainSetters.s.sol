@@ -11,7 +11,8 @@ import {CrossChainIndexFactoryBalancer} from "../../../src/ccip/CrossChainIndexF
 contract ConfigureCrossChainSetters is Script {
     function run() external {
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
-        string memory targetChain = vm.envOr("TARGET_CHAIN", string("sepolia"));
+        // string memory targetChain = vm.envOr("TARGET_CHAIN", string("sepolia"));
+        string memory targetChain = vm.envOr("TARGET_CHAIN", string("optimism_mainnet"));
 
         vm.startBroadcast(deployerPrivateKey);
 
@@ -47,6 +48,8 @@ contract ConfigureCrossChainSetters is Script {
     function _chainPrefix(string memory targetChain) internal pure returns (string memory) {
         if (keccak256(bytes(targetChain)) == keccak256("arbitrum_mainnet")) {
             return "ARBITRUM";
+        } else if (keccak256(bytes(targetChain)) == keccak256("optimism_mainnet")) {
+            return "OPTIMISM";
         }
         return "SEPOLIA";
     }

@@ -27,11 +27,41 @@ contract CallUpdateCrosschainPath is Script, Test {
         // _fillMemeCoinPortfolio();
         // arbeiPathData();
         // _setArbitrumCCIP();
-        _setArbitrumCrossChain();
+        // _setArbitrumCrossChain();
+        // _setOptimismCrossChain();
+        dinariPortfolio();
 
         vm.stopBroadcast();
 
         console.log("All set functions completed successfully!");
+    }
+
+    function dinariPortfolio() internal {
+        address wethAddress = 0x82aF49447D8a07e3bd95BD0d56f35241523fBab1;
+        address nvidia = 0x4DaFFfDDEa93DdF1e0e7B61E844331455053Ce5c; // NVIDIA
+
+        uint64[] memory providerIndex = new uint64[](1);
+        providerIndex[0] = 2;
+
+        uint64[] memory chainSelectors = new uint64[](1);
+        chainSelectors[0] = 4949039107694359620; // arbitrum
+
+        uint24[] memory feesData = new uint24[](1);
+        feesData[0] = 3000;
+
+        bytes[] memory pathData = new bytes[](1);
+        address[] memory path = new address[](2);
+        path[0] = wethAddress;
+        path[1] = nvidia; // NVIDIA
+        pathData[0] = abi.encode(path, feesData);
+
+        // address[] memory path = new address[](2);
+        // path[0] = wethAddress;
+        // path[1] = nya;
+        // pathData[0] = abi.encode(path, feesData);
+
+        FunctionsOracle(functionsOracleProxy).updatePathData(providerIndex, chainSelectors, pathData);
+        console.log("Called mockFillAssetsList() [testnet style].");
     }
 
     function _fillMockAssetsListUSDCWETH() internal {
@@ -63,6 +93,54 @@ contract CallUpdateCrosschainPath is Script, Test {
         pathData[0] = abi.encode(path, feesData);
 
         console.logBytes(pathData[0]);
+    }
+
+    function _setOptimismCrossChain() internal {
+        uint64 otherChainSelector = 3734403246176062136;
+
+        address wethAddress = 0x4200000000000000000000000000000000000006;
+
+        address nya = 0x38F9bf9dCe51833Ec7f03C9dC218197999999999;
+        address tux = 0x17Aabf6838a6303fc6E9C5A227DC1EB6d95c829A;
+        address op = 0x4200000000000000000000000000000000000042;
+
+        uint64[] memory chainSelectors = new uint64[](3);
+        chainSelectors[0] = otherChainSelector;
+        chainSelectors[1] = otherChainSelector;
+        chainSelectors[2] = otherChainSelector;
+
+        uint64[] memory providerIndex = new uint64[](3);
+        providerIndex[0] = 1;
+        providerIndex[1] = 1;
+        providerIndex[2] = 1;
+
+        uint24[] memory feesData = new uint24[](1);
+        feesData[0] = 100;
+
+        bytes[] memory pathData = new bytes[](3);
+        address[] memory path = new address[](2);
+        path[0] = wethAddress;
+        path[1] = nya;
+        pathData[0] = abi.encode(path, feesData);
+
+        uint24[] memory feesData1 = new uint24[](1);
+        feesData1[0] = 10000;
+
+        address[] memory path1 = new address[](2);
+        path1[0] = wethAddress;
+        path1[1] = tux;
+        pathData[1] = abi.encode(path1, feesData1);
+
+        uint24[] memory feesData2 = new uint24[](1);
+        feesData2[0] = 3000;
+
+        address[] memory path2 = new address[](2);
+        path2[0] = wethAddress;
+        path2[1] = op;
+        pathData[2] = abi.encode(path2, feesData2);
+
+        FunctionsOracle(functionsOracleProxy).updatePathData(providerIndex, chainSelectors, pathData);
+        console.log("Called updatePathData().");
     }
 
     function _setArbitrumCrossChain() internal {

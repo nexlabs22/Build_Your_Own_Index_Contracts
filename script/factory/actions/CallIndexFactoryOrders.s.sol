@@ -31,7 +31,7 @@ contract CallIndexFactoryOrders is Script {
 
         uint256 pk = vm.envUint("PRIVATE_KEY");
         vm.startBroadcast(pk);
-        DinariFactoryProcessor(orderProcessor).multical(indexToken, id);
+        DinariFactoryProcessor(orderProcessor).multical(id);
         vm.stopBroadcast();
 
         console.log("multical sent");

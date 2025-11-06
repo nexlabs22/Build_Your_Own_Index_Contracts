@@ -10,7 +10,8 @@ contract UpgradeFunctionsOracle is Script {
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
         vm.startBroadcast(deployerPrivateKey);
 
-        string memory targetChain = vm.envOr("TARGET_CHAIN", string("sepolia"));
+        // string memory targetChain = vm.envOr("TARGET_CHAIN", string("sepolia"));
+        string memory targetChain = vm.envOr("TARGET_CHAIN", string("arbitrum_mainnet"));
 
         address functionOracleProxyAddress;
         address owner = vm.addr(deployerPrivateKey);
@@ -23,7 +24,7 @@ contract UpgradeFunctionsOracle is Script {
             revert("Unsupported target chain");
         }
 
-        Upgrades.upgradeProxy(functionOracleProxyAddress, "FunctionsOracleV5.sol", "", owner);
+        Upgrades.upgradeProxy(functionOracleProxyAddress, "FunctionsOracleV2.sol", "", owner);
 
         address implAddr = Upgrades.getImplementationAddress(functionOracleProxyAddress);
         console.log("FunctionsOracle proxy upgraded to new implementation at:", implAddr);

@@ -15,7 +15,9 @@ contract DeployCrossChainIndexFactoryStorage is Script {
 
     function run() external {
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
-        string memory targetChain = vm.envOr("TARGET_CHAIN", string("arbitrum_sepolia"));
+        // string memory targetChain = vm.envOr("TARGET_CHAIN", string("arbitrum_sepolia"));
+        string memory targetChain = vm.envOr("TARGET_CHAIN", string("optimism_mainnet"));
+
         address owner = vm.addr(deployerPrivateKey);
 
         uint64 chainSelector;
@@ -54,6 +56,15 @@ contract DeployCrossChainIndexFactoryStorage is Script {
             factoryV3 = vm.envAddress("ARBITRUM_UNISWAP_FACTORY_V3_ADDRESS");
             swapRouterV2 = vm.envAddress("ARBITRUM_SWAP_ROUTER_V2_ADDRESS");
             priceFeed = vm.envAddress("ARBITRUM_TO_USD_PRICE_FEED_ADDRESS");
+        } else if (keccak256(bytes(targetChain)) == keccak256("optimism_mainnet")) {
+            chainSelector = uint64(vm.envUint("OPTIMISM_CCIP_CHAIN_SELECTOR"));
+            linkToken = vm.envAddress("OPTIMISM_LINK_TOKEN_ADDRESS");
+            ccipRouter = vm.envAddress("OPTIMISM_CCIP_ROUTER_ADDRESS");
+            weth = vm.envAddress("OPTIMISM_WETH_ADDRESS");
+            swapRouterV3 = vm.envAddress("OPTIMISM_SWAP_ROUTER_V3_ADDRESS");
+            factoryV3 = vm.envAddress("OPTIMISM_UNISWAP_FACTORY_V3_ADDRESS");
+            swapRouterV2 = vm.envAddress("OPTIMISM_SWAP_ROUTER_V2_ADDRESS");
+            priceFeed = vm.envAddress("OPTIMISM_TO_USD_PRICE_FEED_ADDRESS");
         } else {
             revert("Unsupported target chain");
         }

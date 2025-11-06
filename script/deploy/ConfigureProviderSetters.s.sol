@@ -27,7 +27,8 @@ contract ConfigureProviderSetters is Script {
     function run() external {
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
         // string memory targetChain = vm.envOr("TARGET_CHAIN", string("sepolia"));
-        string memory targetChain = vm.envOr("TARGET_CHAIN", string("arbitrum_mainnet"));
+        // string memory targetChain = vm.envOr("TARGET_CHAIN", string("arbitrum_mainnet"));
+        string memory targetChain = vm.envOr("TARGET_CHAIN", string("optimism_mainnet"));
 
         vm.startBroadcast(deployerPrivateKey);
 
@@ -208,7 +209,7 @@ contract ConfigureProviderSetters is Script {
         address priceOracle = vm.envAddress(string.concat(prefix, "_PRICE_ORACLE"));
         address coreSenderProxy = vm.envAddress(string.concat(prefix, "_CORE_SENDER_PROXY_ADDRESS"));
         address balancerSenderProxy = vm.envAddress(string.concat(prefix, "_BALANCER_SENDER_PROXY_ADDRESS"));
-        uint64 chainSelector = uint64(vm.envUint(string.concat(prefix, "_CCIP_CHAIN_SELECTOR")));
+        uint64 chainSelector = uint64(vm.envUint(string.concat(prefix, "_ARBITRUM_CHAIN_SELECTOR")));
 
         CrossChainIndexFactoryStorage ccifs = CrossChainIndexFactoryStorage(crossChainStorageProxy);
         ccifs.setCrossChainFactory(crossChainFactoryProxy);
@@ -316,6 +317,8 @@ contract ConfigureProviderSetters is Script {
             return "ARBITRUM_SEPOLIA";
         } else if (keccak256(bytes(targetChain)) == keccak256("base_mainnet")) {
             return "BASE";
+        } else if (keccak256(bytes(targetChain)) == keccak256("optimism_mainnet")) {
+            return "OPTIMISM";
         }
 
         return "SEPOLIA";

@@ -20,8 +20,8 @@ contract DeployIndexToken is Script {
         // string memory tokenName = "CCIP Portfolio";
         // string memory tokenSymbol = "CCIP Portfolio";
 
-        string memory tokenName = "CCIP Portfolio";
-        string memory tokenSymbol = "CCIP Portfolio";
+        string memory tokenName = "OP CCIP Portfolio";
+        string memory tokenSymbol = "OP CCIP Portfolio";
 
         // string memory targetChain = "sepolia";
         string memory targetChain = "arbitrum_mainnet";
@@ -45,6 +45,12 @@ contract DeployIndexToken is Script {
             supplyCeiling = vm.envUint("ARBITRUM_SUPPLY_CEILING");
             coreSender = vm.envAddress("ARBITRUM_CORE_SENDER_PROXY_ADDRESS");
             globalFactory = vm.envAddress("ARBITRUM_INDEX_FACTORY_PROXY_ADDRESS");
+        } else if (keccak256(bytes(targetChain)) == keccak256("optimism_mainnet")) {
+            feeRatePerDayScaled = vm.envUint("OPTIMISM_FEE_RATE_PER_DAY_SCALED");
+            feeReceiver = vm.envAddress("OPTIMISM_FEE_RECEIVER");
+            supplyCeiling = vm.envUint("OPTIMISM_SUPPLY_CEILING");
+            coreSender = vm.envAddress("OPTIMISM_CORE_SENDER_PROXY_ADDRESS");
+            globalFactory = vm.envAddress("OPTIMISM_INDEX_FACTORY_PROXY_ADDRESS");
         } else {
             revert("Unsupported target chain");
         }

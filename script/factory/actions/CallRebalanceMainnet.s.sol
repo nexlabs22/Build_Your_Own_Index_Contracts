@@ -21,21 +21,27 @@ contract CallRebalance is Script {
     // CrossChain
     // address indexToken = 0x2EC6821b03e2DB6326E585baCbB9df14058eDbd2;
 
+    // OP CCIP
+    // address indexToken = 0x9D00bEc78dD6987c78510d0C410484C5f3c7Ca05;
+
     address indexFactoryBalancer = 0x5258839E9F8aE25B95F2ccfAF8C422369Cf9deeF;
     address dinariBalancer = 0x08b04CE86d42A93C0DE5C25E2fC505f329A7cC5b;
     address ccipBalancer = 0x17048A72b6E88Fc5bF5fD9319F8323Fd647C81E5;
+    uint256 updatedPortfolioNonce = 10;
 
     function run() external {
         uint256 pk = vm.envUint("PRIVATE_KEY");
         vm.startBroadcast(pk);
 
-        // askValues();
+        askValues();
         // firstRebalance();
         // secondRebalance();
         // completeRebalance();
 
         // secondRebalanceCcip();
-        secondRebalance();
+        // secondRebalance();
+        // secondRebalanceDinari();
+        // completeRebalanceDinari();
 
         vm.stopBroadcast();
     }
@@ -45,11 +51,11 @@ contract CallRebalance is Script {
     }
 
     function firstRebalance() public {
-        IndexFactoryBalancer(indexFactoryBalancer).firstReweightAction(indexToken, 1);
+        IndexFactoryBalancer(indexFactoryBalancer).firstReweightAction(indexToken, updatedPortfolioNonce);
     }
 
     function secondRebalance() public {
-        IndexFactoryBalancer(indexFactoryBalancer).secondReweightAction(indexToken, 1);
+        IndexFactoryBalancer(indexFactoryBalancer).secondReweightAction(indexToken, updatedPortfolioNonce);
     }
 
     function secondRebalanceCcip() public {
@@ -57,10 +63,10 @@ contract CallRebalance is Script {
     }
 
     function secondRebalanceDinari() public {
-        DinariBalancer(dinariBalancer).secondRebalanceAction(indexToken, 1);
+        DinariBalancer(dinariBalancer).secondRebalanceAction(indexToken, 5);
     }
 
     function completeRebalanceDinari() public {
-        DinariBalancer(dinariBalancer).completeRebalanceActions(indexToken, 1);
+        DinariBalancer(dinariBalancer).completeRebalanceActions(indexToken, 5);
     }
 }

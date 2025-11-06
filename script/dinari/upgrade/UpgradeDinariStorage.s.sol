@@ -12,7 +12,8 @@ contract UpgradeDinariStorage is Script {
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
         vm.startBroadcast(deployerPrivateKey);
 
-        string memory targetChain = "sepolia";
+        // string memory targetChain = "sepolia";
+        string memory targetChain = "arbitrum_mainnet";
         address proxyAddress;
         address owner = vm.addr(deployerPrivateKey);
 
@@ -24,7 +25,7 @@ contract UpgradeDinariStorage is Script {
             revert("Unsupported target chain");
         }
 
-        Upgrades.upgradeProxy(proxyAddress, "DinariStorage.sol", "", owner);
+        Upgrades.upgradeProxy(proxyAddress, "DinariStorageV2.sol", "", owner);
 
         address newImpl = Upgrades.getImplementationAddress(proxyAddress);
         console.log("DinariStorage proxy upgraded to new implementation at:", newImpl);
