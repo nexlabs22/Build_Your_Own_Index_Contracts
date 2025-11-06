@@ -339,7 +339,7 @@ contract FunctionsOracle is Initializable, FunctionsClient, ConfirmedOwner {
         uint256 totalOracleList = totalOracleList[_indexToken];
         require(totalOracleList > 0, "oracle list is empty");
 
-        currentFilledCount[_indexToken] += 1;
+        currentFilledCount[_indexToken] = oracleFilledCount[_indexToken];
 
         // //save mappings
         for (uint256 i = 0; i < totalOracleList; i++) {

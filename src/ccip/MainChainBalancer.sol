@@ -169,12 +169,12 @@ contract MainChainBalancer is Initializable, ProposableOwnableUpgradeable, Pausa
 
     function requestRebalance(
         address _indexToken,
+        uint256 _nonce,
         uint256 _targetPortfolioValue,
         address _usdcAddress,
         uint256 _dedicatedUSDCAmount
     ) public whenNotPaused onlyOwnerOrOperator {
-        uint256 nonce = mainChainStorage.updatePortfolioNonce();
-        uint256 portfolioValue = mainChainStorage.portfolioTotalValueByNonce(nonce);
+        uint256 portfolioValue = mainChainStorage.portfolioTotalValueByNonce(_nonce);
         targetPortfolioValue = _targetPortfolioValue;
         if (_dedicatedUSDCAmount > 0) {
             IERC20(_usdcAddress).transferFrom(msg.sender, address(this), _dedicatedUSDCAmount);
@@ -182,11 +182,11 @@ contract MainChainBalancer is Initializable, ProposableOwnableUpgradeable, Pausa
             uint256 wethAmount = swap(toETHPath, toETHFees, _dedicatedUSDCAmount, address(this));
             uint256 reweightExtraPercentage =
                 ((_targetPortfolioValue - portfolioValue) * 100e18) / _targetPortfolioValue;
-            mainChainStorage.increaseExtraWethByNonce(nonce, wethAmount);
-            mainChainStorage.increasePendingExtraWethByNonce(nonce, wethAmount);
-            mainChainStorage.increaseReweightExtraPercentage(nonce, reweightExtraPercentage);
+            mainChainStorage.increaseExtraWethByNonce(_nonce, wethAmount);
+            mainChainStorage.increasePendingExtraWethByNonce(_nonce, wethAmount);
+            mainChainStorage.increaseReweightExtraPercentage(_nonce, reweightExtraPercentage);
         }
-        firstReweightAction(_indexToken, _targetPortfolioValue);
+        firstReweightAction(_indexToken, _nonce, _targetPortfolioValue);
     }
 
     function _firstReweightSwaps(
@@ -260,12 +260,11 @@ contract MainChainBalancer is Initializable, ProposableOwnableUpgradeable, Pausa
     /**
      * @dev Performs the first reweight action.
      */
-    function firstReweightAction(address _indexToken, uint256 _targetPortfolioValue)
+    function firstReweightAction(address _indexToken, uint256 nonce, uint256 _targetPortfolioValue)
         public
         whenNotPaused
         onlyOwnerOrOperator
     {
-        uint256 nonce = mainChainStorage.updatePortfolioNonce();
         // check ask values completed
         require(mainChainStorage.rebalanceStatusByNonce(nonce) == MainChainStorage.RebalanceStatus.AskValuesCompleted, "Values not asked");
         uint256 portfolioValue = mainChainStorage.portfolioTotalValueByNonce(nonce);
@@ -453,8 +452,7 @@ contract MainChainBalancer is Initializable, ProposableOwnableUpgradeable, Pausa
     /**
      * @dev Performs the second reweight action.
      */
-    function secondReweightAction(address _indexToken) public whenNotPaused onlyOwnerOrOperator {
-        uint256 nonce = mainChainStorage.updatePortfolioNonce();
+    function secondReweightAction(address _indexToken, uint nonce) public whenNotPaused onlyOwnerOrOperator {
         // check previous reweight completed
         require(mainChainStorage.rebalanceStatusByNonce(nonce) == MainChainStorage.RebalanceStatus.FirstRebalanceCompleted, "First reweight not completed");
         uint256 _targetPortfolioValue = targetPortfolioValue;

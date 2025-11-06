@@ -288,7 +288,7 @@ contract DinariBalancer is Initializable, OwnableUpgradeable, PausableUpgradeabl
         }
     }
 
-    function firstRebalanceAction(address _indexToken, uint256 _dedicatedUSDCAmount)
+    function firstRebalanceAction(address _indexToken, uint256 nonce, uint256 _dedicatedUSDCAmount)
         public
         nonReentrant
         onlyOwnerOrOperator

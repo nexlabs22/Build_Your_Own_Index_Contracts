@@ -50,6 +50,9 @@ contract IndexFactoryBalancer is Initializable, OwnableUpgradeable, PausableUpgr
 
     address public balancerSenderAddress;
 
+    mapping(uint64 => mapping(uint256 => uint256)) public globalNonceToProviderNonce; // mapping of providerNonce to globalNonce
+
+
     event UsdcProvided(
         address indexed indexToken,
         uint8 indexed providerIndex,
@@ -237,11 +240,11 @@ contract IndexFactoryBalancer is Initializable, OwnableUpgradeable, PausableUpgr
                     uint256 targetPortfolioValue =
                         (providerTotalValueByNonce[_updatePortfolioNonce][1] * SHARE_DENOMINATOR)
                             / targetProviderMarketShare;
-                    reweightCCIP(_indexToken, targetPortfolioValue, 0);
+                    reweightCCIP(_indexToken, _updatePortfolioNonce, targetPortfolioValue, 0);
                     providerRebalanceStatus[1][_updatePortfolioNonce] = ProviderRebalanceStatus.FirstRebalance;
                     totalPendingFirstRebalanceByNonce[_updatePortfolioNonce]++;
                 } else if (currentProviderIndexes[i] == 2) {
-                    firstRebalanceDinari(_indexToken, 0);
+                    firstRebalanceDinari(_indexToken, _updatePortfolioNonce, 0);
                     providerRebalanceStatus[2][_updatePortfolioNonce] = ProviderRebalanceStatus.FirstRebalance;
                     totalPendingFirstRebalanceByNonce[_updatePortfolioNonce]++;
                 }
@@ -322,11 +325,11 @@ contract IndexFactoryBalancer is Initializable, OwnableUpgradeable, PausableUpgr
                     uint256 targetPortfolioValue =
                         (portfolioTotalValueByNonce[_updatePortfolioNonce] * targetProviderMarketShare) / 100e18;
                     // reweightCalled = extraUSDCAmount;
-                    reweightCCIP(_indexToken, targetPortfolioValue, extraUSDCAmount);
+                    reweightCCIP(_indexToken, _updatePortfolioNonce, targetPortfolioValue, extraUSDCAmount);
                     providerRebalanceStatus[1][_updatePortfolioNonce] = ProviderRebalanceStatus.SecondRebalance;
                     totalPendingSecondRebalanceByNonce[_updatePortfolioNonce]++;
                 } else if (currentProviderIndexes[i] == 2) {
-                    firstRebalanceDinari(_indexToken, extraUSDCAmount);
+                    firstRebalanceDinari(_indexToken, _updatePortfolioNonce, extraUSDCAmount);
                     providerRebalanceStatus[2][_updatePortfolioNonce] = ProviderRebalanceStatus.SecondRebalance;
                     totalPendingSecondRebalanceByNonce[_updatePortfolioNonce]++;
                 }
@@ -343,6 +346,7 @@ contract IndexFactoryBalancer is Initializable, OwnableUpgradeable, PausableUpgr
     function askValueCCIP(address _indexToken) internal whenNotPaused returns (uint256 orderNonce) {
         uint256 providerUpdateNonce = mainChainBalancer2.getUpdatePortfolioNonce();
         providerNonceToGlobalNonce[1][providerUpdateNonce + 1] = updatePortfolioNonce;
+        globalNonceToProviderNonce[1][updatePortfolioNonce] = providerUpdateNonce + 1;
         mainChainBalancer2.askValues(_indexToken);
         return providerUpdateNonce + 1;
     }
@@ -391,6 +395,7 @@ contract IndexFactoryBalancer is Initializable, OwnableUpgradeable, PausableUpgr
         uint8 providerIndex = dinariBalancer.dinariStorage().providerIndex();
         uint256 providerUpdateNonce = dinariBalancer.rebalanceNonce(_indexToken);
         providerNonceToGlobalNonce[providerIndex][providerUpdateNonce + 1] = updatePortfolioNonce;
+        globalNonceToProviderNonce[providerIndex][updatePortfolioNonce] = providerUpdateNonce + 1;
         dinariBalancer.askValues(_indexToken);
         return providerUpdateNonce + 1;
     }
@@ -412,18 +417,19 @@ contract IndexFactoryBalancer is Initializable, OwnableUpgradeable, PausableUpgr
         _completeAskValues(_indexToken, _updatePortfolioNonce, _updateProviderNonce, _value);
     }
 
-    function firstRebalanceDinari(address _indexToken, uint256 _dedicatedUSDCAmount) internal {
-        DinariBalancer(dinariBalancer).firstRebalanceAction(_indexToken, _dedicatedUSDCAmount);
+    function firstRebalanceDinari(address _indexToken, uint256 _updatePortfolioNonce, uint256 _dedicatedUSDCAmount) internal {
+        DinariBalancer(dinariBalancer).firstRebalanceAction(_indexToken, globalNonceToProviderNonce[2][_updatePortfolioNonce], _dedicatedUSDCAmount);
     }
 
     function askValuesBackedFi(address _indexToken) internal whenNotPaused returns (uint256 orderNonce) {
         // uint8 providerIndex = dinariBalancer.dinariStorage().providerIndex();
         uint256 providerUpdateNonce = dinariBalancer.askValues(_indexToken);
         providerNonceToGlobalNonce[3][providerUpdateNonce] = updatePortfolioNonce;
+        globalNonceToProviderNonce[3][updatePortfolioNonce] = providerUpdateNonce;
         return providerUpdateNonce;
     }
 
-    function reweightCCIP(address _indexToken, uint256 _targetPortfolioValue, uint256 _extraUsdcAmount)
+    function reweightCCIP(address _indexToken, uint256 _updatePortfolioNonce, uint256 _targetPortfolioValue, uint256 _extraUsdcAmount)
         internal
         whenNotPaused
         returns (uint256 orderNonce)
@@ -433,7 +439,7 @@ contract IndexFactoryBalancer is Initializable, OwnableUpgradeable, PausableUpgr
         }
         // reweightCalled++;
         mainChainBalancer.requestRebalance(
-            _indexToken, _targetPortfolioValue, address(factoryStorage.usdcAddress()), _extraUsdcAmount
+            _indexToken, globalNonceToProviderNonce[1][_updatePortfolioNonce], _targetPortfolioValue, address(factoryStorage.usdcAddress()), _extraUsdcAmount
         );
     }
 
