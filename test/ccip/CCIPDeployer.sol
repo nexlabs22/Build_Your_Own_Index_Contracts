@@ -464,7 +464,7 @@ contract CCIPDeployer is
                                 address(indexFactoryStorage),
                                 address(mainChainBalancer),
                                 address(mainChainBalancer2),
-                                address(0)
+                                address(this)
                             )
                         )
                     )

@@ -304,6 +304,7 @@ contract IndexFactoryBalancer is Initializable, OwnableUpgradeable, PausableUpgr
             "Previous step not completed"
         );
         rebalanceStatusByNonce[_updatePortfolioNonce] = RebalanceStatus.SecondRebalanceRequested;
+        bool isSecondEmpty = true;
         for (uint256 i = 0; i < currentProviderIndexes.length; i++) {
             uint256 realProviderMarketShare =
                 (providerTotalValueByNonce[_updatePortfolioNonce][currentProviderIndexes[i]] * 100e18)
@@ -311,7 +312,8 @@ contract IndexFactoryBalancer is Initializable, OwnableUpgradeable, PausableUpgr
             uint256 targetProviderMarketShare = functionsOracle.getOracleProviderIndexTotalShares(
                 _indexToken, oracleFilledCount, currentProviderIndexes[i]
             );
-            if (realProviderMarketShare <= targetProviderMarketShare) {
+            if (realProviderMarketShare < targetProviderMarketShare) {
+                isSecondEmpty = false;
                 uint256 negativePercentage = targetProviderMarketShare - realProviderMarketShare;
                 uint256 extraUSDCAmount = (extraUsdcAmountByNonce[_updatePortfolioNonce] * negativePercentage)
                     / reweightExtraPercentageByNonce[_updatePortfolioNonce];
@@ -330,6 +332,11 @@ contract IndexFactoryBalancer is Initializable, OwnableUpgradeable, PausableUpgr
             }
         }
         emit SecondRebalanceRequested(_indexToken, _updatePortfolioNonce);
+        if(isSecondEmpty) {
+            rebalanceStatusByNonce[_updatePortfolioNonce] = RebalanceStatus.SecondRebalanceCompleted;
+            emit SecondRebalanceCompleted(_indexToken, _updatePortfolioNonce);
+        }
+
     }
 
     function askValueCCIP(address _indexToken) internal whenNotPaused returns (uint256 orderNonce) {
