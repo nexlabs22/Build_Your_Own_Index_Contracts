@@ -373,10 +373,12 @@ contract MainChainBalancer is Initializable, ProposableOwnableUpgradeable, Pausa
         uint256 oracleChainSelectorTotalShares =
             functionsOracle.getOracleChainSelectorTotalShares(_indexToken, _latestOracleCount, chainSelector);
         address[] memory oracleTokens = functionsOracle.allOracleChainSelectorTokens(_indexToken, chainSelector);
+        uint256[] memory oracleMarketShares =
+            functionsOracle.allOracleChainSelectorTokenShares(_indexToken, chainSelector);
         for (uint256 k = 0; k < oracleTokens.length; k++) {
             address newTokenAddress = oracleTokens[k];
 
-            uint256 newTokenMarketShare = functionsOracle.tokenOracleMarketShare(_indexToken, newTokenAddress);
+            uint256 newTokenMarketShare = oracleMarketShares[k];
 
             _internalSwapsWETHToTokensForFirstRebalance(
                 _indexToken, newTokenAddress, wethAmountToSwap, newTokenMarketShare, oracleChainSelectorTotalShares
@@ -548,12 +550,14 @@ contract MainChainBalancer is Initializable, ProposableOwnableUpgradeable, Pausa
         swapVars.swapWethAmount = swapWethAmount;
         Vault vault = Vault(indexFactoryStorage.indexTokenToVault(_indexToken));
         address[] memory oracleTokens = functionsOracle.allOracleChainSelectorTokens(_indexToken, chainSelector);
+        uint256[] memory oracleMarketShares =
+            functionsOracle.allOracleChainSelectorTokenShares(_indexToken, chainSelector);
         for (uint256 k = 0; k < oracleTokens.length; k++) {
             address newTokenAddress = oracleTokens[k];
             (address[] memory fromETHPath, uint24[] memory fromETHFees) =
                 functionsOracle.getFromETHPathData(newTokenAddress);
 
-            uint256 newTokenMarketShare = functionsOracle.tokenOracleMarketShare(_indexToken, newTokenAddress);
+            uint256 newTokenMarketShare = oracleMarketShares[k];
             if (newTokenAddress == address(weth)) {
                 swapVars.wethAmount = (swapVars.swapWethAmount * newTokenMarketShare) / oracleChainSelectorTotalShares;
                 weth.transfer(address(vault), swapVars.wethAmount);
