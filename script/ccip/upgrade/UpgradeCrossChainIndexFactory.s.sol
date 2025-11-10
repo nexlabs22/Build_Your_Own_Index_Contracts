@@ -13,7 +13,8 @@ contract UpgradeCrossChainIndexFactory is Script {
         vm.startBroadcast(deployerPrivateKey);
 
         // string memory targetChain = "arbitrum_sepolia";
-        string memory targetChain = "base";
+        // string memory targetChain = "base";
+        string memory targetChain = "optimism_mainnet";
         address proxyAddress;
         address owner = vm.addr(deployerPrivateKey);
 
@@ -21,11 +22,13 @@ contract UpgradeCrossChainIndexFactory is Script {
             proxyAddress = vm.envAddress("ARBITRUM_SEPOLIA_CROSS_CHAIN_FACTORY_PROXY_ADDRESS");
         } else if (keccak256(bytes(targetChain)) == keccak256("base")) {
             proxyAddress = vm.envAddress("BASE_CROSS_CHAIN_INDEX_FACTORY_PROXY_ADDRESS");
+        } else if (keccak256(bytes(targetChain)) == keccak256("optimism_mainnet")) {
+            proxyAddress = vm.envAddress("OPTIMISM_CROSS_CHAIN_INDEX_FACTORY_PROXY_ADDRESS");
         } else {
             revert("Unsupported target chain");
         }
 
-        Upgrades.upgradeProxy(proxyAddress, "CrossChainIndexFactoryV7.sol", "", owner);
+        Upgrades.upgradeProxy(proxyAddress, "CrossChainIndexFactoryV5.sol", "", owner);
 
         address newImpl = Upgrades.getImplementationAddress(proxyAddress);
         console.log("CrossChainIndexFactory proxy upgraded to new implementation at:", newImpl);

@@ -85,9 +85,69 @@ contract CallMockFulfillRequestMainnet is Script {
 
         // console.log("Mainnet Calling mockFulfillRequest on:", oracle);
         vm.startBroadcast(deployerPrivateKey);
-        setMockForOPCCIPPortfolio(oracle);
+        // setMockForOPCCIPPortfolio(oracle);
+        // setMockForOPMultiAssetPortfolio(oracle);
         // FunctionsOracle(oracle).mockFulfillRequest(indexTokens, tokens, marketShares);
+        setMockMultiAssetCCIP(oracle);
         vm.stopBroadcast();
+    }
+
+    function setMockMultiAssetCCIP(address oracle) internal {
+        address[] memory indexTokens = new address[](2);
+        indexTokens[0] = 0xEbdB8179128df18366b9406F401313F72be27a46;
+        indexTokens[1] = 0xEbdB8179128df18366b9406F401313F72be27a46;
+        // indexTokens[2] = 0xEbdB8179128df18366b9406F401313F72be27a46;
+
+        address[] memory tokens = new address[](2);
+        // tokens[0] = 0xFa7F8980b0f1E64A2062791cc3b0871572f1F7f0; // UNI
+        tokens[0] = 0xCe38e140fC3982a6bCEbc37b040913EF2Cd6C5a7; // APPLE
+        tokens[1] = 0xba5DdD1f9d7F570dc94a51479a000E3BCE967196; // AAVE
+        // tokens[5] = 0x4DaFFfDDEa93DdF1e0e7B61E844331455053Ce5c; // NVIDIA
+
+        uint256[] memory marketShares = new uint256[](2);
+        // marketShares[0] = 100e18;
+        marketShares[0] = 30e18;
+        marketShares[1] = 70e18;
+
+        require(indexTokens.length == tokens.length, "length mismatch");
+        require(tokens.length == marketShares.length, "length mismatch");
+
+        console.log("Mainnet Calling mockFulfillRequest on:", oracle);
+
+        FunctionsOracle(oracle).mockFulfillRequest(indexTokens, tokens, marketShares);
+    }
+
+    function setMockForOPMultiAssetPortfolio(address oracle) internal {
+        address[] memory indexTokens = new address[](6);
+        indexTokens[0] = 0x1Bd5E430fb059FF30bf0ec089629f6164646CCCd;
+        indexTokens[1] = 0x1Bd5E430fb059FF30bf0ec089629f6164646CCCd;
+        indexTokens[2] = 0x1Bd5E430fb059FF30bf0ec089629f6164646CCCd;
+        indexTokens[3] = 0x1Bd5E430fb059FF30bf0ec089629f6164646CCCd;
+        indexTokens[4] = 0x1Bd5E430fb059FF30bf0ec089629f6164646CCCd;
+        indexTokens[5] = 0x1Bd5E430fb059FF30bf0ec089629f6164646CCCd;
+
+        address[] memory tokens = new address[](6);
+        tokens[0] = 0x38F9bf9dCe51833Ec7f03C9dC218197999999999; // NYA
+        tokens[1] = 0x4200000000000000000000000000000000000042; // OP
+        tokens[2] = 0xFa7F8980b0f1E64A2062791cc3b0871572f1F7f0; // UNI
+        tokens[3] = 0xba5DdD1f9d7F570dc94a51479a000E3BCE967196; // AAVE
+        tokens[4] = 0xCe38e140fC3982a6bCEbc37b040913EF2Cd6C5a7; // APPLE
+        tokens[5] = 0x4DaFFfDDEa93DdF1e0e7B61E844331455053Ce5c; // NVIDIA
+
+        uint256[] memory marketShares = new uint256[](6);
+        marketShares[0] = 5e18;
+        marketShares[1] = 5e18;
+        marketShares[2] = 5e18;
+        marketShares[3] = 5e18;
+        marketShares[4] = 40e18;
+        marketShares[5] = 40e18;
+
+        require(indexTokens.length == tokens.length, "length mismatch");
+        require(tokens.length == marketShares.length, "length mismatch");
+
+        console.log("Mainnet Calling mockFulfillRequest on:", oracle);
+
+        FunctionsOracle(oracle).mockFulfillRequest(indexTokens, tokens, marketShares);
     }
 
     function setMockForOPCCIPPortfolio(address oracle) internal {

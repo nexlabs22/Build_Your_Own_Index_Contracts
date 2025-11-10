@@ -18,7 +18,8 @@ import "../factory/IndexFactoryStorage.sol";
 /// @author NEX Labs Protocol
 /// @notice The main token contract for Index Token (NEX Labs Protocol)
 /// @dev This contract uses an upgradeable pattern
-contract MainChainBalancer2 is Initializable, ProposableOwnableUpgradeable, PausableUpgradeable {
+/// @custom:oz-upgrades-from MainChainBalancer2V2
+contract MainChainBalancer2V3 is Initializable, ProposableOwnableUpgradeable, PausableUpgradeable {
     MainChainStorage public mainChainStorage;
     FunctionsOracle public functionsOracle;
     BalancerSender public balancerSender;

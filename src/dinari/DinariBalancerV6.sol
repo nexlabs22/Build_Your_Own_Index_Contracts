@@ -34,7 +34,8 @@ error InvalidRequestId();
 
 /// @title DinariBalancer
 /// @author NEX Labs Protocol
-contract DinariBalancer is Initializable, OwnableUpgradeable, PausableUpgradeable, ReentrancyGuardUpgradeable {
+/// @custom:oz-upgrades-from DinariBalancerV5
+contract DinariBalancerV6 is Initializable, OwnableUpgradeable, PausableUpgradeable, ReentrancyGuardUpgradeable {
     using SafeERC20 for IERC20;
 
     struct ActionInfo {
@@ -408,7 +409,6 @@ contract DinariBalancer is Initializable, OwnableUpgradeable, PausableUpgradeabl
         uint256 amountAfterFee = grossAfterPct - flatFee;
 
         IERC20(dinariStorage.usdc()).approve(address(dinariStorage.dinariOrderManager()), amountAfterFee);
-        IERC20(dinariStorage.usdc()).safeTransfer(address(dinariStorage.dinariOrderManager()), paymentAmount);
 
         uint256 requestId =
             requestBuyOrder(indexToken, token, amountAfterFee, address(dinariStorage.dinariOrderManager()));
@@ -629,10 +629,6 @@ contract DinariBalancer is Initializable, OwnableUpgradeable, PausableUpgradeabl
             }
         }
         return true;
-    }
-
-    function withdrawFunds(address _token, address _to, uint256 _amount) external onlyOwner {
-        IERC20(_token).safeTransfer(_to, _amount);
     }
 
     function checkMultical(uint256 _requestId) public view returns (bool) {

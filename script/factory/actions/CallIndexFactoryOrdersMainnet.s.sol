@@ -19,13 +19,19 @@ contract CallIndexFactoryOrders is Script {
     // address indexToken = 0x112cdC1651C455032a1bB85C5CdD8Cd0C12A8aE1;
 
     // CrossChain
-    address indexToken = 0x2EC6821b03e2DB6326E585baCbB9df14058eDbd2;
+    // address indexToken = 0x2EC6821b03e2DB6326E585baCbB9df14058eDbd2;
 
     // Meme Coin
     // address indexToken = 0x01b536d445e2B2B14e58B5D2469f6b4908E6266A;
 
     // OP CCIP
     // address indexToken = 0x9D00bEc78dD6987c78510d0C410484C5f3c7Ca05;
+
+    // OP Multi Asset
+    // address indexToken = 0x1Bd5E430fb059FF30bf0ec089629f6164646CCCd;
+
+    // Stock CCIP Multi asset
+    address indexToken = 0xEbdB8179128df18366b9406F401313F72be27a46;
 
     address usdc = 0xaf88d065e77c8cC2239327C5EDb3A432268e5831;
     address orderProcessor = 0x55AaA2fE5dDd1eFaD23994D0Fa06a6B53ff3c783;
@@ -39,7 +45,7 @@ contract CallIndexFactoryOrders is Script {
     function _multical() internal {
         // address indexToken = 0x2E4150CFBdF6A37b55d07e81F6d3f4D47648D52A;
 
-        uint256 id = 99305343573533343324030039415639664270793484036763770274076914461729067259749;
+        uint256 id = 25221231214115401628535885299731462914263242041160295290216959343206425919976;
 
         uint256 pk = vm.envUint("PRIVATE_KEY");
         vm.startBroadcast(pk);
@@ -52,7 +58,7 @@ contract CallIndexFactoryOrders is Script {
     function _callIssuance() internal {
         address factory = _indexFactory();
 
-        uint256 amount = 8e5;
+        uint256 amount = 3e6;
         // uint256 amount = 10e6;
 
         console.log("Calling issuanceIndexTokens on:", factory);

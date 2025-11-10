@@ -34,8 +34,8 @@ error InvalidRequestId();
 
 /// @title DinariBalancer
 /// @author NEX Labs Protocol
-/// @custom:oz-upgrades-from DinariBalancerV2
-contract DinariBalancerV3 is Initializable, OwnableUpgradeable, PausableUpgradeable, ReentrancyGuardUpgradeable {
+/// @custom:oz-upgrades-from DinariBalancerV7
+contract DinariBalancerV8 is Initializable, OwnableUpgradeable, PausableUpgradeable, ReentrancyGuardUpgradeable {
     using SafeERC20 for IERC20;
 
     struct ActionInfo {
@@ -289,7 +289,7 @@ contract DinariBalancerV3 is Initializable, OwnableUpgradeable, PausableUpgradea
         }
     }
 
-    function firstRebalanceAction(address _indexToken, uint256 _dedicatedUSDCAmount)
+    function firstRebalanceAction(address _indexToken, uint256 nonce, uint256 _dedicatedUSDCAmount)
         public
         nonReentrant
         onlyOwnerOrOperator
@@ -380,6 +380,10 @@ contract DinariBalancerV3 is Initializable, OwnableUpgradeable, PausableUpgradea
     function _forwardToGlobalBalancer(address _indexToken, uint256 _rebalanceNonce, uint256 amount) internal {
         // if (amount == 0) return;
         IERC20 usdc = IERC20(dinariStorage.usdc());
+        if (amount > 0) {
+            DinariOrderManager(dinariStorage.dinariOrderManager()).withdrawFunds(address(usdc), address(this), amount);
+        }
+
         usdc.approve(address(globalBalancer), amount);
         globalBalancer.completeReweightAction(_indexToken, dinariStorage.providerIndex(), _rebalanceNonce, amount);
         // IERC20(address(dinariStorage.usdc())).safeTransfer(address(globalBalancer), amount);
@@ -569,32 +573,15 @@ contract DinariBalancerV3 is Initializable, OwnableUpgradeable, PausableUpgradea
                     }
                 }
             }
-
-            uint256 remaining = remainingUsdForGlobalByNonce[_indexToken][_rebalanceNonce];
-            _forwardToGlobalBalancer(_indexToken, _rebalanceNonce, remaining);
-
-            // updatePendingTokenSellAmounts(_indexToken, _rebalanceNonce);
-            // functionsOracle.updateCurrentList(_indexToken);
-            // unpauseIndexFactory();
-
-            emit CompleteRebalanceActions(providerIndex, _indexToken, _rebalanceNonce, block.timestamp);
         }
-    }
+        uint256 remaining = remainingUsdForGlobalByNonce[_indexToken][_rebalanceNonce];
+        _forwardToGlobalBalancer(_indexToken, _rebalanceNonce, remaining);
 
-    function _requestUsdcFromGlobal(address indexToken, uint256 nonce, uint256 amount)
-        internal
-        returns (uint256 granted)
-    {
-        if (amount == 0) return 0;
-        uint8 providerIndex = dinariStorage.providerIndex();
+        // updatePendingTokenSellAmounts(_indexToken, _rebalanceNonce);
+        // functionsOracle.updateCurrentList(_indexToken);
+        // unpauseIndexFactory();
 
-        granted = globalBalancer.provideUsdc(indexToken, providerIndex, nonce, address(this), amount);
-
-        if (granted > 0) {
-            usdcRealizedByNonce[indexToken][nonce] += granted;
-        }
-
-        emit GlobalUsdcRequested(indexToken, nonce, amount, granted);
+        emit CompleteRebalanceActions(providerIndex, _indexToken, _rebalanceNonce, block.timestamp);
     }
 
     function checkFirstRebalanceOrdersStatus(address _indexToken, uint256 _rebalanceNonce) public view returns (bool) {
@@ -642,6 +629,10 @@ contract DinariBalancerV3 is Initializable, OwnableUpgradeable, PausableUpgradea
             }
         }
         return true;
+    }
+
+    function withdrawFunds(address _token, address _to, uint256 _amount) external onlyOwner {
+        IERC20(_token).safeTransfer(_to, _amount);
     }
 
     function checkMultical(uint256 _requestId) public view returns (bool) {

@@ -412,7 +412,7 @@ contract IndexFactoryBalancerV2 is Initializable, OwnableUpgradeable, PausableUp
     }
 
     function firstRebalanceDinari(address _indexToken, uint256 _dedicatedUSDCAmount) internal {
-        DinariBalancer(dinariBalancer).firstRebalanceAction(_indexToken, _dedicatedUSDCAmount);
+        DinariBalancer(dinariBalancer).firstRebalanceAction(_indexToken, _dedicatedUSDCAmount, 1);
     }
 
     function askValuesBackedFi(address _indexToken) internal whenNotPaused returns (uint256 orderNonce) {
@@ -431,9 +431,9 @@ contract IndexFactoryBalancerV2 is Initializable, OwnableUpgradeable, PausableUp
             IERC20(factoryStorage.usdcAddress()).approve(address(mainChainBalancer), _extraUsdcAmount);
         }
         // reweightCalled++;
-        mainChainBalancer.requestRebalance(
-            _indexToken, _targetPortfolioValue, address(factoryStorage.usdcAddress()), _extraUsdcAmount
-        );
+        // mainChainBalancer.requestRebalance(
+        //     _indexToken, _targetPortfolioValue, address(factoryStorage.usdcAddress()), _extraUsdcAmount
+        // );
     }
 
     function provideUsdc(address indexToken, uint8 providerIndex, uint256 nonce, address to, uint256 amount)

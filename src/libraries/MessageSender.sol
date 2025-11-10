@@ -80,9 +80,14 @@ library MessageSender {
             receiver: abi.encode(receiver),
             data: _data,
             tokenAmounts: new Client.EVMTokenAmount[](0),
+            // extraArgs: Client._argsToBytes(
+            //     // Client.EVMExtraArgsV1({gasLimit: 3_000_000})
+            //     // Client.EVMExtraArgsV1({gasLimit: _gasLimit})
+            // ),
             extraArgs: Client._argsToBytes(
                 // Client.EVMExtraArgsV1({gasLimit: 3_000_000})
-                Client.EVMExtraArgsV1({gasLimit: _gasLimit})
+                // Client.EVMExtraArgsV1({gasLimit: _gasLimit})
+                Client.GenericExtraArgsV2({gasLimit: _gasLimit, allowOutOfOrderExecution: false})
             ),
             feeToken: payFeesIn == PayFeesIn.LINK ? i_link : address(0)
         });

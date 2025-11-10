@@ -20,8 +20,8 @@ contract DeployIndexToken is Script {
         // string memory tokenName = "CCIP Portfolio";
         // string memory tokenSymbol = "CCIP Portfolio";
 
-        string memory tokenName = "OP Multi Portfolio";
-        string memory tokenSymbol = "OP Multi Portfolio";
+        string memory tokenName = "OP Multi CCIP Portfolio";
+        string memory tokenSymbol = "OP Multi CCIP Portfolio";
 
         // string memory targetChain = "sepolia";
         string memory targetChain = "arbitrum_mainnet";

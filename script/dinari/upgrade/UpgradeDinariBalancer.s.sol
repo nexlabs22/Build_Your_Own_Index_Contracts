@@ -25,7 +25,7 @@ contract UpgradeDinariBalancer is Script {
             revert("Unsupported target chain");
         }
 
-        Upgrades.upgradeProxy(proxyAddress, "DinariBalancerV3.sol", "", owner);
+        Upgrades.upgradeProxy(proxyAddress, "DinariBalancerV9.sol", "", owner);
 
         address newImpl = Upgrades.getImplementationAddress(proxyAddress);
         console.log("DinariBalancer proxy upgraded to new implementation at:", newImpl);

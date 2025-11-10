@@ -331,6 +331,7 @@ contract CrossChainIndexFactory is
 
         bytes32 messageId =
             sendMessage(input.sourceChainSelector, address(input.sender), vars.data, MessageSender.PayFeesIn.Native);
+
         factoryStorage.setIssuanceMessageIdByNonce(input.nonce, messageId);
         emit Issuanced(messageId, input.nonce, block.timestamp);
     }

@@ -282,58 +282,59 @@ contract CrossChainIndexFactoryV3 is
     }
 
     function _handleIssuance(HandleIssuanceInputs memory input) private {
-        // HandleIssuanceLocalVars memory vars;
-        // vars.vault = vault(input.indexToken);
-        // vars.weth = weth();
+        HandleIssuanceLocalVars memory vars;
+        vars.vault = vault(input.indexToken);
+        vars.weth = weth();
 
-        // vars.wethAmount = swap(
-        //     toETHPath(input.tokenAmounts[0].token),
-        //     toETHFees(input.tokenAmounts[0].token),
-        //     input.tokenAmounts[0].amount,
-        //     address(this)
-        // );
-        // vars.oldTokenValues = new uint256[](input.targetAddresses.length);
-        // vars.newTokenValues = new uint256[](input.targetAddresses.length);
-        // for (uint256 i = 0; i < input.targetAddresses.length; i++) {
-        //     uint256 wethToSwap = (vars.wethAmount * input.percentages[i]) / input.extraValues[0];
-        //     (address[] memory _fromETHPath, uint24[] memory _fromETHFees) =
-        //         PathHelpers.decodePathBytes(input.targetPaths[i]);
-        //     uint256 oldTokenValue;
-        //     uint256 newTokenValue;
-        //     if (input.targetAddresses[i] == address(vars.weth)) {
-        //         oldTokenValue = IERC20(input.targetAddresses[i]).balanceOf(address(vars.vault));
-        //         vars.weth.transfer(address(vars.vault), wethToSwap);
-        //         newTokenValue = IERC20(input.targetAddresses[i]).balanceOf(address(vars.vault));
-        //     } else {
-        //         oldTokenValue = factoryStorage.getTokenCurrentValue(
-        //             input.indexToken, input.targetAddresses[i], _fromETHPath, _fromETHFees
-        //         );
-        //         swap(_fromETHPath, _fromETHFees, wethToSwap, address(vars.vault));
-        //         newTokenValue = factoryStorage.getTokenCurrentValue(
-        //             input.indexToken, input.targetAddresses[i], _fromETHPath, _fromETHFees
-        //         );
-        //     }
+        vars.wethAmount = swap(
+            toETHPath(input.tokenAmounts[0].token),
+            toETHFees(input.tokenAmounts[0].token),
+            input.tokenAmounts[0].amount,
+            address(this)
+        );
+        vars.oldTokenValues = new uint256[](input.targetAddresses.length);
+        vars.newTokenValues = new uint256[](input.targetAddresses.length);
+        for (uint256 i = 0; i < input.targetAddresses.length; i++) {
+            uint256 wethToSwap = (vars.wethAmount * input.percentages[i]) / input.extraValues[0];
+            (address[] memory _fromETHPath, uint24[] memory _fromETHFees) =
+                PathHelpers.decodePathBytes(input.targetPaths[i]);
+            uint256 oldTokenValue;
+            uint256 newTokenValue;
+            if (input.targetAddresses[i] == address(vars.weth)) {
+                oldTokenValue = IERC20(input.targetAddresses[i]).balanceOf(address(vars.vault));
+                vars.weth.transfer(address(vars.vault), wethToSwap);
+                newTokenValue = IERC20(input.targetAddresses[i]).balanceOf(address(vars.vault));
+            } else {
+                oldTokenValue = factoryStorage.getTokenCurrentValue(
+                    input.indexToken, input.targetAddresses[i], _fromETHPath, _fromETHFees
+                );
+                swap(_fromETHPath, _fromETHFees, wethToSwap, address(vars.vault));
+                newTokenValue = factoryStorage.getTokenCurrentValue(
+                    input.indexToken, input.targetAddresses[i], _fromETHPath, _fromETHFees
+                );
+            }
 
-        //     vars.oldTokenValues[i] = factoryStorage.convertEthToUsd(oldTokenValue);
-        //     vars.newTokenValues[i] = factoryStorage.convertEthToUsd(newTokenValue);
-        // }
-        // vars.indexTokens = new address[](1);
-        // vars.indexTokens[0] = input.indexToken;
-        // vars.data = abi.encode(
-        //     0,
-        //     input.targetAddresses,
-        //     vars.indexTokens,
-        //     new bytes[](0),
-        //     new bytes[](0),
-        //     input.nonce,
-        //     vars.oldTokenValues,
-        //     vars.newTokenValues
-        // );
+            vars.oldTokenValues[i] = factoryStorage.convertEthToUsd(oldTokenValue);
+            vars.newTokenValues[i] = factoryStorage.convertEthToUsd(newTokenValue);
+        }
+        vars.indexTokens = new address[](1);
+        vars.indexTokens[0] = input.indexToken;
+        vars.data = abi.encode(
+            0,
+            input.targetAddresses,
+            vars.indexTokens,
+            new bytes[](0),
+            new bytes[](0),
+            input.nonce,
+            vars.oldTokenValues,
+            vars.newTokenValues
+        );
 
-        // bytes32 messageId =
-        //     sendMessage(input.sourceChainSelector, address(input.sender), vars.data, MessageSender.PayFeesIn.Native);
-        // factoryStorage.setIssuanceMessageIdByNonce(input.nonce, messageId);
-        // emit Issuanced(messageId, input.nonce, block.timestamp);
+        bytes32 messageId =
+            sendMessage(input.sourceChainSelector, address(input.sender), vars.data, MessageSender.PayFeesIn.Native);
+
+        factoryStorage.setIssuanceMessageIdByNonce(input.nonce, messageId);
+        emit Issuanced(messageId, input.nonce, block.timestamp);
     }
 
     uint256 public receivedCount;

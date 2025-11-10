@@ -24,7 +24,7 @@ contract UpgradeIndexFactoryBalancer is Script {
             revert("Unsupported target chain");
         }
 
-        Upgrades.upgradeProxy(proxyAddress, "IndexFactoryBalancerV3.sol", "", owner);
+        Upgrades.upgradeProxy(proxyAddress, "IndexFactoryBalancerV10.sol", "", owner);
 
         address implAddr = Upgrades.getImplementationAddress(proxyAddress);
         console.log("IndexFactoryBalancer proxy upgraded to new implementation at:", implAddr);
