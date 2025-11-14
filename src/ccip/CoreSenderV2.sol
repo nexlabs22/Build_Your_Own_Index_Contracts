@@ -23,7 +23,8 @@ import "../orderManager/OrderManager.sol";
 /// @author NEX Labs Protocol
 /// @notice The main token contract for Index Token (NEX Labs Protocol)
 /// @dev This contract uses an upgradeable pattern
-contract CoreSender is Initializable, CCIPReceiver, ProposableOwnableUpgradeable, ReentrancyGuardUpgradeable {
+/// @custom:oz-upgrades-from CoreSender
+contract CoreSenderV2 is Initializable, CCIPReceiver, ProposableOwnableUpgradeable, ReentrancyGuardUpgradeable {
     using MessageSender for *;
 
     IndexToken public indexToken;

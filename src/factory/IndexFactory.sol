@@ -35,10 +35,10 @@ contract IndexFactory is Initializable, OwnableUpgradeable, PausableUpgradeable,
     struct CreateSellOrderInput {
         uint256 requestNonce_;
         address indexToken;
-        address inputToken; // underlying leg
-        address outputTokenHint; // e.g., USDC
+        address inputToken;
+        address outputTokenHint;
         uint64 providerIndex_;
-        uint256 inputAmount; // 0 when providerIndex==2
+        uint256 inputAmount;
         uint256 providersFee;
         uint256 burnPercent_;
     }
@@ -54,24 +54,35 @@ contract IndexFactory is Initializable, OwnableUpgradeable, PausableUpgradeable,
     mapping(address => uint64) public providerIndexes;
 
     event SupportedIndexTokenUpdated(address indexed token, bool isSupported);
-    event Issuanced(
-        uint256 indexed requestNonce,
-        address indexed user,
-        address indexed indexToken,
-        address inputToken,
-        address outputToken,
-        uint256 amount
-    );
+    event Issuanced(uint256 indexed requestNonce, address indexed user, address indexed indexToken, uint256 mintAmount);
     event Redemption(
         uint256 indexed requestNonce,
         address indexed user,
         address indexed indexToken,
         address inputToken,
-        address outputToken,
         uint256 amount
     );
 
     uint256 private constant SHARE_DENOMINATOR = 100e18;
+
+    event RequestIssuance(
+        address indexed indexToken,
+        uint64 indexed providerIndex,
+        uint256 indexed nonce,
+        uint256 amount,
+        uint256 share,
+        address inputToken,
+        uint256 fee
+    );
+
+    event RequestRedemption(
+        address indexed indexToken,
+        uint64 indexed providerIndex,
+        uint256 indexed nonce,
+        uint256 amount,
+        uint256 share,
+        uint256 fee
+    );
 
     modifier onlyOrderManager() {
         require(msg.sender == address(orderManager), "IndexFactory: only order manager");
@@ -163,6 +174,10 @@ contract IndexFactory is Initializable, OwnableUpgradeable, PausableUpgradeable,
                         share: share
                     })
                 );
+
+                emit RequestIssuance(
+                    indexToken, currentProviderIndexes[i], issuanceNonce, amount, share, usdc, crossChainFee
+                );
             } else {
                 orderNonce = _createBuyOrder(
                     CreateBuyOrderInput({
@@ -176,6 +191,7 @@ contract IndexFactory is Initializable, OwnableUpgradeable, PausableUpgradeable,
                     })
                 );
             }
+            emit RequestIssuance(indexToken, currentProviderIndexes[i], issuanceNonce, amount, share, usdc, dinariFee);
             // emit Issuanced(issuanceNonce, msg.sender, indexToken, usdc, underlyings[i], parts[i]);
         }
 
@@ -220,6 +236,10 @@ contract IndexFactory is Initializable, OwnableUpgradeable, PausableUpgradeable,
                         burnPercent_: burnPercent
                     })
                 );
+
+                emit RequestRedemption(
+                    indexToken, currentProviderIndexes[i], redemptionNonce, amount, burnPercent, crossChainFee
+                );
             } else {
                 orderNonce = _createSellOrder(
                     CreateSellOrderInput({
@@ -233,6 +253,8 @@ contract IndexFactory is Initializable, OwnableUpgradeable, PausableUpgradeable,
                         burnPercent_: burnPercent
                     })
                 );
+
+                emit RequestRedemption(indexToken, currentProviderIndexes[i], redemptionNonce, amount, burnPercent, 0);
             }
         }
 
@@ -319,6 +341,8 @@ contract IndexFactory is Initializable, OwnableUpgradeable, PausableUpgradeable,
         address requester = factoryStorage.issuanceRequester(_indexToken, _issuanceNonce);
         require(requester != address(0), "IndexFactory: invalid requester");
         IndexToken(_indexToken).mint(requester, mintAmount);
+
+        emit Issuanced(_issuanceNonce, requester, _indexToken, mintAmount);
     }
 
     function completeRedemption(uint256 _redemptionNonce, address _indexToken) internal {
@@ -329,6 +353,7 @@ contract IndexFactory is Initializable, OwnableUpgradeable, PausableUpgradeable,
         address usdc = orderManager.usdcAddress();
         IERC20(usdc).safeTransfer(requester, totalOutputValue);
         issuanceCalled = totalOutputValue;
+        emit Redemption(_redemptionNonce, requester, _indexToken, usdc, totalOutputValue);
     }
 
     // =========================

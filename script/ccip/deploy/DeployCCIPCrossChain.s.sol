@@ -35,27 +35,30 @@ contract DeployCCIPAll is Script {
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
         address owner = vm.addr(deployerPrivateKey);
         // string memory targetChain = "sepolia";
-        string memory targetChain = "base_mainnet";
+        // string memory targetChain = "base_mainnet";
+        string memory targetChain = "ethereum_mainnet";
+        // string memory targetChain = "bsc_mainnet";
 
         ChainConfig memory cfg = _loadConfig(targetChain);
 
         vm.startBroadcast(deployerPrivateKey);
 
-        // if (cfg.vaultAddress != address(0)) {
+        // if (cfg.vaultAddress != address(0)) {x
         //     mainChainStorage.setVault(cfg.vaultAddress);
         // }
         address ccStorageProxy = _deployCrossChainIndexFactoryStorage(owner, cfg);
-        address ccFactoryProxy = _deployCrossChainIndexFactory(owner, cfg, ccStorageProxy);
-        address ccBalancerProxy = _deployCrossChainIndexFactoryBalancer(owner, cfg, ccStorageProxy);
+        // address ccStorageProxy = 0x0Ea235d241ac4953DF78D81125f524B1F61dcF7B;
+        // address ccFactoryProxy = _deployCrossChainIndexFactory(owner, cfg, ccStorageProxy);
+        // address ccBalancerProxy = _deployCrossChainIndexFactoryBalancer(owner, cfg, ccStorageProxy);
 
         console.log("CrossChainIndexFactoryStorage proxy deployed at:", ccStorageProxy);
         console.log("CrossChainIndexFactoryStorage ProxyAdmin:", Upgrades.getAdminAddress(ccStorageProxy));
 
-        console.log("CrossChainIndexFactory proxy deployed at:", ccFactoryProxy);
-        console.log("CrossChainIndexFactory ProxyAdmin:", Upgrades.getAdminAddress(ccFactoryProxy));
+        // console.log("CrossChainIndexFactory proxy deployed at:", ccFactoryProxy);
+        // console.log("CrossChainIndexFactory ProxyAdmin:", Upgrades.getAdminAddress(ccFactoryProxy));
 
-        console.log("CrossChainIndexFactoryBalancer proxy deployed at:", ccBalancerProxy);
-        console.log("CrossChainIndexFactoryBalancer ProxyAdmin:", Upgrades.getAdminAddress(ccBalancerProxy));
+        // console.log("CrossChainIndexFactoryBalancer proxy deployed at:", ccBalancerProxy);
+        // console.log("CrossChainIndexFactoryBalancer ProxyAdmin:", Upgrades.getAdminAddress(ccBalancerProxy));
 
         vm.stopBroadcast();
     }
@@ -88,6 +91,32 @@ contract DeployCCIPAll is Script {
             cfg.ccipRouter = vm.envAddress("BASE_CCIP_ROUTER_ADDRESS");
             // cfg.orderManager = vm.envAddress("BASE_ORDER_MANAGER_PROXY_ADDRESS");
             cfg.usdc = vm.envAddress("BASE_USDC_ADDRESS");
+        } else if (keccak256(bytes(targetChain)) == keccak256("ethereum_mainnet")) {
+            cfg.chainSelector = uint64(vm.envUint("ETHEREUM_CCIP_CHAIN_SELECTOR"));
+            // cfg.functionsOracle = vm.envAddress("ETHEREUM_FUNCTIONS_ORACLE_PROXY_ADDRESS");
+            cfg.toUsdPriceFeed = vm.envAddress("ETHEREUM_TO_USD_PRICE_FEED_ADDRESS");
+            cfg.linkToken = vm.envAddress("ETHEREUM_CHAINLINK_TOKEN_ADDRESS");
+            cfg.weth = vm.envAddress("ETHEREUM_WETH_ADDRESS");
+            cfg.swapRouterV3 = vm.envAddress("ETHEREUM_ROUTER_V3_ADDRESS");
+            cfg.factoryV3 = vm.envAddress("ETHEREUM_FACTORY_V3_ADDRESS");
+            cfg.swapRouterV2 = vm.envAddress("ETHEREUM_ROUTER_V2_ADDRESS");
+            cfg.factoryV2 = vm.envAddress("ETHEREUM_FACTORY_V2_ADDRESS");
+            cfg.ccipRouter = vm.envAddress("ETHEREUM_CCIP_ROUTER_ADDRESS");
+            cfg.usdc = vm.envAddress("ETHEREUM_USDC_ADDRESS");
+
+            // cfg.orderManager = vm.envAddress("BASE_ORDER_MANAGER_PROXY_ADDRESS");
+        } else if (keccak256(bytes(targetChain)) == keccak256("bsc_mainnet")) {
+            cfg.chainSelector = uint64(vm.envUint("BSC_CCIP_CHAIN_SELECTOR"));
+            // cfg.functionsOracle = vm.envAddress("BSC_FUNCTIONS_ORACLE_PROXY_ADDRESS");
+            cfg.toUsdPriceFeed = vm.envAddress("BSC_TO_USD_PRICE_FEED_ADDRESS");
+            cfg.linkToken = vm.envAddress("BSC_CHAINLINK_TOKEN_ADDRESS");
+            cfg.weth = vm.envAddress("BSC_WETH_ADDRESS");
+            cfg.swapRouterV3 = vm.envAddress("BSC_ROUTER_V3_ADDRESS");
+            cfg.factoryV3 = vm.envAddress("BSC_FACTORY_V3_ADDRESS");
+            cfg.swapRouterV2 = vm.envAddress("BSC_ROUTER_V2_ADDRESS");
+            cfg.factoryV2 = vm.envAddress("BSC_FACTORY_V2_ADDRESS");
+            cfg.ccipRouter = vm.envAddress("BSC_CCIP_ROUTER_ADDRESS");
+            // cfg.usdc = vm.envAddress("BSC_USDC_ADDRESS");
         } else {
             revert("Unsupported target chain");
         }

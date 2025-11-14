@@ -12,19 +12,20 @@ contract UpgradeCrossChainIndexFactoryBalancer is Script {
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
         vm.startBroadcast(deployerPrivateKey);
 
-        string memory targetChain = "arbitrum_sepolia";
+        // string memory targetChain = "arbitrum_sepolia";
+        string memory targetChain = "optimism_mainnet";
         address proxyAddress;
         address owner = vm.addr(deployerPrivateKey);
 
         if (keccak256(bytes(targetChain)) == keccak256("arbitrum_sepolia")) {
             proxyAddress = vm.envAddress("ARBITRUM_SEPOLIA_CROSS_CHAIN_FACTORY_BALANCER_PROXY_ADDRESS");
-        } else if (keccak256(bytes(targetChain)) == keccak256("arbitrum_mainnet")) {
-            proxyAddress = vm.envAddress("");
+        } else if (keccak256(bytes(targetChain)) == keccak256("optimism_mainnet")) {
+            proxyAddress = vm.envAddress("OPTIMISM_CROSS_CHAIN_FACTORY_BALANCER_PROXY_ADDRESS");
         } else {
             revert("Unsupported target chain");
         }
 
-        Upgrades.upgradeProxy(proxyAddress, "CrossChainIndexFactoryBalancerV2.sol", "", owner);
+        Upgrades.upgradeProxy(proxyAddress, "CrossChainIndexFactoryBalancerV4.sol", "", owner);
 
         address newImpl = Upgrades.getImplementationAddress(proxyAddress);
         console.log("CrossChainIndexFactoryBalancer proxy upgraded to new implementation at:", newImpl);

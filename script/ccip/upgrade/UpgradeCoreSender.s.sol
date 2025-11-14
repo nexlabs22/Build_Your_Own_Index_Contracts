@@ -12,7 +12,8 @@ contract UpgradeCoreSender is Script {
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
         vm.startBroadcast(deployerPrivateKey);
 
-        string memory targetChain = "sepolia";
+        // string memory targetChain = "sepolia";
+        string memory targetChain = "arbitrum_mainnet";
         address proxyAddress;
         address owner = vm.addr(deployerPrivateKey);
 
@@ -24,7 +25,7 @@ contract UpgradeCoreSender is Script {
             revert("Unsupported target chain");
         }
 
-        Upgrades.upgradeProxy(proxyAddress, "CoreSender.sol", "", owner);
+        Upgrades.upgradeProxy(proxyAddress, "CoreSenderV2.sol", "", owner);
 
         address newImpl = Upgrades.getImplementationAddress(proxyAddress);
         console.log("CoreSender proxy upgraded to new implementation at:", newImpl);

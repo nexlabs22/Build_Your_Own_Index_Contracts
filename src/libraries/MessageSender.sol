@@ -86,8 +86,8 @@ library MessageSender {
             // ),
             extraArgs: Client._argsToBytes(
                 // Client.EVMExtraArgsV1({gasLimit: 3_000_000})
-                // Client.EVMExtraArgsV1({gasLimit: _gasLimit})
-                Client.GenericExtraArgsV2({gasLimit: _gasLimit, allowOutOfOrderExecution: false})
+                Client.EVMExtraArgsV1({gasLimit: _gasLimit})
+                // Client.GenericExtraArgsV2({gasLimit: _gasLimit, allowOutOfOrderExecution: false})
             ),
             feeToken: payFeesIn == PayFeesIn.LINK ? i_link : address(0)
         });

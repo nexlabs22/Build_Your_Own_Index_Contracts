@@ -120,13 +120,23 @@ contract BalancerSender is Initializable, CCIPReceiver, ProposableOwnableUpgrade
      */
     receive() external payable {}
 
-    function emitFirstReweightActionCompleted(address _indexToken, uint256 _providerNonce) public onlyMainChainBalancer {
-        mainChainStorage.setRebalanceStatusByNonce(_providerNonce, MainChainStorage.RebalanceStatus.FirstRebalanceCompleted);
+    function emitFirstReweightActionCompleted(address _indexToken, uint256 _providerNonce)
+        public
+        onlyMainChainBalancer
+    {
+        mainChainStorage.setRebalanceStatusByNonce(
+            _providerNonce, MainChainStorage.RebalanceStatus.FirstRebalanceCompleted
+        );
         emit FirstReweightActionCompleted(_indexToken, _providerNonce, block.timestamp);
     }
 
-    function emitSecondReweightActionCompleted(address _indexToken, uint256 _providerNonce) external onlyMainChainBalancer {
-        mainChainStorage.setRebalanceStatusByNonce(_providerNonce, MainChainStorage.RebalanceStatus.SecondRebalanceCompleted);
+    function emitSecondReweightActionCompleted(address _indexToken, uint256 _providerNonce)
+        external
+        onlyMainChainBalancer
+    {
+        mainChainStorage.setRebalanceStatusByNonce(
+            _providerNonce, MainChainStorage.RebalanceStatus.SecondRebalanceCompleted
+        );
         emit SecondReweightActionCompleted(_indexToken, _providerNonce, block.timestamp);
     }
 
@@ -155,16 +165,16 @@ contract BalancerSender is Initializable, CCIPReceiver, ProposableOwnableUpgrade
      * @param _recipient The address of the recipient.
      * @return outputAmount The amount of output token.
      */
-    function swap(address[] memory path, uint24[] memory fees, uint256 amountIn, address _recipient)
+    function swap(address[] memory path, uint24[] memory fees, uint256 amountIn, address _recipient, address _token)
         public
         returns (uint256 outputAmount)
     {
         // Validate input parameters
         require(amountIn > 0, "Amount must be greater than zero");
         require(_recipient != address(0), "Invalid recipient address");
-        ISwapRouter swapRouterV3 = mainChainStorage.swapRouterV3();
+        ISwapRouter swapRouterV3 = mainChainStorage.getSwapRouterV3(_token);
         IUniswapV2Router02 swapRouterV2 = mainChainStorage.swapRouterV2();
-        uint256 amountOutMinimum = mainChainStorage.getMinAmountOut(path, fees, amountIn);
+        uint256 amountOutMinimum = mainChainStorage.getMinAmountOut(path, fees, amountIn, _token);
         outputAmount = SwapHelpers.swap(swapRouterV3, swapRouterV2, path, fees, amountIn, amountOutMinimum, _recipient);
     }
 
@@ -274,7 +284,9 @@ contract BalancerSender is Initializable, CCIPReceiver, ProposableOwnableUpgrade
         weth.transferFrom(msg.sender, address(this), _extraWethAmount);
         (address[] memory fromETHPath, uint24[] memory fromETHFees) =
             mainChainStorage.getFromETHPathData(mainChainStorage.crossChainToken(_chainSelector));
-        uint256 crossChainTokenAmount = swap(fromETHPath, fromETHFees, _extraWethAmount, address(this));
+        uint256 crossChainTokenAmount = swap(
+            fromETHPath, fromETHFees, _extraWethAmount, address(this), mainChainStorage.crossChainToken(_chainSelector)
+        );
         uint256[] memory extraData = new uint256[](2);
         extraData[0] = _portfolioValue;
         extraData[1] = _oracleChainSelectorTotalShares;
@@ -406,7 +418,8 @@ contract BalancerSender is Initializable, CCIPReceiver, ProposableOwnableUpgrade
             uint256[] memory value1,
             uint256[] memory _value2
         ) = abi.decode(
-            any2EvmMessage.data, (uint256, address, address[], address[], bytes[], bytes[], uint256, uint256[], uint256[])
+            any2EvmMessage.data,
+            (uint256, address, address[], address[], bytes[], bytes[], uint256, uint256[], uint256[])
         ); // abi-decoding of the sent string message
         // no-op references to avoid unused local warnings
         if (_tokenAddresses2.length + _tokenPaths.length + _tokenPaths2.length + _value2.length == 2 ** 256 - 1) {
@@ -418,33 +431,35 @@ contract BalancerSender is Initializable, CCIPReceiver, ProposableOwnableUpgrade
             );
         }
         if (actionType == 0) {} else if (actionType == 1) {} else if (actionType == 2) {
-            (, address[] memory underlyingAssets,) =
-            functionsOracle.getCurrentProviderIndexData(_indexToken, functionsOracle.currentFilledCount(_indexToken), 1);
+            (, address[] memory underlyingAssets,) = functionsOracle.getCurrentProviderIndexData(
+                _indexToken, functionsOracle.currentFilledCount(_indexToken), 1
+            );
             for (uint256 i = 0; i < value1.length; i++) {
                 mainChainStorage.increasePortfolioTotalValueByNonce(nonce, value1[i]);
                 mainChainStorage.increaseTokenValueByNonce(nonce, tokenAddresses[i], value1[i]);
                 mainChainStorage.increaseChainValueByNonce(nonce, sourceChainSelector, value1[i]);
                 mainChainStorage.increaseUpdatedTokensValueCount(nonce);
 
-                if(
-                    mainChainStorage.updatedTokensValueCount(nonce)
-                        == underlyingAssets.length
-                ) {
-                    mainChainStorage.setRebalanceStatusByNonce(nonce, MainChainStorage.RebalanceStatus.AskValuesCompleted);
-                    indexFactoryBalancer.completeAskValueCCIP(_indexToken, nonce, mainChainStorage.portfolioTotalValueByNonce(nonce));
+                if (mainChainStorage.updatedTokensValueCount(nonce) == underlyingAssets.length) {
+                    mainChainStorage.setRebalanceStatusByNonce(
+                        nonce, MainChainStorage.RebalanceStatus.AskValuesCompleted
+                    );
+                    indexFactoryBalancer.completeAskValueCCIP(
+                        _indexToken, nonce, mainChainStorage.portfolioTotalValueByNonce(nonce)
+                    );
                     emit AskValuesCompleted(_indexToken, nonce, block.timestamp);
                 }
             }
         } else if (actionType == 3) {
-            if(any2EvmMessage.destTokenAmounts.length > 0) {
-            Client.EVMTokenAmount[] memory tokenAmounts = any2EvmMessage.destTokenAmounts;
-            address token = tokenAmounts[0].token;
-            uint256 amount = tokenAmounts[0].amount;
-            (address[] memory toETHPath, uint24[] memory toETHFees) = mainChainStorage.getToETHPathData(token);
-            uint256 wethAmount = swap(toETHPath, toETHFees, amount, address(this));
-            mainChainStorage.increaseExtraWethByNonce(nonce, wethAmount);
-            mainChainStorage.increasePendingExtraWethByNonce(nonce, wethAmount);
-            weth.transfer(mainChainStorage.mainChainBalancer(), wethAmount);
+            if (any2EvmMessage.destTokenAmounts.length > 0) {
+                Client.EVMTokenAmount[] memory tokenAmounts = any2EvmMessage.destTokenAmounts;
+                address token = tokenAmounts[0].token;
+                uint256 amount = tokenAmounts[0].amount;
+                (address[] memory toETHPath, uint24[] memory toETHFees) = mainChainStorage.getToETHPathData(token);
+                uint256 wethAmount = swap(toETHPath, toETHFees, amount, address(this), token);
+                mainChainStorage.increaseExtraWethByNonce(nonce, wethAmount);
+                mainChainStorage.increasePendingExtraWethByNonce(nonce, wethAmount);
+                weth.transfer(mainChainStorage.mainChainBalancer(), wethAmount);
             }
             _handleCompleteFirstReweight(_indexToken, nonce);
         } else if (actionType == 4) {

@@ -18,8 +18,8 @@ import "../factory/IndexFactoryStorage.sol";
 /// @author NEX Labs Protocol
 /// @notice The main token contract for Index Token (NEX Labs Protocol)
 /// @dev This contract uses an upgradeable pattern
-/// @custom:oz-upgrades-from MainChainBalancer
-contract MainChainBalancerV2 is Initializable, ProposableOwnableUpgradeable, PausableUpgradeable {
+/// @custom:oz-upgrades-from MainChainBalancerV5
+contract MainChainBalancerV6 is Initializable, ProposableOwnableUpgradeable, PausableUpgradeable {
     MainChainStorage public mainChainStorage;
     FunctionsOracle public functionsOracle;
     BalancerSender public balancerSender;
@@ -150,17 +150,17 @@ contract MainChainBalancerV2 is Initializable, ProposableOwnableUpgradeable, Pau
      * @param _recipient The address of the recipient.
      * @return outputAmount The amount of output token.
      */
-    function swap(address[] memory path, uint24[] memory fees, uint256 amountIn, address _recipient)
+    function swap(address[] memory path, uint24[] memory fees, uint256 amountIn, address _recipient, address _token)
         public
         returns (uint256 outputAmount)
     {
         // Validate input parameters
         require(amountIn > 0, "Amount must be greater than zero");
         require(_recipient != address(0), "Invalid recipient address");
-        ISwapRouter swapRouterV3 = mainChainStorage.swapRouterV3();
+        ISwapRouter swapRouterV3 = mainChainStorage.getSwapRouterV3(_token);
         IUniswapV2Router02 swapRouterV2 = mainChainStorage.swapRouterV2();
-        // uint256 amountOutMinimum = mainChainStorage.getMinAmountOut(path, fees, amountIn);
-        // outputAmount = SwapHelpers.swap(swapRouterV3, swapRouterV2, path, fees, amountIn, amountOutMinimum, _recipient);
+        uint256 amountOutMinimum = mainChainStorage.getMinAmountOut(path, fees, amountIn, _token);
+        outputAmount = SwapHelpers.swap(swapRouterV3, swapRouterV2, path, fees, amountIn, amountOutMinimum, _recipient);
     }
 
     function getUpdatePortfolioNonce() public view returns (uint256) {
@@ -179,7 +179,7 @@ contract MainChainBalancerV2 is Initializable, ProposableOwnableUpgradeable, Pau
         if (_dedicatedUSDCAmount > 0) {
             IERC20(_usdcAddress).transferFrom(msg.sender, address(this), _dedicatedUSDCAmount);
             (address[] memory toETHPath, uint24[] memory toETHFees) = functionsOracle.getToETHPathData(_usdcAddress);
-            uint256 wethAmount = swap(toETHPath, toETHFees, _dedicatedUSDCAmount, address(this));
+            uint256 wethAmount = swap(toETHPath, toETHFees, _dedicatedUSDCAmount, address(this), _usdcAddress);
             uint256 reweightExtraPercentage =
                 ((_targetPortfolioValue - portfolioValue) * 100e18) / _targetPortfolioValue;
             mainChainStorage.increaseExtraWethByNonce(_nonce, wethAmount);
@@ -249,7 +249,7 @@ contract MainChainBalancerV2 is Initializable, ProposableOwnableUpgradeable, Pau
             if (remainedExtraWeth > 1000) {
                 (address[] memory toTokenPath, uint24[] memory toTokenFees) =
                     functionsOracle.getFromETHPathData(usdcAddress);
-                outputAmount = swap(toTokenPath, toTokenFees, remainedExtraWeth, address(this));
+                outputAmount = swap(toTokenPath, toTokenFees, remainedExtraWeth, address(this), usdcAddress);
                 // approve to order manager
                 IERC20(usdcAddress).approve(address(indexFactoryBalancer), outputAmount);
             }
@@ -318,7 +318,7 @@ contract MainChainBalancerV2 is Initializable, ProposableOwnableUpgradeable, Pau
             } else {
                 uint256 tokenAmount = IERC20(swapVars.tokenAddress).balanceOf(address(vault));
                 vault.withdrawFunds(swapVars.tokenAddress, address(this), tokenAmount);
-                wethAmount = swap(toETHPath, toETHFees, tokenAmount, address(this));
+                wethAmount = swap(toETHPath, toETHFees, tokenAmount, address(this), swapVars.tokenAddress);
             }
             swapWethAmount += wethAmount;
         }
@@ -363,7 +363,8 @@ contract MainChainBalancerV2 is Initializable, ProposableOwnableUpgradeable, Pau
                 fromETHPath,
                 fromETHFees,
                 (_wethAmountToSwap * _newTokenMarketShare) / _oracleChainSelectorTotalShares,
-                address(indexFactoryStorage.indexTokenToVault(_indexToken))
+                address(indexFactoryStorage.indexTokenToVault(_indexToken)),
+                _newTokenAddress
             );
         }
         return wethAmount;
@@ -376,10 +377,12 @@ contract MainChainBalancerV2 is Initializable, ProposableOwnableUpgradeable, Pau
         uint256 oracleChainSelectorTotalShares =
             functionsOracle.getOracleChainSelectorTotalShares(_indexToken, _latestOracleCount, chainSelector);
         address[] memory oracleTokens = functionsOracle.allOracleChainSelectorTokens(_indexToken, chainSelector);
+        uint256[] memory oracleMarketShares =
+            functionsOracle.allOracleChainSelectorTokenShares(_indexToken, chainSelector);
         for (uint256 k = 0; k < oracleTokens.length; k++) {
             address newTokenAddress = oracleTokens[k];
 
-            uint256 newTokenMarketShare = functionsOracle.tokenOracleMarketShare(_indexToken, newTokenAddress);
+            uint256 newTokenMarketShare = oracleMarketShares[k];
 
             _internalSwapsWETHToTokensForFirstRebalance(
                 _indexToken, newTokenAddress, wethAmountToSwap, newTokenMarketShare, oracleChainSelectorTotalShares
@@ -537,7 +540,7 @@ contract MainChainBalancerV2 is Initializable, ProposableOwnableUpgradeable, Pau
             } else {
                 uint256 tokenAmount = IERC20(swapVars.tokenAddress).balanceOf(address(vault));
                 vault.withdrawFunds(swapVars.tokenAddress, address(this), tokenAmount);
-                swapVars.wethAmount = swap(toETHPath, toETHFees, tokenAmount, address(this));
+                swapVars.wethAmount = swap(toETHPath, toETHFees, tokenAmount, address(this), swapVars.tokenAddress);
             }
             swapVars.swapWethAmount += swapVars.wethAmount;
         }
@@ -554,12 +557,14 @@ contract MainChainBalancerV2 is Initializable, ProposableOwnableUpgradeable, Pau
         swapVars.swapWethAmount = swapWethAmount;
         Vault vault = Vault(indexFactoryStorage.indexTokenToVault(_indexToken));
         address[] memory oracleTokens = functionsOracle.allOracleChainSelectorTokens(_indexToken, chainSelector);
+        uint256[] memory oracleMarketShares =
+            functionsOracle.allOracleChainSelectorTokenShares(_indexToken, chainSelector);
         for (uint256 k = 0; k < oracleTokens.length; k++) {
             address newTokenAddress = oracleTokens[k];
             (address[] memory fromETHPath, uint24[] memory fromETHFees) =
                 functionsOracle.getFromETHPathData(newTokenAddress);
 
-            uint256 newTokenMarketShare = functionsOracle.tokenOracleMarketShare(_indexToken, newTokenAddress);
+            uint256 newTokenMarketShare = oracleMarketShares[k];
             if (newTokenAddress == address(weth)) {
                 swapVars.wethAmount = (swapVars.swapWethAmount * newTokenMarketShare) / oracleChainSelectorTotalShares;
                 weth.transfer(address(vault), swapVars.wethAmount);
@@ -568,7 +573,8 @@ contract MainChainBalancerV2 is Initializable, ProposableOwnableUpgradeable, Pau
                     fromETHPath,
                     fromETHFees,
                     (swapVars.swapWethAmount * newTokenMarketShare) / oracleChainSelectorTotalShares,
-                    address(vault)
+                    address(vault),
+                    newTokenAddress
                 );
             }
         }
@@ -599,8 +605,10 @@ contract MainChainBalancerV2 is Initializable, ProposableOwnableUpgradeable, Pau
         // uint256 negativePercentage = targetChainValue > portfolioValue ? ((targetChainValue - portfolioValue) * 100e18) / portfolioValue : 0;
         uint256 negativePercentage = ((targetChainValue - swapVars.chainValue) * 100e18)
             / indexFactoryBalancer.getGlobalPortfolioValueByProviderNonce(1, nonce);
-        uint256 extraWethAmount = (mainChainStorage.extraWethByNonce(nonce) * negativePercentage)
-            / mainChainStorage.reweightExtraPercentage(nonce);
+        uint256 extraWethAmount = negativePercentage > mainChainStorage.reweightExtraPercentage(nonce)
+            ? mainChainStorage.extraWethByNonce(nonce)
+            : (mainChainStorage.extraWethByNonce(nonce) * negativePercentage)
+                / mainChainStorage.reweightExtraPercentage(nonce);
         mainChainStorage.increaseConsumedExtraWethByNonce(
             nonce,
             extraWethAmount
@@ -632,8 +640,10 @@ contract MainChainBalancerV2 is Initializable, ProposableOwnableUpgradeable, Pau
         // uint256 negativePercentage = _oracleChainSelectorTotalShares - chainCurrentRealShare;
         uint256 negativePercentage = ((targetChainValue - _chainValue) * 100e18)
             / indexFactoryBalancer.getGlobalPortfolioValueByProviderNonce(1, _nonce);
-        uint256 extraWethAmount = (mainChainStorage.extraWethByNonce(_nonce) * negativePercentage)
-            / mainChainStorage.reweightExtraPercentage(_nonce);
+        uint256 extraWethAmount = negativePercentage > mainChainStorage.reweightExtraPercentage(_nonce)
+            ? mainChainStorage.extraWethByNonce(_nonce)
+            : (mainChainStorage.extraWethByNonce(_nonce) * negativePercentage)
+                / mainChainStorage.reweightExtraPercentage(_nonce);
         mainChainStorage.increaseConsumedExtraWethByNonce(
             _nonce,
             extraWethAmount

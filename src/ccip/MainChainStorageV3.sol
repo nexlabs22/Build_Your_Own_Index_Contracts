@@ -27,7 +27,8 @@ import "../factory/IndexFactoryStorage.sol";
 /// @author NEX Labs Protocol
 /// @notice The main token contract for Index Token (NEX Labs Protocol)
 /// @dev This contract uses an upgradeable pattern
-contract MainChainStorage is Initializable, ProposableOwnableUpgradeable {
+/// @custom:oz-upgrades-from MainChainStorageV2
+contract MainChainStorageV3 is Initializable, ProposableOwnableUpgradeable {
     //nonce
     struct TokenOldAndNewValues {
         uint256 oldTokenValue;
@@ -237,7 +238,7 @@ contract MainChainStorage is Initializable, ProposableOwnableUpgradeable {
 
     function setDexRouterAndFactory(address _router, address _factory, uint8 _dexId) public onlyOwner {
         dexIDToRouter[_dexId] = _router;
-        dexIDToFactory[_dexId] = _factory;
+        dexIDToFactory[_dexId] = _router;
     }
 
     /**

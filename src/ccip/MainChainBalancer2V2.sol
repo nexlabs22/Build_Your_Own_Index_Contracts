@@ -166,11 +166,11 @@ contract MainChainBalancer2V2 is Initializable, ProposableOwnableUpgradeable, Pa
         if (tokenAddress == address(weth)) {
             value = IERC20(tokenAddress).balanceOf(address(indexFactoryStorage.indexTokenToVault(_indexToken)));
         } else {
-            value = mainChainStorage.getAmountOut(
-                toETHPath,
-                toETHFees,
-                IERC20(tokenAddress).balanceOf(address(indexFactoryStorage.indexTokenToVault(_indexToken)))
-            );
+            // value = mainChainStorage.getAmountOut(
+            //     toETHPath,
+            //     toETHFees,
+            //     IERC20(tokenAddress).balanceOf(address(indexFactoryStorage.indexTokenToVault(_indexToken)))
+            // );
         }
     }
 

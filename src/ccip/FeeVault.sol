@@ -16,11 +16,11 @@ import "../libraries/MessageSender.sol";
 import "../libraries/SwapHelpers.sol";
 import "../interfaces/IUniswapV2Router02.sol";
 import "../interfaces/IWETH.sol";
+
 /// @title Fee Vault Contract
 /// @author NEX Labs Protocol
 /// @notice The main contract for managing fees and withdrawals
 /// @dev This contract uses an upgradeable pattern
-
 contract FeeVault is Initializable, ProposableOwnableUpgradeable, ReentrancyGuardUpgradeable, PausableUpgradeable {
     using SafeERC20 for IERC20;
 
@@ -38,23 +38,10 @@ contract FeeVault is Initializable, ProposableOwnableUpgradeable, ReentrancyGuar
         _;
     }
 
-    /**
-     * @dev Initializes the contract with the given parameters.
-     * @param _currentChainSelector The current chain selector.
-     * @param _token The address of the IndexToken contract..
-     * @param _weth The address of the WETH token.
-     */
-    function initialize(
-        uint64 _currentChainSelector,
-        address payable _token,
-        address _orderManager,
-        address _mainChainStorage,
-        address _functionsOracle,
-        address payable _coreSender,
-        //addresses
-        address _weth,
-        address _usdc
-    ) external initializer {
+    function initialize(address _mainChainStorage, address _functionsOracle, address _weth, address _usdc)
+        external
+        initializer
+    {
         // Validate input parameters
         require(_weth != address(0), "Invalid WETH address");
 
@@ -123,13 +110,13 @@ contract FeeVault is Initializable, ProposableOwnableUpgradeable, ReentrancyGuar
      * @param _recipient The address of the recipient.
      * @return outputAmount The amount of output token.
      */
-    function swap(address[] memory path, uint24[] memory fees, uint256 amountIn, address _recipient)
+    function swap(address[] memory path, uint24[] memory fees, uint256 amountIn, address _recipient, address _token)
         internal
         returns (uint256 outputAmount)
     {
-        ISwapRouter swapRouterV3 = mainChainStorage.swapRouterV3();
+        ISwapRouter swapRouterV3 = mainChainStorage.getSwapRouterV3(_token);
         IUniswapV2Router02 swapRouterV2 = mainChainStorage.swapRouterV2();
-        uint256 amountOutMinimum = mainChainStorage.getMinAmountOut(path, fees, amountIn);
+        uint256 amountOutMinimum = mainChainStorage.getMinAmountOut(path, fees, amountIn, _token);
         outputAmount = SwapHelpers.swap(swapRouterV3, swapRouterV2, path, fees, amountIn, amountOutMinimum, _recipient);
     }
 
@@ -151,7 +138,7 @@ contract FeeVault is Initializable, ProposableOwnableUpgradeable, ReentrancyGuar
             // Swap and withdraw ETH
             require(address(this).balance >= _amount, "NexVault: insufficient ETH balance");
             (address[] memory toETHPath, uint24[] memory toETHFees) = functionsOracle.getToETHPathData(usdcAddress);
-            uint256 wethAmount = swap(toETHPath, toETHFees, _amount, address(this));
+            uint256 wethAmount = swap(toETHPath, toETHFees, _amount, address(this), usdcAddress);
             weth.withdraw(wethAmount);
             (bool success,) = _to.call{value: wethAmount}("");
             require(success, "NexVault: ETH transfer failed");

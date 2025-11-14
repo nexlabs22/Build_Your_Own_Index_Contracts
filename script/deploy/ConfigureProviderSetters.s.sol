@@ -28,7 +28,8 @@ contract ConfigureProviderSetters is Script {
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
         // string memory targetChain = vm.envOr("TARGET_CHAIN", string("sepolia"));
         // string memory targetChain = vm.envOr("TARGET_CHAIN", string("arbitrum_mainnet"));
-        string memory targetChain = vm.envOr("TARGET_CHAIN", string("optimism_mainnet"));
+        // string memory targetChain = vm.envOr("TARGET_CHAIN", string("optimism_mainnet"));
+        string memory targetChain = vm.envOr("TARGET_CHAIN", string("bsc_mainnet"));
 
         vm.startBroadcast(deployerPrivateKey);
 
@@ -319,6 +320,8 @@ contract ConfigureProviderSetters is Script {
             return "BASE";
         } else if (keccak256(bytes(targetChain)) == keccak256("optimism_mainnet")) {
             return "OPTIMISM";
+        } else if (keccak256(bytes(targetChain)) == keccak256("bsc_mainnet")) {
+            return "BSC";
         }
 
         return "SEPOLIA";

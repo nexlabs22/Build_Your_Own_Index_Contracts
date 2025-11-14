@@ -168,7 +168,8 @@ contract MainChainBalancer2 is Initializable, ProposableOwnableUpgradeable, Paus
             value = mainChainStorage.getAmountOut(
                 toETHPath,
                 toETHFees,
-                IERC20(tokenAddress).balanceOf(address(indexFactoryStorage.indexTokenToVault(_indexToken)))
+                IERC20(tokenAddress).balanceOf(address(indexFactoryStorage.indexTokenToVault(_indexToken))),
+                tokenAddress
             );
         }
     }

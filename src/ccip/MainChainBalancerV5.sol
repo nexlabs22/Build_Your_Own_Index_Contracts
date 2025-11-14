@@ -18,8 +18,8 @@ import "../factory/IndexFactoryStorage.sol";
 /// @author NEX Labs Protocol
 /// @notice The main token contract for Index Token (NEX Labs Protocol)
 /// @dev This contract uses an upgradeable pattern
-/// @custom:oz-upgrades-from MainChainBalancer
-contract MainChainBalancerV2 is Initializable, ProposableOwnableUpgradeable, PausableUpgradeable {
+/// @custom:oz-upgrades-from MainChainBalancerV4
+contract MainChainBalancerV5 is Initializable, ProposableOwnableUpgradeable, PausableUpgradeable {
     MainChainStorage public mainChainStorage;
     FunctionsOracle public functionsOracle;
     BalancerSender public balancerSender;
@@ -376,10 +376,12 @@ contract MainChainBalancerV2 is Initializable, ProposableOwnableUpgradeable, Pau
         uint256 oracleChainSelectorTotalShares =
             functionsOracle.getOracleChainSelectorTotalShares(_indexToken, _latestOracleCount, chainSelector);
         address[] memory oracleTokens = functionsOracle.allOracleChainSelectorTokens(_indexToken, chainSelector);
+        uint256[] memory oracleMarketShares =
+            functionsOracle.allOracleChainSelectorTokenShares(_indexToken, chainSelector);
         for (uint256 k = 0; k < oracleTokens.length; k++) {
             address newTokenAddress = oracleTokens[k];
 
-            uint256 newTokenMarketShare = functionsOracle.tokenOracleMarketShare(_indexToken, newTokenAddress);
+            uint256 newTokenMarketShare = oracleMarketShares[k];
 
             _internalSwapsWETHToTokensForFirstRebalance(
                 _indexToken, newTokenAddress, wethAmountToSwap, newTokenMarketShare, oracleChainSelectorTotalShares
@@ -554,12 +556,14 @@ contract MainChainBalancerV2 is Initializable, ProposableOwnableUpgradeable, Pau
         swapVars.swapWethAmount = swapWethAmount;
         Vault vault = Vault(indexFactoryStorage.indexTokenToVault(_indexToken));
         address[] memory oracleTokens = functionsOracle.allOracleChainSelectorTokens(_indexToken, chainSelector);
+        uint256[] memory oracleMarketShares =
+            functionsOracle.allOracleChainSelectorTokenShares(_indexToken, chainSelector);
         for (uint256 k = 0; k < oracleTokens.length; k++) {
             address newTokenAddress = oracleTokens[k];
             (address[] memory fromETHPath, uint24[] memory fromETHFees) =
                 functionsOracle.getFromETHPathData(newTokenAddress);
 
-            uint256 newTokenMarketShare = functionsOracle.tokenOracleMarketShare(_indexToken, newTokenAddress);
+            uint256 newTokenMarketShare = oracleMarketShares[k];
             if (newTokenAddress == address(weth)) {
                 swapVars.wethAmount = (swapVars.swapWethAmount * newTokenMarketShare) / oracleChainSelectorTotalShares;
                 weth.transfer(address(vault), swapVars.wethAmount);
@@ -599,8 +603,10 @@ contract MainChainBalancerV2 is Initializable, ProposableOwnableUpgradeable, Pau
         // uint256 negativePercentage = targetChainValue > portfolioValue ? ((targetChainValue - portfolioValue) * 100e18) / portfolioValue : 0;
         uint256 negativePercentage = ((targetChainValue - swapVars.chainValue) * 100e18)
             / indexFactoryBalancer.getGlobalPortfolioValueByProviderNonce(1, nonce);
-        uint256 extraWethAmount = (mainChainStorage.extraWethByNonce(nonce) * negativePercentage)
-            / mainChainStorage.reweightExtraPercentage(nonce);
+        uint256 extraWethAmount = negativePercentage > mainChainStorage.reweightExtraPercentage(nonce)
+            ? mainChainStorage.extraWethByNonce(nonce)
+            : (mainChainStorage.extraWethByNonce(nonce) * negativePercentage)
+                / mainChainStorage.reweightExtraPercentage(nonce);
         mainChainStorage.increaseConsumedExtraWethByNonce(
             nonce,
             extraWethAmount
@@ -632,8 +638,10 @@ contract MainChainBalancerV2 is Initializable, ProposableOwnableUpgradeable, Pau
         // uint256 negativePercentage = _oracleChainSelectorTotalShares - chainCurrentRealShare;
         uint256 negativePercentage = ((targetChainValue - _chainValue) * 100e18)
             / indexFactoryBalancer.getGlobalPortfolioValueByProviderNonce(1, _nonce);
-        uint256 extraWethAmount = (mainChainStorage.extraWethByNonce(_nonce) * negativePercentage)
-            / mainChainStorage.reweightExtraPercentage(_nonce);
+        uint256 extraWethAmount = negativePercentage > mainChainStorage.reweightExtraPercentage(_nonce)
+            ? mainChainStorage.extraWethByNonce(_nonce)
+            : (mainChainStorage.extraWethByNonce(_nonce) * negativePercentage)
+                / mainChainStorage.reweightExtraPercentage(_nonce);
         mainChainStorage.increaseConsumedExtraWethByNonce(
             _nonce,
             extraWethAmount

@@ -37,6 +37,9 @@ contract IndexFactoryStorage is Initializable, ProposableOwnableUpgradeable {
     mapping(address => mapping(uint256 => uint256)) public issuanceCompletedAssetsCount; // issuanceNonce => count
     mapping(address => mapping(uint256 => uint256)) public redemptionCompletedAssetsCount; // redemptionNonce => count
 
+    mapping(address => address) public vaultToIndexToken;
+    mapping(address => address) public indexTokenToFeeVault;
+
     modifier onlyIndexFactory() {
         require(msg.sender == indexFactory, "IndexFactoryStorage: only index factory");
         _;
@@ -119,6 +122,16 @@ contract IndexFactoryStorage is Initializable, ProposableOwnableUpgradeable {
     function setIndexTokenToVault(address _indexToken, address _vault) external onlyOwner {
         // if (_indexToken == address(0) || _vault == address(0)) revert ZeroAddress();
         indexTokenToVault[_indexToken] = _vault;
+    }
+
+    function setIndexTokenToFeeVault(address _indexToken, address _feeVault) external onlyOwner {
+        // if (_indexToken == address(0) || _vault == address(0)) revert ZeroAddress();
+        indexTokenToFeeVault[_indexToken] = _feeVault;
+    }
+
+    function setVaultToIndexToken(address _vault, address _indexToken) external onlyOwner {
+        // if (_indexToken == address(0) || _vault == address(0)) revert ZeroAddress();
+        vaultToIndexToken[_vault] = _indexToken;
     }
 
     function setOrderManager(address _orderManager) external onlyOwner {

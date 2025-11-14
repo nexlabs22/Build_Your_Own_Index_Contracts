@@ -27,7 +27,8 @@ import "../factory/IndexFactoryStorage.sol";
 /// @author NEX Labs Protocol
 /// @notice The main token contract for Index Token (NEX Labs Protocol)
 /// @dev This contract uses an upgradeable pattern
-contract MainChainStorage is Initializable, ProposableOwnableUpgradeable {
+/// @custom:oz-upgrades-from MainChainStorageV3
+contract MainChainStorageV4 is Initializable, ProposableOwnableUpgradeable {
     //nonce
     struct TokenOldAndNewValues {
         uint256 oldTokenValue;

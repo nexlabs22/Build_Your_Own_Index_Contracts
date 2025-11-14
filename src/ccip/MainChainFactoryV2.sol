@@ -26,8 +26,8 @@ import "../vault/Vault.sol";
 /// @author NEX Labs Protocol
 /// @notice The main token contract for Index Token (NEX Labs Protocol)
 /// @dev This contract uses an upgradeable pattern
-
-contract MainChainFactory is
+/// @custom:oz-upgrades-from MainChainFactory
+contract MainChainFactoryV2 is
     Initializable,
     ProposableOwnableUpgradeable,
     ReentrancyGuardUpgradeable,

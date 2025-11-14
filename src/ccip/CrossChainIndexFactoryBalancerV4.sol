@@ -27,7 +27,8 @@ import "./CrossChainIndexFactoryStorage.sol";
 /// @author NEX Labs Protocol
 /// @notice The main token contract for Index Token (NEX Labs Protocol)
 /// @dev This contract uses an upgradeable pattern
-contract CrossChainIndexFactoryBalancer is
+/// @custom:oz-upgrades-from CrossChainIndexFactoryBalancerV3
+contract CrossChainIndexFactoryBalancerV4 is
     Initializable,
     CCIPReceiver,
     ContextUpgradeable,
@@ -533,37 +534,37 @@ contract CrossChainIndexFactoryBalancer is
     }
 
     function _handleSecondReweightAction(HandleSecondReweightActionInputs memory inputData) internal {
-        uint256 crossChainWethAmount = swap(
-            toETHPath(inputData.tokenAddress), toETHFees(inputData.tokenAddress), inputData.tokenAmount, address(this)
-        );
+        // uint256 crossChainWethAmount = swap(
+        //     toETHPath(inputData.tokenAddress), toETHFees(inputData.tokenAddress), inputData.tokenAmount, address(this)
+        // );
 
-        swapSecondReweightAction(
-            inputData.currentTokens,
-            inputData.oracleTokens,
-            inputData.currentTargetPaths,
-            inputData.oracleTargetPaths,
-            inputData.oracleTokenShares,
-            crossChainWethAmount,
-            inputData.extraData,
-            weth(),
-            vault(inputData.indexToken)
-        );
+        // swapSecondReweightAction(
+        //     inputData.currentTokens,
+        //     inputData.oracleTokens,
+        //     inputData.currentTargetPaths,
+        //     inputData.oracleTargetPaths,
+        //     inputData.oracleTokenShares,
+        //     crossChainWethAmount,
+        //     inputData.extraData,
+        //     weth(),
+        //     vault(inputData.indexToken)
+        // );
 
-        uint256[] memory zeroUintArr = new uint256[](0);
-        address[] memory zeroAddArr = new address[](0);
+        // uint256[] memory zeroUintArr = new uint256[](0);
+        // address[] memory zeroAddArr = new address[](0);
 
-        bytes memory data = abi.encode(
-            4,
-            inputData.indexToken,
-            zeroAddArr,
-            zeroAddArr,
-            new bytes[](0),
-            new bytes[](0),
-            inputData.nonce,
-            zeroUintArr,
-            zeroUintArr
-        );
-        sendMessage(inputData.sourceChainSelector, inputData.sender, data, MessageSender.PayFeesIn.Native);
+        // bytes memory data = abi.encode(
+        //     4,
+        //     inputData.indexToken,
+        //     zeroAddArr,
+        //     zeroAddArr,
+        //     new bytes[](0),
+        //     new bytes[](0),
+        //     inputData.nonce,
+        //     zeroUintArr,
+        //     zeroUintArr
+        // );
+        // sendMessage(inputData.sourceChainSelector, inputData.sender, data, MessageSender.PayFeesIn.Native);
     }
 
     struct SwapSecondReweightActionVars {

@@ -14,6 +14,20 @@ contract CallUpdateCrosschainPath is Script, Test {
     // address functionsOracleProxy = 0xBeB1e7d48718B2f55c2B13c31fB51CF7b1123592; // testnet
     address functionsOracleProxy = 0xB48e2500998874cB7300b587190250C20daF8Ce8; // mainnet
 
+    address weth = 0x82aF49447D8a07e3bd95BD0d56f35241523fBab1;
+    address link = 0xf97f4df75117a78c1A5a0DBb814Af92458539FB4;
+    address gns = 0x18c11FD286C5EC11c3b683Caa813B77f5163A122;
+    address hegic = 0x431402e8b9dE9aa016C743880e04E517074D8cEC;
+    address rain = 0x25118290e6A5f4139381D072181157035864099d;
+    address krom = 0x55fF62567f09906A85183b866dF84bf599a4bf70;
+    address mor = 0x092bAaDB7DEf4C3981454dD9c0A0D7FF07bCFc86;
+    address peas = 0x02f92800F57BCD74066F5709F1Daa1A4302Df875;
+    address lava = 0x11e969e9B3f89cB16D686a03Cd8508C9fC0361AF;
+    address anime = 0x37a645648dF29205C6261289983FB04ECD70b4B3;
+    address lpt = 0x289ba1701C2F088cf0faf8B3705246331cB8A839;
+    address bdt = 0x21CCbc5e7f353EC43b2F5b1Fb12c3E9D89D30Dca;
+    address arc = 0x7F465507f058e17Ad21623927a120ac05CA32741;
+
     function run() external {
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
         vm.startBroadcast(deployerPrivateKey);
@@ -29,11 +43,360 @@ contract CallUpdateCrosschainPath is Script, Test {
         // _setArbitrumCCIP();
         // _setArbitrumCrossChain();
         // _setOptimismCrossChain();
-        dinariPortfolio();
+        // dinariPortfolio();
+        // multiAssetPortfolioWithHighAmount();
+        setArbitrum30Asset();
+        // setOP30Asset();
+        // setBase30Asset();
+        // SetBinance30Asset();
 
         vm.stopBroadcast();
 
         console.log("All set functions completed successfully!");
+    }
+
+    function setChainSelectors30Asset() internal returns (uint64[] memory) {
+        uint64 mainChainSelector = 4949039107694359620;
+
+        uint64[] memory chainSelectors = new uint64[](3);
+        chainSelectors[0] = mainChainSelector;
+        chainSelectors[1] = mainChainSelector;
+        chainSelectors[2] = mainChainSelector;
+        // chainSelectors[3] = mainChainSelector;
+        // chainSelectors[4] = mainChainSelector;
+        // chainSelectors[5] = mainChainSelector;
+        // chainSelectors[6] = mainChainSelector;
+        // chainSelectors[7] = mainChainSelector;
+        // chainSelectors[8] = mainChainSelector;
+        // chainSelectors[9] = mainChainSelector;
+        // chainSelectors[10] = mainChainSelector;
+        // chainSelectors[11] = mainChainSelector;
+        // chainSelectors[12] = mainChainSelector;
+
+        return chainSelectors;
+    }
+
+    function setProviderIndexes() internal returns (uint64[] memory) {
+        uint64[] memory providerIndex = new uint64[](3);
+        providerIndex[0] = 1;
+        providerIndex[1] = 1;
+        providerIndex[2] = 1;
+        // providerIndex[3] = 1;
+        // providerIndex[4] = 1;
+        // providerIndex[5] = 1;
+        // providerIndex[6] = 1;
+        // providerIndex[7] = 1;
+        // providerIndex[8] = 1;
+        // providerIndex[9] = 1;
+        // providerIndex[10] = 1;
+        // providerIndex[11] = 1;
+        // providerIndex[12] = 1;
+
+        return providerIndex;
+    }
+
+    function setArbitrum30Asset() internal {
+        // uint64 mainChainSelector = 4949039107694359620;
+
+        // address weth = 0x82aF49447D8a07e3bd95BD0d56f35241523fBab1;
+        // address link = 0xf97f4df75117a78c1A5a0DBb814Af92458539FB4;
+        // address gns = 0x18c11FD286C5EC11c3b683Caa813B77f5163A122;
+        // address hegic = 0x431402e8b9dE9aa016C743880e04E517074D8cEC;
+        // address rain = 0x25118290e6A5f4139381D072181157035864099d;
+        // address krom = 0x55fF62567f09906A85183b866dF84bf599a4bf70;
+        // address mor = 0x092bAaDB7DEf4C3981454dD9c0A0D7FF07bCFc86;
+        // address peas = 0x02f92800F57BCD74066F5709F1Daa1A4302Df875;
+        // address lava = 0x11e969e9B3f89cB16D686a03Cd8508C9fC0361AF;
+        // address anime = 0x37a645648dF29205C6261289983FB04ECD70b4B3;
+        // address lpt = 0x289ba1701C2F088cf0faf8B3705246331cB8A839;
+        // address bdt = 0x21CCbc5e7f353EC43b2F5b1Fb12c3E9D89D30Dca;
+        // address arc = 0x7F465507f058e17Ad21623927a120ac05CA32741;
+
+        uint64[] memory chainSelectors = setChainSelectors30Asset();
+
+        // uint64[] memory chainSelectors = new uint64[](13);
+        // chainSelectors[0] = mainChainSelector;
+        // chainSelectors[1] = mainChainSelector;
+        // chainSelectors[2] = mainChainSelector;
+        // chainSelectors[3] = mainChainSelector;
+        // chainSelectors[4] = mainChainSelector;
+        // chainSelectors[5] = mainChainSelector;
+        // chainSelectors[6] = mainChainSelector;
+        // chainSelectors[7] = mainChainSelector;
+        // chainSelectors[8] = mainChainSelector;
+        // chainSelectors[9] = mainChainSelector;
+        // chainSelectors[10] = mainChainSelector;
+        // chainSelectors[11] = mainChainSelector;
+        // chainSelectors[12] = mainChainSelector;
+
+        uint64[] memory providerIndex = setProviderIndexes();
+
+        // uint64[] memory providerIndex = new uint64[](13);
+        // providerIndex[0] = 1;
+        // providerIndex[1] = 1;
+        // providerIndex[2] = 1;
+        // providerIndex[3] = 1;
+        // providerIndex[4] = 1;
+        // providerIndex[5] = 1;
+        // providerIndex[6] = 1;
+        // providerIndex[7] = 1;
+        // providerIndex[8] = 1;
+        // providerIndex[9] = 1;
+        // providerIndex[10] = 1;
+        // providerIndex[11] = 1;
+        // providerIndex[12] = 1;
+
+        uint24[] memory fees3000 = new uint24[](1);
+        fees3000[0] = 3000;
+
+        uint24[] memory fees500 = new uint24[](1);
+        fees500[0] = 500;
+
+        uint24[] memory fees100 = new uint24[](1);
+        fees100[0] = 100;
+
+        uint24[] memory fees10000 = new uint24[](1);
+        fees10000[0] = 10000;
+
+        bytes[] memory pathData = new bytes[](3);
+        // address[] memory path = new address[](2);
+        // path[0] = weth;
+        // path[1] = weth;
+        // pathData[0] = abi.encode(path, fees3000);
+
+        // address[] memory path1 = new address[](2);
+        // path1[0] = weth;
+        // path1[1] = link;
+        // pathData[1] = abi.encode(path1, fees3000);
+
+        // address[] memory path2 = new address[](2);
+        // path2[0] = weth;
+        // path2[1] = gns;
+        // pathData[2] = abi.encode(path2, fees3000);
+
+        // address[] memory path3 = new address[](2);
+        // path3[0] = weth;
+        // path3[1] = hegic;
+        // pathData[3] = abi.encode(path3, fees500);
+
+        // address[] memory path4 = new address[](2);
+        // path4[0] = weth;
+        // path4[1] = rain;
+        // pathData[4] = abi.encode(path4, fees100);
+
+        // address[] memory path5 = new address[](2);
+        // path5[0] = weth;
+        // path5[1] = krom;
+        // pathData[0] = abi.encode(path5, fees3000);
+
+        // address[] memory path6 = new address[](2);
+        // path6[0] = weth;
+        // path6[1] = mor;
+        // pathData[1] = abi.encode(path6, fees3000);
+
+        // address[] memory path7 = new address[](2);
+        // path7[0] = weth;
+        // path7[1] = peas;
+        // pathData[2] = abi.encode(path7, fees10000);
+
+        // address[] memory path8 = new address[](2);
+        // path8[0] = weth;
+        // path8[1] = lava;
+        // pathData[3] = abi.encode(path8, fees500);
+
+        // address[] memory path9 = new address[](2);
+        // path9[0] = weth;
+        // path9[1] = anime;
+        // pathData[4] = abi.encode(path9, fees3000);
+
+        address[] memory path10 = new address[](2);
+        path10[0] = weth;
+        path10[1] = lpt;
+        pathData[0] = abi.encode(path10, fees3000);
+
+        address[] memory path11 = new address[](2);
+        path11[0] = weth;
+        path11[1] = bdt;
+        pathData[1] = abi.encode(path11, fees3000);
+
+        address[] memory path12 = new address[](2);
+        path12[0] = weth;
+        path12[1] = arc;
+        pathData[2] = abi.encode(path12, fees3000);
+
+        FunctionsOracle(functionsOracleProxy).updatePathData(providerIndex, chainSelectors, pathData);
+        console.log("Called mockFillAssetsList() [testnet style].");
+    }
+
+    function setOP30Asset() internal {
+        uint64 mainChainSelector = 3734403246176062136;
+
+        address wethAddr = 0x4200000000000000000000000000000000000006;
+        address snx = 0x8700dAec35aF8Ff88c16BdF0418774CB3D7599B4;
+        address wld = 0xdC6fF44d5d932Cbd77B52E5612Ba0529DC6226F1;
+
+        uint64[] memory chainSelectors = new uint64[](2);
+        chainSelectors[0] = mainChainSelector;
+        chainSelectors[1] = mainChainSelector;
+
+        uint64[] memory providerIndex = new uint64[](2);
+        providerIndex[0] = 1;
+        providerIndex[1] = 1;
+
+        uint24[] memory fees3000 = new uint24[](1);
+        fees3000[0] = 3000;
+
+        uint24[] memory fees10000 = new uint24[](1);
+        fees10000[0] = 10000;
+
+        bytes[] memory pathData = new bytes[](2);
+        address[] memory path = new address[](2);
+        path[0] = wethAddr;
+        path[1] = snx;
+        pathData[0] = abi.encode(path, fees3000);
+
+        address[] memory path1 = new address[](2);
+        path1[0] = wethAddr;
+        path1[1] = wld;
+        pathData[1] = abi.encode(path1, fees10000);
+
+        FunctionsOracle(functionsOracleProxy).updatePathData(providerIndex, chainSelectors, pathData);
+        console.log("Called mockFillAssetsList() [testnet style].");
+    }
+
+    function setBase30Asset() internal {
+        uint64 mainChainSelector = 15971525489660198786;
+
+        address wethAddr = 0x4200000000000000000000000000000000000006;
+        address degen = 0x4ed4E862860beD51a9570b96d89aF5E1B0Efefed;
+        address yes = 0x1B68244B100A6713ca7F540697b1bE12148a8bf9;
+
+        uint64[] memory chainSelectors = new uint64[](2);
+        chainSelectors[0] = mainChainSelector;
+        chainSelectors[1] = mainChainSelector;
+
+        uint64[] memory providerIndex = new uint64[](2);
+        providerIndex[0] = 1;
+        providerIndex[1] = 1;
+
+        uint24[] memory fees3000 = new uint24[](1);
+        fees3000[0] = 3000;
+
+        uint24[] memory fees10000 = new uint24[](1);
+        fees10000[0] = 10000;
+
+        bytes[] memory pathData = new bytes[](2);
+        address[] memory path = new address[](2);
+        path[0] = wethAddr;
+        path[1] = degen;
+        pathData[0] = abi.encode(path, fees3000);
+
+        address[] memory path1 = new address[](2);
+        path1[0] = wethAddr;
+        path1[1] = yes;
+        pathData[1] = abi.encode(path1, fees10000);
+
+        FunctionsOracle(functionsOracleProxy).updatePathData(providerIndex, chainSelectors, pathData);
+        console.log("Called mockFillAssetsList() [testnet style].");
+    }
+
+    function SetBinance30Asset() internal {
+        uint64 mainChainSelector = 11344663589394136015;
+
+        address wbnb = 0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c;
+        address xrp = 0x1D2F0da169ceB9fC7B3144628dB156f3F6c60dBE;
+        address solana = 0x570A5D26f7765Ecb712C0924E4De545B89fD43dF;
+
+        uint64[] memory chainSelectors = new uint64[](2);
+        chainSelectors[0] = mainChainSelector;
+        chainSelectors[1] = mainChainSelector;
+
+        uint64[] memory providerIndex = new uint64[](2);
+        providerIndex[0] = 1;
+        providerIndex[1] = 1;
+
+        uint24[] memory fees2500 = new uint24[](1);
+        fees2500[0] = 2500;
+
+        bytes[] memory pathData = new bytes[](2);
+        address[] memory path = new address[](2);
+        path[0] = wbnb;
+        path[1] = xrp;
+        pathData[0] = abi.encode(path, fees2500);
+
+        address[] memory path1 = new address[](2);
+        path1[0] = wbnb;
+        path1[1] = solana;
+        pathData[1] = abi.encode(path1, fees2500);
+
+        FunctionsOracle(functionsOracleProxy).updatePathData(providerIndex, chainSelectors, pathData);
+        console.log("Called mockFillAssetsList() [testnet style].");
+    }
+
+    function multiAssetPortfolioWithHighAmount() internal {
+        uint64 mainChainSelector = 4949039107694359620;
+
+        address wethAddress = 0x82aF49447D8a07e3bd95BD0d56f35241523fBab1;
+        address btc = 0x2f2a2543B76A4166549F7aaB2e75Bef0aefC5B0f;
+        // address weth = 0x82aF49447D8a07e3bd95BD0d56f35241523fBab1;
+        address arbitrum = 0x912CE59144191C1204E64559FE8253a0e49E6548;
+        address pendle = 0x0c880f6761F1af8d9Aa9C466984b80DAb9a8c9e8;
+        address curve = 0x11cDb42B0EB46D95f990BeDD4695A6e3fA034978;
+        address gmx = 0xfc5A1A6EB076a2C7aD06eD22C90d7E710E35ad0a;
+        // address zora = 0x1111111111166b7FE7bd91427724B487980aFc69;
+        // address toshi = 0xAC1Bd2486aAf3B5C0fc3Fd868558b082a531B2B4;
+
+        uint64[] memory chainSelectors = new uint64[](5);
+        chainSelectors[0] = mainChainSelector;
+        chainSelectors[1] = mainChainSelector;
+        chainSelectors[2] = mainChainSelector;
+        chainSelectors[3] = mainChainSelector;
+        chainSelectors[4] = mainChainSelector;
+
+        uint64[] memory providerIndex = new uint64[](5);
+        providerIndex[0] = 1;
+        providerIndex[1] = 1;
+        providerIndex[2] = 1;
+        providerIndex[3] = 1;
+        providerIndex[4] = 1;
+
+        uint24[] memory feesData = new uint24[](1);
+        feesData[0] = 500;
+
+        bytes[] memory pathData = new bytes[](5);
+        address[] memory path = new address[](2);
+        path[0] = wethAddress;
+        path[1] = btc;
+        pathData[0] = abi.encode(path, feesData);
+
+        // uint24[] memory feesData1 = new uint24[](1);
+        // feesData1[0] = 500;
+
+        address[] memory path1 = new address[](2);
+        path1[0] = wethAddress;
+        path1[1] = arbitrum;
+        pathData[1] = abi.encode(path1, feesData);
+
+        address[] memory path2 = new address[](2);
+        path2[0] = wethAddress;
+        path2[1] = pendle;
+        pathData[2] = abi.encode(path2, feesData);
+
+        uint24[] memory feesData1 = new uint24[](1);
+        feesData1[0] = 3000;
+
+        address[] memory path3 = new address[](2);
+        path3[0] = wethAddress;
+        path3[1] = curve;
+        pathData[3] = abi.encode(path3, feesData1);
+
+        address[] memory path4 = new address[](2);
+        path4[0] = wethAddress;
+        path4[1] = gmx;
+        pathData[4] = abi.encode(path4, feesData1);
+
+        FunctionsOracle(functionsOracleProxy).updatePathData(providerIndex, chainSelectors, pathData);
+        console.log("Called mockFillAssetsList() [testnet style].");
     }
 
     function dinariPortfolio() internal {

@@ -14,8 +14,9 @@ contract DeployVault is Script {
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
 
         // string memory targetChain = "arbitrum_sepolia";
-        // string memory targetChain = "base";
-        string memory targetChain = "optimism_mainnet";
+        string memory targetChain = "base";
+        // string memory targetChain = "optimism_mainnet";
+        // string memory targetChain = "bsc_mainnet";
 
         address crosschainIndexFactory;
         address crosschainIndexFactoryBalancer;
@@ -32,6 +33,9 @@ contract DeployVault is Script {
         } else if (keccak256(bytes(targetChain)) == keccak256("optimism_mainnet")) {
             crosschainIndexFactory = vm.envAddress("OPTIMISM_CROSS_CHAIN_FACTORY_PROXY_ADDRESS");
             crosschainIndexFactoryBalancer = vm.envAddress("OPTIMISM_CROSS_CHAIN_FACTORY_BALANCER_PROXY_ADDRESS");
+        } else if (keccak256(bytes(targetChain)) == keccak256("bsc_mainnet")) {
+            crosschainIndexFactory = vm.envAddress("BSC_CROSS_CHAIN_FACTORY_PROXY_ADDRESS");
+            crosschainIndexFactoryBalancer = vm.envAddress("BSC_CROSS_CHAIN_FACTORY_BALANCER_PROXY_ADDRESS");
         } else {
             revert("Unsupported target chain");
         }

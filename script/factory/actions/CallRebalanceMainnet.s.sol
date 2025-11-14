@@ -30,7 +30,7 @@ contract CallRebalance is Script {
     address indexFactoryBalancer = 0x5258839E9F8aE25B95F2ccfAF8C422369Cf9deeF;
     address dinariBalancer = 0x08b04CE86d42A93C0DE5C25E2fC505f329A7cC5b;
     address ccipBalancer = 0x17048A72b6E88Fc5bF5fD9319F8323Fd647C81E5;
-    uint256 updatedPortfolioNonce = 28;
+    uint256 updatedPortfolioNonce = 30;
 
     function run() external {
         uint256 pk = vm.envUint("PRIVATE_KEY");
@@ -62,14 +62,14 @@ contract CallRebalance is Script {
     }
 
     function secondRebalanceCcip() public {
-        MainChainBalancer(ccipBalancer).secondReweightAction(indexToken, 23);
+        MainChainBalancer(ccipBalancer).secondReweightAction(indexToken, 25);
     }
 
     function secondRebalanceDinari() public {
-        DinariBalancer(dinariBalancer).secondRebalanceAction(indexToken, 3);
+        DinariBalancer(dinariBalancer).secondRebalanceAction(indexToken, 7);
     }
 
     function completeRebalanceDinari() public {
-        DinariBalancer(dinariBalancer).completeRebalanceActions(indexToken, 5);
+        DinariBalancer(dinariBalancer).completeRebalanceActions(indexToken, 7);
     }
 }

@@ -3,15 +3,11 @@ pragma solidity 0.8.25;
 
 import {Script} from "forge-std/Script.sol";
 import {console} from "forge-std/console.sol";
-import {stdJson} from "forge-std/StdJson.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-
 import {IndexFactory} from "../../../src/factory/IndexFactory.sol";
 import "../../../src/dinari/DinariFactoryProcessor.sol";
 
 contract CallIndexFactoryOrders is Script {
-    using stdJson for string;
-
     // Dinari
     // address indexToken = 0x2E4150CFBdF6A37b55d07e81F6d3f4D47648D52A;
 
@@ -31,15 +27,27 @@ contract CallIndexFactoryOrders is Script {
     // address indexToken = 0x1Bd5E430fb059FF30bf0ec089629f6164646CCCd;
 
     // Stock CCIP Multi asset
-    address indexToken = 0xEbdB8179128df18366b9406F401313F72be27a46;
+    // address indexToken = 0xEbdB8179128df18366b9406F401313F72be27a46;
+
+    // CCIP STOCK
+    // address indexToken = 0x0017329c4A4fD1289935D27777291A94dA006D46;
+
+    // CrossChain Stock
+    // address indexToken = 0xA9D65c20E04aDBDf9B7d4236207D826C9ABAE90f;
+
+    // OP Base Stock
+    // address indexToken = 0x5B29Bc3BE79C3910Dfc82337595a8a521241f073;
+
+    // BSC OP BASE
+    address indexToken = 0x12334Dcb7bf99379Eb79c61935e18AD816fDf651;
 
     address usdc = 0xaf88d065e77c8cC2239327C5EDb3A432268e5831;
     address orderProcessor = 0x55AaA2fE5dDd1eFaD23994D0Fa06a6B53ff3c783;
 
     function run() external {
-        _callIssuance();
+        // _callIssuance();
         // _multical();
-        // _callRedemption();
+        _callRedemption();
     }
 
     function _multical() internal {
@@ -58,7 +66,7 @@ contract CallIndexFactoryOrders is Script {
     function _callIssuance() internal {
         address factory = _indexFactory();
 
-        uint256 amount = 3e6;
+        uint256 amount = 6e6;
         // uint256 amount = 10e6;
 
         console.log("Calling issuanceIndexTokens on:", factory);
@@ -67,7 +75,7 @@ contract CallIndexFactoryOrders is Script {
 
         uint256 pk = vm.envUint("PRIVATE_KEY");
         vm.startBroadcast(pk);
-        // IERC20(usdc).approve(address(factory), 12e6);
+        IERC20(usdc).approve(address(factory), 12e6);
         uint256 orderNonce = IndexFactory(factory).issuanceIndexTokens(indexToken, amount);
         vm.stopBroadcast();
 
@@ -78,7 +86,7 @@ contract CallIndexFactoryOrders is Script {
         address factory = _indexFactory();
 
         // CCIP
-        uint256 amount = IERC20(indexToken).balanceOf(0x11a8E23DAfbE058e9758c899dAEe0e43f287A96D);
+        uint256 amount = IERC20(indexToken).balanceOf(0x11a8E23DAfbE058e9758c899dAEe0e43f287A96D) / 2;
         // uint256 amount = 100e18;
 
         console.log("Calling redemption on:", factory);
