@@ -23,7 +23,7 @@ contract UpgradeIndexFactoryStorage is Script {
             revert("Unsupported target chain");
         }
 
-        Upgrades.upgradeProxy(proxyAddress, "IndexFactoryStorage.sol", "", owner);
+        Upgrades.upgradeProxy(proxyAddress, "IndexFactoryStorageV2.sol", "", owner);
 
         address implAddr = Upgrades.getImplementationAddress(proxyAddress);
         console.log("IndexFactoryStorage proxy upgraded to new implementation at:", implAddr);

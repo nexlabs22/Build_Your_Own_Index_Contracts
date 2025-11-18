@@ -8,8 +8,6 @@ import {stdJson} from "forge-std/StdJson.sol";
 import {FunctionsOracle} from "../../../src/oracle/FunctionsOracle.sol";
 
 contract CallMockFulfillRequestMainnet is Script {
-    using stdJson for string;
-
     function run() external {
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
         string memory targetChain = vm.envOr("TARGET_CHAIN", string("arbitrum_mainnet"));

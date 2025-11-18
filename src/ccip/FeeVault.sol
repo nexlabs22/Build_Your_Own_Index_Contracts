@@ -43,11 +43,11 @@ contract FeeVault is Initializable, ProposableOwnableUpgradeable, ReentrancyGuar
         initializer
     {
         // Validate input parameters
-        require(_weth != address(0), "Invalid WETH address");
+        // require(_weth != address(0), "Invalid WETH address");
 
         __Ownable_init(msg.sender);
         __ReentrancyGuard_init();
-        __ReentrancyGuard_init_unchained();
+        // __ReentrancyGuard_init_unchained();
         //set chain selector
         mainChainStorage = MainChainStorage(_mainChainStorage);
         functionsOracle = FunctionsOracle(_functionsOracle);
@@ -123,6 +123,11 @@ contract FeeVault is Initializable, ProposableOwnableUpgradeable, ReentrancyGuar
     function depositFunds() external payable {
         require(msg.value > 0, "NexVault: amount must be greater than 0");
         weth.deposit{value: msg.value}();
+    }
+
+    function depositUsdc(uint256 _amount) external {
+        require(_amount > 0, "Invalid amount");
+        IERC20(usdcAddress).safeTransferFrom(msg.sender, address(this), _amount);
     }
 
     /**
