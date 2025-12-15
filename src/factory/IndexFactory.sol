@@ -18,6 +18,7 @@ import {FeeCalculation} from "../libraries/FeeCalculation.sol";
 error ZeroAmount();
 error ZeroAddress();
 error WrongETHAmount();
+error Rebalancing();
 
 contract IndexFactory is Initializable, OwnableUpgradeable, PausableUpgradeable, ReentrancyGuardUpgradeable {
     using SafeERC20 for IERC20;
@@ -54,33 +55,41 @@ contract IndexFactory is Initializable, OwnableUpgradeable, PausableUpgradeable,
     mapping(address => uint64) public providerIndexes;
 
     event SupportedIndexTokenUpdated(address indexed token, bool isSupported);
-    event Issuanced(uint256 indexed requestNonce, address indexed user, address indexed indexToken, uint256 mintAmount);
-    event Redemption(
-        uint256 indexed requestNonce,
+    event Issuanced(
+        uint256 indexed nonce,
         address indexed user,
         address indexed indexToken,
+        uint256 outputAmount,
         address inputToken,
-        uint256 amount
+        uint256 inputAmount
+    );
+    event Redemption(
+        uint256 indexed nonce,
+        address indexed user,
+        address indexed indexToken,
+        uint256 outputAmount,
+        uint256 inputAmount,
+        address outputToken
     );
 
     uint256 private constant SHARE_DENOMINATOR = 100e18;
 
     event RequestIssuance(
         address indexed indexToken,
-        uint64 indexed providerIndex,
+        address indexed user,
         uint256 indexed nonce,
-        uint256 amount,
-        uint256 share,
+        uint256 inputAmount,
         address inputToken,
         uint256 fee
     );
 
     event RequestRedemption(
         address indexed indexToken,
-        uint64 indexed providerIndex,
+        address indexed user,
         uint256 indexed nonce,
-        uint256 amount,
-        uint256 share,
+        uint256 inputAmount,
+        uint256 burnPercent,
+        address outputToken,
         uint256 fee
     );
 
@@ -138,6 +147,10 @@ contract IndexFactory is Initializable, OwnableUpgradeable, PausableUpgradeable,
         nonReentrant
         returns (uint256 orderNonce)
     {
+        if (factoryStorage.isRebalncing(indexToken) == true) {
+            revert Rebalancing();
+        }
+
         _validateIssuanceInputs(indexToken, amount);
 
         address usdc = orderManager.usdcAddress();
@@ -146,8 +159,9 @@ contract IndexFactory is Initializable, OwnableUpgradeable, PausableUpgradeable,
         uint256 dinariFee = getDinariFee(indexToken, amount);
         uint256 crossChainFee = getCrossChainFee(indexToken, usdc, amount);
         uint256 providersFee = dinariFee + crossChainFee;
-        _collectUsdcAndFee(usdc, amount, usdcFee, providersFee);
+        _collectUsdcAndFee(usdc, amount, usdcFee, providersFee, indexToken);
         factoryStorage.setIssuanceRequester(indexToken, issuanceNonce, msg.sender);
+        factoryStorage.setIssuanceInputAmount(indexToken, issuanceNonce, amount);
 
         _requireUnderlyings(indexToken);
         _approveForOrderManager(usdc, amount);
@@ -175,9 +189,9 @@ contract IndexFactory is Initializable, OwnableUpgradeable, PausableUpgradeable,
                     })
                 );
 
-                emit RequestIssuance(
-                    indexToken, currentProviderIndexes[i], issuanceNonce, amount, share, usdc, crossChainFee
-                );
+                // emit RequestIssuance(
+                //     indexToken, msg.sender, currentProviderIndexes[i], issuanceNonce, amount, share, usdc, crossChainFee
+                // );
             } else {
                 orderNonce = _createBuyOrder(
                     CreateBuyOrderInput({
@@ -191,9 +205,13 @@ contract IndexFactory is Initializable, OwnableUpgradeable, PausableUpgradeable,
                     })
                 );
             }
-            emit RequestIssuance(indexToken, currentProviderIndexes[i], issuanceNonce, amount, share, usdc, dinariFee);
+            // emit RequestIssuance(
+            //     indexToken, msg.sender, currentProviderIndexes[i], issuanceNonce, amount, share, usdc, dinariFee
+            // );
             // emit Issuanced(issuanceNonce, msg.sender, indexToken, usdc, underlyings[i], parts[i]);
         }
+
+        emit RequestIssuance(indexToken, msg.sender, issuanceNonce, amount, usdc, dinariFee + crossChainFee);
 
         issuanceNonce += 1;
         return orderNonce;
@@ -205,6 +223,10 @@ contract IndexFactory is Initializable, OwnableUpgradeable, PausableUpgradeable,
         nonReentrant
         returns (uint256 orderNonce)
     {
+        if (factoryStorage.isRebalncing(indexToken) == true) {
+            revert Rebalancing();
+        }
+
         _validateRedemptionInputs(indexToken, amount);
         // transfer cross chain fee
         uint256 crossChainFee = getCrossChainFee(indexToken, orderManager.usdcAddress(), amount);
@@ -212,6 +234,7 @@ contract IndexFactory is Initializable, OwnableUpgradeable, PausableUpgradeable,
             IERC20(orderManager.usdcAddress()).safeTransferFrom(msg.sender, address(this), crossChainFee);
         }
         factoryStorage.setRedemptionRequester(indexToken, redemptionNonce, msg.sender);
+        factoryStorage.setRedemptionInputAmount(indexToken, redemptionNonce, amount);
         // Pull and burn
         IERC20(indexToken).safeTransferFrom(msg.sender, address(this), amount);
         uint256 burnPercent = _computeBurnPercent(indexToken, amount);
@@ -237,9 +260,15 @@ contract IndexFactory is Initializable, OwnableUpgradeable, PausableUpgradeable,
                     })
                 );
 
-                emit RequestRedemption(
-                    indexToken, currentProviderIndexes[i], redemptionNonce, amount, burnPercent, crossChainFee
-                );
+                // emit RequestRedemption(
+                //     indexToken,
+                //     msg.sender,
+                //     currentProviderIndexes[i],
+                //     redemptionNonce,
+                //     amount,
+                //     burnPercent,
+                //     crossChainFee
+                // );
             } else {
                 orderNonce = _createSellOrder(
                     CreateSellOrderInput({
@@ -254,9 +283,13 @@ contract IndexFactory is Initializable, OwnableUpgradeable, PausableUpgradeable,
                     })
                 );
 
-                emit RequestRedemption(indexToken, currentProviderIndexes[i], redemptionNonce, amount, burnPercent, 0);
+                // emit RequestRedemption(indexToken, msg.sender, 1, redemptionNonce, amount, burnPercent, 0);
             }
         }
+
+        emit RequestRedemption(
+            indexToken, msg.sender, redemptionNonce, amount, burnPercent, orderManager.usdcAddress(), crossChainFee
+        );
 
         redemptionNonce += 1;
         return orderNonce;
@@ -339,21 +372,25 @@ contract IndexFactory is Initializable, OwnableUpgradeable, PausableUpgradeable,
 
         // mint index token for requester
         address requester = factoryStorage.issuanceRequester(_indexToken, _issuanceNonce);
+        uint256 inputAmount = factoryStorage.issuanceInputAmount(_indexToken, _issuanceNonce);
         require(requester != address(0), "IndexFactory: invalid requester");
         IndexToken(_indexToken).mint(requester, mintAmount);
 
-        emit Issuanced(_issuanceNonce, requester, _indexToken, mintAmount);
+        emit Issuanced(_issuanceNonce, requester, _indexToken, mintAmount, orderManager.usdcAddress(), inputAmount);
     }
 
     function completeRedemption(uint256 _redemptionNonce, address _indexToken) internal {
         uint256 totalOutputValue = factoryStorage.redemptionTotalOutputValue(_indexToken, _redemptionNonce);
         require(totalOutputValue > 0, "IndexFactory: no output value");
         address requester = factoryStorage.redemptionRequester(_indexToken, _redemptionNonce);
+        uint256 inputAmount = factoryStorage.redemptionInputAmount(_indexToken, _redemptionNonce);
         require(requester != address(0), "IndexFactory: invalid requester");
         address usdc = orderManager.usdcAddress();
         IERC20(usdc).safeTransfer(requester, totalOutputValue);
         issuanceCalled = totalOutputValue;
-        emit Redemption(_redemptionNonce, requester, _indexToken, usdc, totalOutputValue);
+        emit Redemption(
+            _redemptionNonce, requester, _indexToken, totalOutputValue, inputAmount, orderManager.usdcAddress()
+        );
     }
 
     // =========================
@@ -401,10 +438,21 @@ contract IndexFactory is Initializable, OwnableUpgradeable, PausableUpgradeable,
         // );
     }
 
-    function _collectUsdcAndFee(address usdc, uint256 amount, uint256 usdcFee, uint256 _crossChainFee) private {
+    function _collectUsdcAndFee(
+        address usdc,
+        uint256 amount,
+        uint256 usdcFee,
+        uint256 _crossChainFee,
+        address _indexToken
+    ) private {
         IERC20(usdc).safeTransferFrom(msg.sender, address(this), amount + _crossChainFee);
         if (usdcFee > 0) {
-            IERC20(usdc).safeTransferFrom(msg.sender, factoryStorage.feeReceiver(), usdcFee);
+            uint256 ownerShare = (usdcFee * factoryStorage.ownerShare()) / 100e18;
+            uint256 creatorShare = (usdcFee * factoryStorage.creatorShare()) / 100e18;
+            address creator = factoryStorage.indexTokenToCreator(_indexToken);
+            require(creator != address(0), "Invalid creator address!");
+            IERC20(usdc).safeTransferFrom(msg.sender, factoryStorage.feeReceiver(), ownerShare);
+            IERC20(usdc).safeTransferFrom(msg.sender, creator, creatorShare);
         }
     }
 
