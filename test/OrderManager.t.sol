@@ -2,6 +2,8 @@
 pragma solidity ^0.8.25;
 
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
+import {IERC1271} from "@openzeppelin/contracts/interfaces/IERC1271.sol";
 import {OrderManager} from "../src/orderManager/OrderManager.sol";
 import {BackedFiFactory} from "../src/backedfi/BackedFiFactory.sol";
 import {IndexFactoryStorage} from "../src/backedfi/IndexFactoryStorage.sol";
@@ -535,5 +537,47 @@ contract OrderManagerTest is OlympixUnitTest("OrderManager") {
         // test: indexToken == address(0) triggers revert (opix-target-branch-219-True)
         vm.expectRevert(bytes("Invalid address!"));
         orderManager.redemptionWithBackedFiFactory(address(0), 123, 456);
+    }
+
+    /// @notice Checks that a valid signature from an authorized operator returns the magic value
+    function test_isValidSignature_Success() public {
+        uint256 testPk = 0xabc123;
+        address testOp = vm.addr(testPk);
+        
+        vm.prank(owner_);
+        orderManager.setOperator(testOp, true);
+
+        bytes32 msgHash = keccak256("nexlabs_test_message");
+        bytes32 ethHash = keccak256(abi.encodePacked("\x19Ethereum Signed Message:\n32", msgHash));
+        
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(testPk, ethHash);
+        bytes memory signature = abi.encodePacked(r, s, v);
+
+        bytes4 result = orderManager.isValidSignature(ethHash, signature);
+        
+        assertEq(
+            bytes32(result), 
+            bytes32(IERC1271.isValidSignature.selector), 
+            "ERC1271: valid operator signature failed"
+        );
+    }
+
+    /// @notice Ensures that signatures from unauthorized addresses return the failure code
+    function test_isValidSignature_Failure_NotOperator() public {
+        uint256 userPk = 0x999;
+        
+        bytes32 msgHash = keccak256("nexlabs_test_message");
+        bytes32 ethHash = keccak256(abi.encodePacked("\x19Ethereum Signed Message:\n32", msgHash));
+        
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(userPk, ethHash);
+        bytes memory signature = abi.encodePacked(r, s, v);
+
+        bytes4 result = orderManager.isValidSignature(ethHash, signature);
+        
+        assertEq(
+            bytes32(result), 
+            bytes32(bytes4(0xffffffff)), 
+            "ERC1271: unauthorized signature should fail"
+        );
     }
 }

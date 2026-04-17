@@ -4,10 +4,14 @@ pragma solidity ^0.8.25;
 import {SafeERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
+import "@openzeppelin/contracts/interfaces/IERC1271.sol";
+import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
+
 import "../factory/IndexFactory.sol";
 import {BackedFiFactory} from "../backedfi/BackedFiFactory.sol";
 
-contract OrderManager is Initializable, OwnableUpgradeable {
+contract OrderManager is Initializable, OwnableUpgradeable, IERC1271 {
     using SafeERC20 for IERC20;
 
     struct OrderNonceInfo {
@@ -198,5 +202,15 @@ contract OrderManager is Initializable, OwnableUpgradeable {
         require(_inputAmount > 0, "Invalid amount!");
         require(_indexToken != address(0), "Invalid address!");
         backedFiFactory.redemption(_indexToken, _inputAmount, _burnPercent);
+    }
+
+    function isValidSignature(bytes32 _hash, bytes memory _signature) public view override returns (bytes4 magicValue) {
+        address signer = ECDSA.recover(_hash, _signature);
+        
+        if (isOperator[signer]) {
+            return IERC1271.isValidSignature.selector;
+        } else {
+            return 0xffffffff;
+        }
     }
 }
