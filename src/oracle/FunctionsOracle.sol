@@ -392,11 +392,7 @@ contract FunctionsOracle is Initializable, FunctionsClient, ConfirmedOwner {
         return oracleData[_indexToken][oracleFilledCount[_indexToken]].oracleChainSelectorTokens[_chainSelector].length;
     }
 
-    function currentChainSelectorTokensCount(address _indexToken, uint64 _chainSelector)
-        public
-        view
-        returns (uint256)
-    {
+    function currentChainSelectorTokensCount(address _indexToken, uint64 _chainSelector) public view returns (uint256) {
         return
             currentData[_indexToken][currentFilledCount[_indexToken]].currentChainSelectorTokens[_chainSelector].length;
     }

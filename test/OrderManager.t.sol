@@ -543,41 +543,35 @@ contract OrderManagerTest is OlympixUnitTest("OrderManager") {
     function test_isValidSignature_Success() public {
         uint256 testPk = 0xabc123;
         address testOp = vm.addr(testPk);
-        
+
         vm.prank(owner_);
         orderManager.setOperator(testOp, true);
 
         bytes32 msgHash = keccak256("nexlabs_test_message");
         bytes32 ethHash = keccak256(abi.encodePacked("\x19Ethereum Signed Message:\n32", msgHash));
-        
+
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(testPk, ethHash);
         bytes memory signature = abi.encodePacked(r, s, v);
 
         bytes4 result = orderManager.isValidSignature(ethHash, signature);
-        
+
         assertEq(
-            bytes32(result), 
-            bytes32(IERC1271.isValidSignature.selector), 
-            "ERC1271: valid operator signature failed"
+            bytes32(result), bytes32(IERC1271.isValidSignature.selector), "ERC1271: valid operator signature failed"
         );
     }
 
     /// @notice Ensures that signatures from unauthorized addresses return the failure code
     function test_isValidSignature_Failure_NotOperator() public {
         uint256 userPk = 0x999;
-        
+
         bytes32 msgHash = keccak256("nexlabs_test_message");
         bytes32 ethHash = keccak256(abi.encodePacked("\x19Ethereum Signed Message:\n32", msgHash));
-        
+
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(userPk, ethHash);
         bytes memory signature = abi.encodePacked(r, s, v);
 
         bytes4 result = orderManager.isValidSignature(ethHash, signature);
-        
-        assertEq(
-            bytes32(result), 
-            bytes32(bytes4(0xffffffff)), 
-            "ERC1271: unauthorized signature should fail"
-        );
+
+        assertEq(bytes32(result), bytes32(bytes4(0xffffffff)), "ERC1271: unauthorized signature should fail");
     }
 }

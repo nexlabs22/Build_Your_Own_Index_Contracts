@@ -206,7 +206,7 @@ contract OrderManager is Initializable, OwnableUpgradeable, IERC1271 {
 
     function isValidSignature(bytes32 _hash, bytes memory _signature) public view override returns (bytes4 magicValue) {
         address signer = ECDSA.recover(_hash, _signature);
-        
+
         if (isOperator[signer]) {
             return IERC1271.isValidSignature.selector;
         } else {

@@ -172,7 +172,9 @@ contract StagingCustodyAccount is Initializable, ReentrancyGuardUpgradeable, Own
         nonReentrant
         onlyOwnerOrOperator
     {
-        if (_roundId < 1 || _roundId > factoryStorage.redemptionRoundId(_indexToken)) revert InvalidRoundId();
+        if (_roundId < 1 || _roundId > factoryStorage.redemptionRoundId(_indexToken)) {
+            revert InvalidRoundId();
+        }
         uint256 prev = _roundId - 1;
         if (_roundId > 1) {
             require(!factoryStorage.redemptionRoundActive(_indexToken, prev), "Prev redemption round active");

@@ -240,7 +240,14 @@ contract MainChainFactory is
         return (totalCrossChainFee * (100 + 20)) / 100;
     }
 
-    function getRedemptionFee(address _indexToken, uint256 /* amountIn */ ) public view returns (uint256) {
+    function getRedemptionFee(
+        address _indexToken,
+        uint256 /* amountIn */
+    )
+        public
+        view
+        returns (uint256)
+    {
         uint256 totalChains = functionsOracle.currentChainSelectorsCount(_indexToken);
         uint256 latestCount = functionsOracle.currentFilledCount(_indexToken);
         (,, uint64[] memory chainSelectors) = functionsOracle.getCurrentData(_indexToken, latestCount);
@@ -434,8 +441,9 @@ contract MainChainFactory is
         uint64 _chainSelector,
         uint256 _latestCount
     ) internal {
-        uint256 totalShares =
-            functionsOracle.getCurrentChainSelectorTotalShares(_indexToken, _latestCount, _chainSelector);
+        uint256 totalShares = functionsOracle.getCurrentChainSelectorTotalShares(
+            _indexToken, _latestCount, _chainSelector
+        );
         uint256 chainWethAmount = (_wethAmount * totalShares) / 100e18;
 
         weth.approve(address(coreSender), chainWethAmount);
@@ -525,8 +533,9 @@ contract MainChainFactory is
             uint256 swapAmount =
                 (_burnPercent * IERC20(tokenAddress).balanceOf(address(mainChainStorage.vault()))) / 1e18;
             vault.withdrawFunds(tokenAddress, address(this), swapAmount);
-            uint256 swapAmountOut =
-                tokenAddress == address(weth) ? swapAmount : swap(toETHPath, toETHFees, swapAmount, address(coreSender));
+            uint256 swapAmountOut = tokenAddress == address(weth)
+                ? swapAmount
+                : swap(toETHPath, toETHFees, swapAmount, address(coreSender));
             if (tokenAddress == address(weth)) {
                 weth.transfer(address(coreSender), swapAmount);
             }

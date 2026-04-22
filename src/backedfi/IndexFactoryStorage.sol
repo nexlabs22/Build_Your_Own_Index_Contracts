@@ -148,10 +148,7 @@ contract IndexFactoryStorage is Initializable, OwnableUpgradeable {
         feeReceiver = _feeReceiver;
     }
 
-    function setIssuanceInputAmount(address _indexToken, uint256 _issuanceNonce, uint256 _amount)
-        external
-        onlyFactory
-    {
+    function setIssuanceInputAmount(address _indexToken, uint256 _issuanceNonce, uint256 _amount) external onlyFactory {
         if (_amount == 0) revert ZeroAmount();
         issuanceInputAmountByIndexToken[_indexToken][_issuanceNonce] = _amount;
     }
@@ -441,11 +438,12 @@ contract IndexFactoryStorage is Initializable, OwnableUpgradeable {
         return !redemptionRoundActive[_indexToken][prev] && redemptionIsCompleted[_indexToken][prev];
     }
 
-    function getPortfolioValue(address _indexToken, address[] memory, /* underlyingAssets */ uint256[] memory _prices)
-        public
-        view
-        returns (uint256 totalValue)
-    {
+    function getPortfolioValue(
+        address _indexToken,
+        address[] memory,
+        /* underlyingAssets */
+        uint256[] memory _prices
+    ) public view returns (uint256 totalValue) {
         address vaultAddr = indexTokenToVault[_indexToken];
         require(vaultAddr != address(0), "vault not set");
 
@@ -474,7 +472,11 @@ contract IndexFactoryStorage is Initializable, OwnableUpgradeable {
         address _indexToken,
         address _underlyingAsset,
         uint256 _price // 1e18-scaled
-    ) public view returns (uint256 totalValue) {
+    )
+        public
+        view
+        returns (uint256 totalValue)
+    {
         require(_indexToken != address(0), "invalid index token");
         address vaultAddr = indexTokenToVault[_indexToken];
         require(vaultAddr != address(0), "vault not set");
