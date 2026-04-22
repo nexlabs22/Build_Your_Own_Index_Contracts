@@ -133,9 +133,8 @@ contract CoreSender is Initializable, CCIPReceiver, ProposableOwnableUpgradeable
     }
 
     function withdrawLink() external onlyOwnerOrOperator {
-        IERC20(mainChainStorage.linkToken()).transfer(
-            msg.sender, IERC20(mainChainStorage.linkToken()).balanceOf(address(this))
-        );
+        IERC20(mainChainStorage.linkToken())
+            .transfer(msg.sender, IERC20(mainChainStorage.linkToken()).balanceOf(address(this)));
     }
 
     /**
@@ -527,10 +526,7 @@ contract CoreSender is Initializable, CCIPReceiver, ProposableOwnableUpgradeable
         );
         (
             uint256 actionType,
-            address[] memory tokenAddresses,
-            ,
-            ,
-            ,
+            address[] memory tokenAddresses,,,,
             uint256 nonce,
             uint256[] memory value1,
             uint256[] memory value2

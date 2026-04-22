@@ -210,14 +210,12 @@ contract ContractDeployer is
     {
         IndexToken indexTokenImpl = new IndexToken();
         indexToken = IndexToken(
-            payable(
-                address(
+            payable(address(
                     new ERC1967Proxy(
                         address(indexTokenImpl),
                         abi.encodeCall(IndexToken.initialize, ("Anti Inflation", "ANFI", 1e18, feeReceiver, 1000000e18))
                     )
-                )
-            )
+                ))
         );
 
         Vault vaultImpl = new Vault();
@@ -227,25 +225,21 @@ contract ContractDeployer is
 
         FunctionsOracle functionsOracleImpl = new FunctionsOracle();
         functionsOracle = FunctionsOracle(
-            payable(
-                address(
+            payable(address(
                     new ERC1967Proxy(
                         address(functionsOracleImpl),
                         abi.encodeCall(FunctionsOracle.initialize, (address(oracle), JOB_ID))
                     )
-                )
-            )
+                ))
         );
 
         IndexFactoryStorage indexFactoryStorageImpl = new IndexFactoryStorage();
         indexFactoryStorage = IndexFactoryStorage(
-            payable(
-                address(
+            payable(address(
                     new ERC1967Proxy(
                         address(indexFactoryStorageImpl), abi.encodeCall(IndexFactoryStorage.initialize, ())
                     )
-                )
-            )
+                ))
         );
 
         deployedIndexToken = indexToken;
@@ -270,17 +264,14 @@ contract ContractDeployer is
     {
         Vault crossChainVaultImpl = new Vault();
         crossChainVault = Vault(
-            payable(
-                address(
+            payable(address(
                     new ERC1967Proxy(address(crossChainVaultImpl), abi.encodeCall(Vault.initialize, (address(this))))
-                )
-            )
+                ))
         );
 
         CrossChainIndexFactoryStorage crossChainIndexFactoryStorageImpl = new CrossChainIndexFactoryStorage();
         crossChainIndexFactoryStorage = CrossChainIndexFactoryStorage(
-            payable(
-                address(
+            payable(address(
                     new ERC1967Proxy(
                         address(crossChainIndexFactoryStorageImpl),
                         abi.encodeCall(
@@ -298,14 +289,12 @@ contract ContractDeployer is
                             )
                         )
                     )
-                )
-            )
+                ))
         );
 
         CrossChainIndexFactory crossChainIndexFactoryImpl = new CrossChainIndexFactory();
         crossChainIndexFactory = CrossChainIndexFactory(
-            payable(
-                address(
+            payable(address(
                     new ERC1967Proxy(
                         address(crossChainIndexFactoryImpl),
                         abi.encodeCall(
@@ -313,14 +302,12 @@ contract ContractDeployer is
                             (address(crossChainIndexFactoryStorage), address(mockRouter), address(link))
                         )
                     )
-                )
-            )
+                ))
         );
 
         MainChainStorage mainChainStorageImpl = new MainChainStorage();
         mainChainStorage = MainChainStorage(
-            payable(
-                address(
+            payable(address(
                     new ERC1967Proxy(
                         address(mainChainStorageImpl),
                         abi.encodeCall(
@@ -338,8 +325,7 @@ contract ContractDeployer is
                             )
                         )
                     )
-                )
-            )
+                ))
         );
 
         deployedCrossChainVault = crossChainVault;
@@ -364,19 +350,16 @@ contract ContractDeployer is
     {
         OrderManager orderManagerImpl = new OrderManager();
         orderManager = OrderManager(
-            payable(
-                address(
+            payable(address(
                     new ERC1967Proxy(
                         address(orderManagerImpl), abi.encodeCall(OrderManager.initialize, (address(usdc), address(0)))
                     )
-                )
-            )
+                ))
         );
 
         CoreSender coreSenderImpl = new CoreSender();
         coreSender = CoreSender(
-            payable(
-                address(
+            payable(address(
                     new ERC1967Proxy(
                         address(coreSenderImpl),
                         abi.encodeCall(
@@ -392,14 +375,12 @@ contract ContractDeployer is
                             )
                         )
                     )
-                )
-            )
+                ))
         );
 
         IndexFactory indexFactoryImpl = new IndexFactory();
         IndexFactory indexFactory = IndexFactory(
-            payable(
-                address(
+            payable(address(
                     new ERC1967Proxy(
                         address(indexFactoryImpl),
                         abi.encodeCall(
@@ -407,14 +388,12 @@ contract ContractDeployer is
                             (address(orderManager), address(functionsOracle), address(indexFactoryStorage))
                         )
                     )
-                )
-            )
+                ))
         );
 
         MainChainFactory mainChainFactoryImpl = new MainChainFactory();
         MainChainFactory mainChainFactoryProxy = MainChainFactory(
-            payable(
-                address(
+            payable(address(
                     new ERC1967Proxy(
                         address(mainChainFactoryImpl),
                         abi.encodeCall(
@@ -430,8 +409,7 @@ contract ContractDeployer is
                             )
                         )
                     )
-                )
-            )
+                ))
         );
 
         deployedOrderManager = orderManager;
@@ -675,9 +653,8 @@ contract ContractDeployer is
         uint256[] memory amounts = new uint256[](2);
         amounts[0] = address(tokens[0]) == address(token0) ? amount0 : amount1;
         amounts[1] = address(tokens[1]) == address(token1) ? amount1 : amount0;
-        INonfungiblePositionManager(positionManagerAddress).createAndInitializePoolIfNecessary(
-            address(tokens[0]), address(tokens[1]), 3000, encodePriceSqrt(1, 1)
-        );
+        INonfungiblePositionManager(positionManagerAddress)
+            .createAndInitializePoolIfNecessary(address(tokens[0]), address(tokens[1]), 3000, encodePriceSqrt(1, 1));
         address poolAddress = IUniswapV3Factory2(factoryAddress).getPool(address(tokens[0]), address(tokens[1]), 3000);
         if (poolAddress == address(0)) revert PoolNotCreated();
         tokens[0].approve(positionManagerAddress, amounts[0]);
@@ -719,9 +696,10 @@ contract ContractDeployer is
         uint256[] memory amounts = new uint256[](2);
         amounts[0] = address(token0) < wethAddr ? amount0 : amount1;
         amounts[1] = address(token0) > wethAddr ? amount0 : amount1;
-        INonfungiblePositionManager(positionManagerAddress).createAndInitializePoolIfNecessary(
-            address(tokens[0]), address(tokens[1]), 3000, encodePriceSqrt(amounts[1] / 1e10, amounts[0] / 1e10)
-        );
+        INonfungiblePositionManager(positionManagerAddress)
+            .createAndInitializePoolIfNecessary(
+                address(tokens[0]), address(tokens[1]), 3000, encodePriceSqrt(amounts[1] / 1e10, amounts[0] / 1e10)
+            );
         address poolAddress = IUniswapV3Factory2(factoryAddress).getPool(address(tokens[0]), address(tokens[1]), 3000);
         if (poolAddress == address(0)) revert PoolNotCreated();
         IWETH(wethAddr).deposit{value: amount1}();

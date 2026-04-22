@@ -37,7 +37,9 @@ contract BasicMessageSender is Withdraw {
             receiver: abi.encode(receiver),
             data: abi.encode(messageText),
             tokenAmounts: new Client.EVMTokenAmount[](0),
-            extraArgs: Client._argsToBytes(Client.GenericExtraArgsV2({gasLimit: 200_000, allowOutOfOrderExecution: true})),
+            extraArgs: Client._argsToBytes(
+                Client.GenericExtraArgsV2({gasLimit: 200_000, allowOutOfOrderExecution: true})
+            ),
             feeToken: payFeesIn == PayFeesIn.LINK ? i_link : address(0)
         });
 

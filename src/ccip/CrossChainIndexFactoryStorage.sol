@@ -293,9 +293,8 @@ contract CrossChainIndexFactoryStorage is
     {
         uint256 lastAmount = amountIn;
         for (uint256 i = 0; i < path.length - 1; i++) {
-            lastAmount = IPriceOracle(priceOracle).estimateAmountOut(
-                address(factoryV3), path[i], path[i + 1], uint128(lastAmount), fees[i]
-            );
+            lastAmount = IPriceOracle(priceOracle)
+                .estimateAmountOut(address(factoryV3), path[i], path[i + 1], uint128(lastAmount), fees[i]);
         }
         amountOut = lastAmount;
     }
