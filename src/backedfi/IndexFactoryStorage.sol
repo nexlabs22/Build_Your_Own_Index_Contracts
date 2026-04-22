@@ -443,7 +443,11 @@ contract IndexFactoryStorage is Initializable, OwnableUpgradeable {
         address[] memory,
         /* underlyingAssets */
         uint256[] memory _prices
-    ) public view returns (uint256 totalValue) {
+    )
+        public
+        view
+        returns (uint256 totalValue)
+    {
         address vaultAddr = indexTokenToVault[_indexToken];
         require(vaultAddr != address(0), "vault not set");
 
